@@ -1,20 +1,8 @@
 //***************************************************************************
 //
 //  File........: LCD_LIB.c
-//
-//  Author(s)...: Johnny McClymont
-//
-//  Target(s)...: ATmega128
-//
-//  Compiler....: AVR-GCC 3.3.1; avr-libc 1.0
-//
+//  Author(s)...: Johnny McClymont, Paul Chote
 //  Description.: LCD routines
-//
-//  Revisions...: 1.0
-//
-//  YYYYMMDD - VER. - COMMENT                                       - SIGN.
-//
-//  20090606 - 1.0  - Created                                       - J.McClymont
 //
 //***************************************************************************
 
@@ -28,19 +16,9 @@
 #include "UART_Math.h"
 #include "usart.h"
 
-
-/*****************************************************************************
-*
-*   Function name : LCD_init
-*
-*   Returns :       None
-*
-*   Parameters :    None
-*
-*   Purpose :       Initialises the LCD
-*
-*****************************************************************************/
-
+/*
+ * Initialise the LCD
+ */
 void LCD_init(void)
 {
 	Delay(50000);
@@ -63,10 +41,11 @@ void LCD_init(void)
 }
 
 
-
+/*
+ * Set the message display mode for the LCD 
+ */
 void update_LCD(unsigned char LCD_state)
-{
-	
+{	
 	switch (LCD_state)
 	{
 		case SYNCING:
@@ -158,7 +137,9 @@ void update_LCD(unsigned char LCD_state)
 }
 
 
-
+/*
+ * Send a control byte to the LCD
+ */
 void LCD_WriteControl(unsigned char value, int time)
 {
 	LCD_DATA = value;
@@ -170,6 +151,9 @@ void LCD_WriteControl(unsigned char value, int time)
 
 }
 
+/*
+ * Send a data byte to the LCD
+ */
 void LCD_WriteData(unsigned char value)
 {
 	LCD_DATA = value;
@@ -178,12 +162,12 @@ void LCD_WriteData(unsigned char value)
 	Delay(5);
 	PORTF &= ~(1<<LCD_ENABLE);
 	//Delay(5);
-
 }
 
-
-
-void LCD_sendmsg (const char *s)
+/*
+ * Send a string to the LCD
+ */
+void LCD_sendmsg(const char *s)
 {
 	unsigned char qcntr,sndcntr;	//indexes into the queue array holding the msg to send via UART
 	unsigned char queue[16];		//character queue array holding msg to send via UART
@@ -198,6 +182,9 @@ void LCD_sendmsg (const char *s)
 	while (qcntr != sndcntr) LCD_WriteData(queue[sndcntr++]); //send the god damn msg
 }
 
+/*
+ * Send a decimal number to the LCD
+ */
 void LCD_sendDecimal(int number, unsigned char places)
 {
 	unsigned char thousands = 0;
@@ -205,6 +192,7 @@ void LCD_sendDecimal(int number, unsigned char places)
 	unsigned char tens = 0;
 	unsigned char ones = 0;
 	
+	// TODO: Use the modulus operator. This is just ridiculous.
 	while (number >= 0)
 	{
 		number = number - 1000;
@@ -257,6 +245,12 @@ void LCD_sendDecimal(int number, unsigned char places)
 		LCD_WriteData(hexToAscii(ones));
 		places--;
 	}
-	
 }
  
+/*
+ * Returns the LCD cursor to the start of the display
+ */
+void reset_LCD(void)
+{
+	putHeader = 0;
+}

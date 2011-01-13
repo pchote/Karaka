@@ -1,62 +1,20 @@
 //***************************************************************************
 //
 //  File........: main.h
-//
-//  Author(s)...: Johnny McClymont
-//
-//  Target(s)...: ATmega128
-//
-//  Compiler....: AVR-GCC 3.3.1; avr-libc 1.0
-//
+//  Author(s)...: Johnny McClymont, Paul Chote
 //  Description.: ATMega128 USB Timer interface module
 //
-//  Revisions...: 1.0
-//
-//  YYYYMMDD - VER. - COMMENT                                       - SIGN.
-//
-//  20081111 - 1.0  - Created                                       - J.McClymont
-//
 //***************************************************************************
+
 #include <string.h>
 
-typedef  struct
-{
-	unsigned int year;
-	unsigned char month;
-	unsigned char day;
-	unsigned char hours; 			//holds hours value
-	unsigned char minutes;			//holds mintues value
-	unsigned char seconds;			//holds seconds value
-} 	clock;
-
-void Initialization(void);
-void InputSignal_Init(void);
-void Delay(unsigned int millisec);
-void reset_LCD(void);
-
-
-unsigned char status_register;
-unsigned char control_register;
-unsigned int Pulse_Counter;
-unsigned int Current_Count;
-
-
-clock UTCtime_lastPulse;
-clock UTCtime_endOfFrame;
-
-unsigned int milliseconds;
-
-unsigned char GPS_state;
-unsigned char wait_4_ten_second_boundary;
-unsigned char wait_4_timestamp;
-unsigned char wait_4_EOFtimestamp;
-unsigned char check_GPS_present;
+#ifndef KARAKA_MAIN_H
+#define KARAKA_MAIN_H
 
 
 #define SWHIGH	1
 #define SWLOW	0
 #define SWREV	1
-
 
 #define RXD			    PINE0   // UART 0 RECEIVE
 #define TXD				PINE1   // UART 0 TRANSMIT
@@ -86,11 +44,37 @@ unsigned char check_GPS_present;
 #define GPS_TIME_GOOD			3	//gps is locked and working.
 
 
+typedef struct
+{
+	unsigned int year;
+	unsigned char month;
+	unsigned char day;
+	unsigned char hours;
+	unsigned char minutes;
+	unsigned char seconds;
+} clock;
+
+unsigned char status_register;
+unsigned char control_register;
+unsigned int Pulse_Counter;
+unsigned int Current_Count;
+
+clock UTCtime_lastPulse;
+clock UTCtime_endOfFrame;
+
+unsigned int milliseconds;
+unsigned char GPS_state;
+unsigned char wait_4_ten_second_boundary;
+unsigned char wait_4_timestamp;
+unsigned char wait_4_EOFtimestamp;
+unsigned char check_GPS_present;
 int command_cntr;
 unsigned char pulse_timer;			//variable to set length of CCD pulse (number * 512uS)
 unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packet as EOF time
 
+void InputSignal_Init(void);
+void Delay(unsigned int millisec);
+void reset_LCD(void);
 
 
-
-
+#endif
