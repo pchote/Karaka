@@ -40,7 +40,6 @@ void LCD_init(void)
 	putHeader = 0;
 }
 
-
 /*
  * Set the message display mode for the LCD 
  */
@@ -136,7 +135,6 @@ void update_LCD(unsigned char LCD_state)
 	}
 }
 
-
 /*
  * Send a control byte to the LCD
  */
@@ -191,8 +189,8 @@ void LCD_sendDecimal(int number, unsigned char places)
 	unsigned char hundreds = 0;
 	unsigned char tens = 0;
 	unsigned char ones = 0;
-	
-	// TODO: Use the modulus operator. This is just ridiculous.
+
+	// TODO: Use integer division and the modulus operator. This is just ridiculous.
 	while (number >= 0)
 	{
 		number = number - 1000;

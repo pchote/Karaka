@@ -43,7 +43,6 @@
 #define CHECK_GPS_TIME_VALID	2	//check to see timing packets from GPS are from GPS clock
 #define GPS_TIME_GOOD			3	//gps is locked and working.
 
-
 typedef struct
 {
 	unsigned int year;

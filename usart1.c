@@ -1,97 +1,58 @@
 //***************************************************************************
 //
 //  File........: usart.c
-//
-//  Author(s)...: Johnny McClymont
-//
-//  Target(s)...: ATmega128
-//
-//  Compiler....: AVR-GCC 3.3.1; avr-libc 1.0
-//
+//  Author(s)...: Johnny McClymont, Paul Chote
 //  Description.: ATMeag128 USART routines
-//
-//  Revisions...: 1.0
-//
-//  YYYYMMDD - VER. - COMMENT                                       - SIGN.
-//
-//  20050824 - 1.0  - Created                                       - J.McClymont
 //
 //***************************************************************************
 
-
 #include <avr/io.h>
-#include "usart1.h"
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include "usart1.h"
+#include "usart.h"
 #include "main.h"
 #include "GPS.h"
-#include "usart.h"
-
 	
-/*****************************************************************************
-*
-*   Function name : USART_Init
-*
-*   Returns :       None
-*
-*   Parameters :    unsigned int baudrate
-*
-*   Purpose :       Initialize the USART
-*
-*****************************************************************************/
+/*
+ * Initialise the USART
+ * TODO: Give a helpful description
+ */
 void USART1_Init(unsigned int baudrate)
 {
-    // Set baud rate
-    UBRR1H = (unsigned char)(baudrate>>8);
-    UBRR1L = (unsigned char)baudrate;
-
-    // Enable 2x speed
-    UCSR1A = (1<<U2X1);
-
-    // Enable transmitter.  .
-    UCSR1B = (1<<RXEN1)|(1<<TXEN1)|(1<<RXCIE1)|(0<<UDRIE1);
-
-    // Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
-    UCSR1C = (0<<UMSEL1)|(0<<UPM01)|(0<<USBS1)|(3<<UCSZ10)|(0<<UCPOL1);
+	// Set baud rate
 	UBRR1H = (unsigned char)(baudrate>>8);
-    UBRR1L = (unsigned char)baudrate;	
+	UBRR1L = (unsigned char)baudrate;
+
+	// Enable 2x speed
+	UCSR1A = (1<<U2X1);
+
+	// Enable transmitter.  .
+	UCSR1B = (1<<RXEN1)|(1<<TXEN1)|(1<<RXCIE1)|(0<<UDRIE1);
+
+	// Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
+	UCSR1C = (0<<UMSEL1)|(0<<UPM01)|(0<<USBS1)|(3<<UCSZ10)|(0<<UCPOL1);
+	UBRR1H = (unsigned char)(baudrate>>8);
+	UBRR1L = (unsigned char)baudrate;	
 	checking_DLE_stuffing = 0;
 	gps_usart_state = SYNCING_PACKETS;
 	sync_state = LOOK_FOR_DLE;
 }
 
-
-/*****************************************************************************
-*
-*   Function name : Usart1_Tx
-*
-*   Returns :       char
-*
-*   Parameters :    char data: byte to send
-*
-*   Purpose :       Send one byte through the USART1, returns 1 if byte sent, 
-*					returns 0 if byte not sent correctly.
-*
-*****************************************************************************/
+/*
+ * Send a single byte through the USART1
+ */
 void Usart1_Tx(char data)
 {
 	while (!(UCSR1A & (1<<UDRE1)));	
 	UDR1 = data;
-	while (!(UCSR1A & (1<<TXC1)));	//Wait until transmission complete	
+	// Wait until transmission is complete.
+	while (!(UCSR1A & (1<<TXC1)));
 }
 
-
-/*****************************************************************************
-*
-*   Function name : Usart1_Rx
-*
-*   Returns :       char: byte received
-*
-*   Parameters :    None
-*
-*   Purpose :       Receives one byte from the USART1
-*
-*****************************************************************************/
+/*
+ * Recieve a single byte from the USART1
+ */
 char Usart1_Rx(void)
 {
 	unsigned char temp;
@@ -101,21 +62,11 @@ char Usart1_Rx(void)
     return temp;
 }
 
-
-/****************************************************************************
-*
-*	Function Name :	SIG_UART1_RECV
-*
-*	Returns : 		None
-*
-*	Parameters :	None
-*
-*	Purpose :		Interrupt service routine for Data received from UART
-*					Receives one byte of data from the USART. Determines
-*					command char received and execute code as required.
-*
-*****************************************************************************/
-
+/* 
+ * Interrupt service routine for Data received from UART
+ * Receives one byte of data from the USART. Determines
+ * command char received and execute code as required.
+ */
 SIGNAL(SIG_UART1_RECV)
 {
 	check_GPS_present = 0;
@@ -172,7 +123,6 @@ SIGNAL(SIG_UART1_RECV)
 		GPS_state = SYNCING;
 		switch(sync_state)
 		{
-		
 			case LOOK_FOR_DLE:
 				if (incomingbyte == 0x10) 
 				{
@@ -220,7 +170,6 @@ SIGNAL(SIG_UART1_RECV)
 			default:
 				sync_state = LOOK_FOR_DLE;
 			break;
-			
 		}
 	}
 }
