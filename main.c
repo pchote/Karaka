@@ -52,101 +52,15 @@
 int main(void)
 {    
 	                                // Program initalization
-    
 	Initialization();
 	
 	sendmsg(PSTR("GPS Karaka Interface Module - Kia Ora>"));
 	
 	sei();
-                                    // Main loop        
-	while(1)            
-	{ if(command_received == 1){        //if a valid command has come in
-        getHeaderInfo(Usart_command[0]; //check if it is reading or writing and get address 
-        switch(Register_Address)
-        {
-           case STATUS:                 //Status Register Read only
-            usart_TX(hexToascii((status_register>>4)&$0f));
-            usart_Tx(hexToAscii(status_register&$0f));
-            usart_Tx('>');
-        break; 
-        
-        case CONTROL:                   //Control register
-            if(write_flsg == 0)         //send out value of control register
-            {
-                usart_Tx(hexToAscii((control_register>>4)&$0f));
-                usart_Tx(hexToAscii(status_register&$0f));
-            }
-            else
-            {
-                control_register = usart_command[1];
-            } 
-            usart_Tx('>')
-        break;
-            
-        case UTCTIME:                    //Time register
-            if (wait_4_timestamp == 0)
-            {
-                send_UTC_Timestamp();
-            }
-            else
-            {
-                error(1)
-                sent_UTC = 1;
-            }
-        break;
-                        
-        case CCD_EXPOSURE:                //Control register
-            if (write_flag == 0)          //Send out value of control register
-            {
-                sendDecimal(Pulse_COunter,4);
-            }
-            else
-            {
-                cli();
-                Pulse_Counter = Dec2Hex(Usart_Command[1],Usart_Command[2]);
-                Current_Count = 0;
-                wait_4_ten_second_boundry = 1;                  
-                sei();
-            }
-            Usart_Tx('>');
-        break;
-        
-        case EOFTIME:                       //end of frame time register
-            if (wait_4_EOFtimestamp == 0)
-            {
-                send_EOF_TimeStamp();
-            }
-            else
-            {
-                ERROR(2);
-                send_EOF = 1;
-            }
-        break;
-        
-        case LAST_PACKET:                   //last GPS packet register
-            send_lastPacket();
-        break;
-        
-        case ERROR_PACKET:                  //last GPS packet causing error register
-            send_errorPacket();
-        break;
-        
-        default:
-            ERROR(6);
-            }
-            command_received = 0;
-            command_cntr = 0;
-         }
-    }      
-       
+
+	// Wait. USB Commands are handled by an interrupt in usart
+	while(1){}
 }    
-        
-           
-		  	
-
-
-
-
 
 
 /*****************************************************************************
@@ -162,8 +76,6 @@ int main(void)
 *****************************************************************************/
 void Initialization(void)
 {
-	
-	
 	PORTA = (1<<CCD_PULSE);
 	PORTB = 0x00;
 	PORTC = 0x00;
@@ -184,8 +96,6 @@ void Initialization(void)
 	wait_4_ten_second_boundary = 1;
 	wait_4_timestamp = 0;
 	wait_4_EOFtimestamp = 0;
-    send_EOF = 0;
-    send_UTC = 0:
 	
 	Command_Init();
 	GPS_Init();
@@ -196,21 +106,6 @@ void Initialization(void)
 	LCD_init();
 	reset_LCD();
 	start_timer1();
-    
-    /* pchote: the following isn't in the printout */
-    USART_Init(16)      //Set baudrate USB to 115.2Kbs
-    USART1_Init(207)    //Set baudrate GPS to 9600 baud
-    timer2_init();      //Millisecond counter
-    timer0_init();      //Pulse counter
-    timer1_init();      //LCD update counter
-    GPS-init();
-    inputsignal_init(); // interupts
-    LCD_init();
-    reset_LCD();
-    start_timer1();
-    
-    
-	
 }
 
 
@@ -233,30 +128,7 @@ void InputSignal_Init(void)
     //enable all external interrupts		
 	EIMSK = (0<<INT7)|(0<<INT6)|(0<<INT5)|(0<<INT4)|(0<<INT3)|(0<<INT2)|(0<<INT1)|(1<<INT0);		
 }
-{
- /******************************************************************************
-*
-*   Function name:  get_header_info
-*
-*   returns:        none
-*
-*   parameters:     char header byte 
-*
-*   Purpose:        Passes header byte for r/w bit, register address and sets flags.
-*                   Header byte layout:
-*                   W/R, CB1,CB0, AD5, AD4, AD3, AD2, AD1, AD0
-*                   Not used:
-*                   CB1, CB0
-*
-*******************************************************************************/
-void get_header_info(char headerByte{
-    Register_Address = headerByte & $1f;
-    write_flag = (headerByte >>7); 
-}  
-  
-    
-  
-{
+
 /*****************************************************************************
 *
 *   Function name : reset_LCD
@@ -268,104 +140,10 @@ void get_header_info(char headerByte{
 *   Purpose :       Sets LCD to write new header comment
 *
 *****************************************************************************/
-  void reset_LCD(void)
-
+void reset_LCD(void)
+{
 	putHeader = 0;
 }
-{
-/*****************************************************************************
-*
-*   Function name : send_ EOF_timestamp
-*
-*   Returns :       None
-*
-*   Parameters :    none
-*
-*   Purpose :       Sends EOF timestamp to serial port
-*
-*****************************************************************************/
- void send_EOF_Timestamp(void)
-    sendDecimal(UTCtime_endofframe.year, 4);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_endofframe.month, 2);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_endofframe.day, 2);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_endofframe.hours, 4);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_endofframe.minutes,2);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_endofframe.seconds, 4);
-    Usart_Tx($3A);
-    sendDecimal(0,3);
-    Usart_Tx($3A);
- }
-
- {
-/*****************************************************************************
-*
-*   Function name : send_ UTC_timestamp
-*
-*   Returns :       None
-*
-*   Parameters :    none
-*
-*   Purpose :       Sends UTC timestamp to serial port
-*
-*****************************************************************************/
- void send_EOF_Timestamp(void)
-    sendDecimal(UTCtime_lastpulse.year, 4);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_lastpulse.month, 2);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_lastpulse.day, 2);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_lastpulse.hours, 4);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_lastpulse.minutes,2);
-    Usart_Tx($3A);
-    sendDecimal(UTCtime_lastpulse.seconds, 4);
-    Usart_Tx($3A);
-    sendDecimal(milliseconds,3);
-    Usart_Tx('>');
- }
-
-/*****************************************************************************
-*
-*   Function name : ERROR
-*
-*   Returns :       None
-*
-*   Parameters :    error code
-*
-*   Purpose :       write error code to serial port
-*
-*****************************************************************************/
-void ERROR(unsigned char errorcode)
-{ sendmsg (PSTR("ERROR"));
-     usart_Tx(hextoAscii((errorcode>>4)&$0f;
-     usart_Tx(hextoAscii((errorcode)&$0f;
-     usart_Tx('>')
-}
-
-/*****************************************************************************
-*
-*   Function name : send_error packet
-*
-*   Returns :       None
-*
-*   Parameters :    None
-*
-*   Purpose :       send error packet to serial port
-*
-*****************************************************************************/
-void send_errorpacket(void)
-
-
-
-
-
-
 
 /*****************************************************************************
 *
