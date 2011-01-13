@@ -14,7 +14,7 @@
 #include "usart.h"
 #include "UART_Math.h"
 #include "usart1.h"
-#include "timer2.h"
+#include "msec_timer.h"
 #include "timer0.h"
 #include "timer1.h"
 #include "GPS.h"
@@ -54,7 +54,7 @@ int main(void)
 	// Initialise the hardware units
 	Command_Init();
 	GPS_Init();
-	timer2_init();		// Millisecond counter
+	msec_timer_init();		// Millisecond counter
 	timer0_init();		// Pulse timer
 	timer1_init();		// LCD update timer
 	InputSignal_Init();	//set up interrupts.
@@ -128,8 +128,8 @@ SIGNAL(SIG_INTERRUPT0)
 				start_timer0();		//start pulse counter for CCD pulse
 			}
 		}
-		stop_timer2();
+		msec_timer_stop();
 		milliseconds = 0;
-		start_timer2();
+		msec_timer_start();
 	}
 }
