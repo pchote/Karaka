@@ -26,20 +26,39 @@
  */
 int main(void)
 {
-	// Configure port I/O usage
-	// TODO: Document what each port is used for
+	// Configure port A.
+	// Pin 0 is used to output the CCD sync pulse.
+	// Pins 1-5 used to input the (unimplemented) button controls
 	DDRA = (1<<CCD_PULSE)|(0<<UP)|(0<<LEFT)|(0<<DOWN)|(0<<RIGHT)|(0<<CENTER);
-	DDRC = 0xff;
-	DDRD &= ~(1<<GPS_PULSE);
-	DDRE = (0<<SWITCH_CHANGE)|(1<<TXD)|(0<<RXD);
-	DDRF = (1<<LCD_ENABLE)|(1<<LCD_READ_WRITE)|(1<<LCD_REG_SELECT);		//set port F
-
-	// Set initial pin levels.
-	PORTA = (1<<CCD_PULSE);
+	
+	// Pin 0 is initially set HIGH
+	// TODO: Why? shouldn't this be LOW? or is it inverted by later circuits?
+	PORTA = (1<<CCD_PULSE);	
+	
+	// Configure port B.
+	// Appears to be unused by code
 	PORTB = 0x00;
+	
+	// Configure port C.
+	// All ports are output to the LCD
+	DDRC = 0xFF;
 	PORTC = 0x00;
+	
+	// Configure Port D.
+	// Used for communication with the GPS
+	// Pin 0 is set to trigger SIG_INTERRUPT0 when a pulse from the gps arrives
+	DDRD &= ~(1<<GPS_PULSE);
 	PORTD = 0x00;
+	
+	// Configure Port E.
+	// Pins 0 and 1 are used for serial communication (via usb to the host machine?)
+	// Pin 6 is used as an input to indicate that the (unimplemented) button controls have changed
+	DDRE = (0<<SWITCH_CHANGE)|(1<<TXD)|(0<<RXD);
 	PORTE = 0x00;
+	
+	// Configure Port F.
+	// Used to send state to the LCD
+	DDRF = (1<<LCD_ENABLE)|(1<<LCD_READ_WRITE)|(1<<LCD_REG_SELECT);		//set port F
 	PORTF = 0x00;
 
 	// Initialise global variables

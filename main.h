@@ -24,13 +24,13 @@
 #define GPS_PULSE		PIND0	// Input for GPS Pulse
 
 #define CCD_PULSE		PINA0	// Output for CCD pulse
-
-#define SWITCH_CHANGE	PINE4	// Input to indicate a switch change has occurred
 #define UP				PINA1	// Input for UP button
 #define LEFT			PINA2	// Input for Left button
 #define DOWN			PINA3	// Input for Down button
 #define RIGHT			PINA4	// Input for Right button
 #define CENTER			PINA5	// Input for Center button
+#define SWITCH_CHANGE	PINE4	// Input to indicate a switch change has occurred
+
 
 #define LCD_ENABLE		PINF2	// Output to enable LCD
 #define LCD_READ_WRITE	PINF1	// Output to select reading or writing from LCD (Read active LOW)
