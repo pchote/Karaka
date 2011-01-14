@@ -3,7 +3,7 @@
 //  File........: msec_timer.c
 //  Author(s)...: Johnny McClymont, Paul Chote
 //  Description.: A timer to keep track of the number of milliseconds
-//                that have passed.
+//                that have passed using timer2.
 //
 //***************************************************************************
 
@@ -21,8 +21,12 @@
  */
 void msec_timer_init(void)
 {
+	// Set the pre-scaler to XXXX
+	// 20Mhz / XXXX gives a YYYYus tick rate?
 	TCCR2 = 0x00;
 	TCCR2 &= ~((1<<CS20)|(1<<CS21)|(1<<CS22));
+	
+	// Enable the timer2 overflow interrupt
 	TIMSK |= (1<<TOIE2);
 	TCNT2 = 6;
 }

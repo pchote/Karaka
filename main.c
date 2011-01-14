@@ -15,7 +15,7 @@
 #include "UART_Math.h"
 #include "usart1.h"
 #include "msec_timer.h"
-#include "timer0.h"
+#include "sync_pulse.h"
 #include "timer1.h"
 #include "GPS.h"
 #include "LCD_LIB.h"
@@ -55,7 +55,7 @@ int main(void)
 	Command_Init();
 	GPS_Init();
 	msec_timer_init();		// Millisecond counter
-	timer0_init();		// Pulse timer
+	sync_pulse_init();		// Pulse timer
 	timer1_init();		// LCD update timer
 	InputSignal_Init();	//set up interrupts.
 	LCD_init();
@@ -113,7 +113,6 @@ SIGNAL(SIG_INTERRUPT0)
 			Current_Count++;
 			if (Current_Count == Pulse_Counter)
 			{
-				PORTA &= ~(1<<GPS_PULSE); //send high signal to CCD
 				Current_Count = 0;	      //reset current count for next frame count
 				wait_4_EOFtimestamp = 1;
 				pulse_timer = 1;	// set ccd intergrate pulse to 512uS long
@@ -126,7 +125,7 @@ SIGNAL(SIG_INTERRUPT0)
 				{
 					nextPacketisEOF = 1;
 				}
-				start_timer0();		//start pulse counter for CCD pulse
+				sync_pulse_trigger();
 			}
 		}
 		msec_timer_stop();
