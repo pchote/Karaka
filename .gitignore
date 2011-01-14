@@ -1,1 +1,3 @@
-default/*
+*.o
+main.elf
+main.hex
