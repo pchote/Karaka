@@ -17,7 +17,7 @@
 #include "main.h"
 
 /*
- * Initialise the timer
+ * Initialise the timer on timer2
  */
 void msec_timer_init(void)
 {

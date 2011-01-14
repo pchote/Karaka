@@ -128,7 +128,7 @@ SIGNAL(SIG_UART0_RECV)
  * modifications by Martin Thomas, KL, .de
  */
 static inline float pgm_read_float_hlp(const float *addr)
-{	
+{
 	union
 	{
 		int i[2];	// uint16_t 

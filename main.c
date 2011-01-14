@@ -88,6 +88,7 @@ void InputSignal_Init(void)
 
 /*
  * Wait for a specified number of milliseconds
+ * TODO: Isn't this usec?
  */
 void Delay(unsigned int millisec)
 {

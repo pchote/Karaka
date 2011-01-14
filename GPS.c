@@ -1,49 +1,28 @@
 //***************************************************************************
 //
 //  File........: GPS.c
-//
-//  Author(s)...: Johnny McClymont
-//
-//  Target(s)...: ATmega128
-//
-//  Compiler....: AVR-GCC 3.3.1; avr-libc 1.0
-//
-//  Description.: GPS routines
-//
-//  Revisions...: 1.0
-//
-//  YYYYMMDD - VER. - COMMENT                                       - SIGN.
-//
-//  20090606 - 1.0  - Created                                       - J.McClymont
+//  Author(s)...: Johnny McClymont, Paul Chote
+//  Description.: Trimble GPS listener
 //
 //***************************************************************************
 
-
 #include <avr/io.h>
-#include "usart1.h"
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include "usart1.h"
 #include "main.h"
 #include "GPS.h"
 #include "usart.h"
 #include "UART_Math.h"
 #include "Command_Layer.h"
-
 	
-/*****************************************************************************
-*
-*   Function name : GPS_Init
-*
-*   Returns :       None
-*
-*   Parameters :    none
-*
-*   Purpose :       Initialize the GPS
-*
-*****************************************************************************/
+/*
+ * Initialise the Trimble gps listener
+ */
 void GPS_Init(void)
 {	
 	USART1_Init(207); 	// set baudrate to 9600
+	
 	//initialise the clocks to zero
 	UTCtime_lastPulse.seconds = 0;
 	UTCtime_lastPulse.minutes = 0;
@@ -60,23 +39,11 @@ void GPS_Init(void)
 	
 	endOfFrame_pulse = 0;	//set to 0 to indicate end of frame pulse not received
 	GPS_state = SYNCING;	//set GPS state to syncing, as we need to sync with incoming packets
-	
-	
 }
 
-
-/*****************************************************************************
-*
-*   Function name : GPS_processPacket
-*
-*   Returns :       none
-*
-*   Parameters :    none
-*
-*   Purpose :       Parse GPS packet
-*					
-*
-*****************************************************************************/
+/*
+ * Process a packet from the Trimble GPS
+ */
 void GPS_processPacket(void)
 {
 	packet_proccessed = 0;
@@ -227,19 +194,9 @@ void GPS_processPacket(void)
 	packet_proccessed = 1;
 }
 
-
-/*****************************************************************************
-*
-*   Function name : store_error_packet();()
-*
-*   Returns :       none
-*
-*   Parameters :    error code
-*
-*   Purpose :       stores packet that caused error
-*					
-*
-*****************************************************************************/
+/*
+ * Store a packet that caused an error for later retrieval
+ */
 void store_error_packet(unsigned char code)
 {
 	for (int i = 0; i< packet_cntr; i++)
@@ -251,23 +208,9 @@ void store_error_packet(unsigned char code)
 	
 }
 
-
-
-
-
-
-/*****************************************************************************
-*
-*   Function name : GPS_sendPacketMask()
-*
-*   Returns :       none
-*
-*   Parameters :    none
-*
-*   Purpose :       Send packet tpo mask automatic packets
-*					
-*
-*****************************************************************************/
+/*
+ * Send a packet mask to the Trimble unit to supress automatic packets
+ */
 void GPS_sendPacketMask(void)
 {
 	unsigned char thisPacket[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
@@ -275,9 +218,4 @@ void GPS_sendPacketMask(void)
 	{
 		Usart1_Tx(thisPacket[i]);
 	}
-	
 }
-
-
-
-

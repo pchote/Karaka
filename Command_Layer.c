@@ -1,28 +1,15 @@
 //***************************************************************************
 //
-//  File........: COMMAND_LAYER.c
-//
-//  Author(s)...: Johnny McClymont
-//
-//  Target(s)...: ATmega128
-//
-//  Compiler....: AVR-GCC 3.3.1; avr-libc 1.0
-//
-//  Description.: GPS routines
-//
-//  Revisions...: 1.0
-//
-//  YYYYMMDD - VER. - COMMENT                                       - SIGN.
-//
-//  20090606 - 1.0  - Created                                       - J.McClymont
+//  File........: Command_Layer.c
+//  Author(s)...: Johnny McClymont, Paul Chote
+//  Description.: Responds to user queries over usb
 //
 //***************************************************************************
 
-
 #include <avr/io.h>
-#include "usart1.h"
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include "usart1.h"
 #include "main.h"
 #include "Command_Layer.h"
 #include "usart.h"
@@ -30,36 +17,18 @@
 #include "GPS.h"
 
 	
-/*****************************************************************************
-*
-*   Function name : Command_Init
-*
-*   Returns :       None
-*
-*   Parameters :    none
-*
-*   Purpose :       Initialize the GPS
-*
-*****************************************************************************/
+/*
+ * Initialise the command parser
+ */
 void Command_Init(void)
 {	
 	USART_Init(16);		// set baudrate at 115.2 kbs
 	error_state = NO_ERROR;
 }
 
-
-/*****************************************************************************
-*
-*   Function name : Command_processPacket
-*
-*   Returns :       none
-*
-*   Parameters :    none
-*
-*   Purpose :       Parse Command packet
-*					
-*
-*****************************************************************************/
+/*
+ * Process a command packet
+ */
 void Command_processPacket(void)
 {
 	reply_cntr = 0;
@@ -69,7 +38,7 @@ void Command_processPacket(void)
 	reply_Packet[reply_cntr++] = stored_error_state;  //put error code into reply packet
 	switch (command_Packet[0])	//get packet ID
 	{
-		case DUMMY:
+		case ECHO:
 				
 		break;
 		
@@ -195,20 +164,9 @@ void Command_processPacket(void)
 	Command_sendPacket();
 }
 
-
-
-/*****************************************************************************
-*
-*   Function name : Command_sendPacket()
-*
-*   Returns :       none
-*
-*   Parameters :    none
-*
-*   Purpose :       Send packet to UI software
-*					
-*
-*****************************************************************************/
+/*
+ * Respond to a command packet using buffered data
+ */
 void Command_sendPacket(void)
 {
 	Usart_Tx(0x10);
