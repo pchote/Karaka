@@ -7,11 +7,7 @@
 //
 //***************************************************************************
 
-#include <avr/io.h>
 #include <avr/interrupt.h>
-#include <avr/pgmspace.h>
-#include <avr/sleep.h>
-#include <inttypes.h>
 #include "main.h"
 
 /*
