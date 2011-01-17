@@ -120,7 +120,7 @@ void display_update()
 			display_write_number(gps_last_timestamp.seconds,2);
 			display_write_byte(' ');
 			display_write_byte('[');
-			display_write_number(Pulse_Counter - Current_Count,4);
+			display_write_number(Pulse_Counter - Current_Count, 4);
 			display_write_byte(']');
 			display_write_control(NEWLINE,10);	
 		break;

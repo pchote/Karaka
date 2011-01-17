@@ -11,6 +11,8 @@
 #ifndef KARAKA_MAIN_H
 #define KARAKA_MAIN_H
 
+#define FALSE (0)
+#define TRUE (!(FALSE))
 
 #define SWHIGH	1
 #define SWLOW	0
@@ -71,7 +73,6 @@ unsigned char wait_4_timestamp;
 unsigned char wait_4_EOFtimestamp;
 unsigned char check_GPS_present;
 int command_cntr;
-unsigned char pulse_timer;			//variable to set length of CCD pulse (number * 512uS)
 unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packet as EOF time
 
 unsigned char ascii_to_nibble(unsigned char a);

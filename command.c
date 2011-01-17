@@ -35,8 +35,8 @@ void command_init(void)
 	// Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
 	UCSR0C = (0<<UMSEL0)|(0<<UPM00)|(0<<USBS0)|(3<<UCSZ00)|(0<<UCPOL0);
 	
-	command_checking_DLE_stuffing = 0;
-	command_have_startbit = 0;
+	command_checking_DLE_stuffing = FALSE;
+	command_have_startbit = FALSE;
 	command_cntr = 0;
 }
 
@@ -69,7 +69,7 @@ void command_process_packet(void)
 		break;
 		
 		case GET_UTCTIME:
-			if (wait_4_timestamp == 0)
+			if (!wait_4_timestamp)
 			{	
 				command_write_number(gps_last_timestamp.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
@@ -100,7 +100,7 @@ void command_process_packet(void)
 							+ ascii_to_nibble(command_packet[5]);
 			
 			Current_Count = 0;
-			wait_4_ten_second_boundary = 1;
+			wait_4_ten_second_boundary = TRUE;
 			sei();
 		
 		case GET_CCD_EXPOSURE:
@@ -108,7 +108,7 @@ void command_process_packet(void)
 		break;
 		
 		case GET_EOFTIME:
-			if (wait_4_EOFtimestamp == 0)
+			if (!wait_4_EOFtimestamp)
 			{
 				command_write_number(gps_last_synctime.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
@@ -220,40 +220,34 @@ unsigned char command_receive_byte(void)
 SIGNAL(SIG_UART0_RECV)
 {
 	unsigned char userCommand = command_receive_byte();
-	if ((userCommand == 0x10) && (command_have_startbit == 0))	//check if received byte is physical layer packet start byte
-	{		
-		command_have_startbit = 1; 
-	}
-	else if (command_have_startbit == 1) //if already processing packet continue to scan for packet end byte
+	if ((userCommand == 0x10) && !command_have_startbit) //check if received byte is physical layer packet start byte		
+		command_have_startbit = TRUE;
+	else if (command_have_startbit) //if already processing packet continue to scan for packet end byte
 	{	
 		command_packet[command_cntr++] = userCommand;		//save received byte to packet buffer
 		if (userCommand == 0x10)  
 		{
-			if (command_checking_DLE_stuffing == 1)
+			if (command_checking_DLE_stuffing)
 			{
-				command_checking_DLE_stuffing = 0;
+				command_checking_DLE_stuffing = FALSE;
 				command_cntr--;		//write over 2nd DLE byte in gps_trimble_packet
 			}
 			else
-			{
-				command_checking_DLE_stuffing = 1;
-			}
+				command_checking_DLE_stuffing = TRUE;
 		}
 		else if (userCommand == 0x03)
 		{
-			if (command_checking_DLE_stuffing == 1)  //this is true if the last =byte received was an odd numbered DLE
+			if (command_checking_DLE_stuffing)  //this is true if the last =byte received was an odd numbered DLE
 			{
 				command_cntr--;		//remove the ETX byte
 				command_cntr--;		//remove the DLE byte
-				command_have_startbit = 0;
+				command_have_startbit = FALSE;
 				command_process_packet();
 				command_cntr = 0;
 			}
 		}
 		else 
-		{
-			command_checking_DLE_stuffing = 0;
-		}	
+			command_checking_DLE_stuffing = FALSE;
 	}
 }
 

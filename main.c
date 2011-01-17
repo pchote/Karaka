@@ -57,9 +57,9 @@ int main(void)
 	Current_Count = 0;
 	status_register = 0;
 	control_register = 0;
-	wait_4_ten_second_boundary = 1;
-	wait_4_timestamp = 0;
-	wait_4_EOFtimestamp = 0;
+	wait_4_ten_second_boundary = TRUE;
+	wait_4_timestamp = FALSE;
+	wait_4_EOFtimestamp = FALSE;
 
 	// Initialise the hardware units
 	command_init();
@@ -88,25 +88,24 @@ int main(void)
  */
 SIGNAL(SIG_INTERRUPT0)
 {
-	if((Pulse_Counter != 0) && (gps_state == GPS_TIME_GOOD))  //make sure pulse counter value is 1 or greater and that we are in normal GPS state
+	if((Pulse_Counter != 0) && gps_state == GPS_TIME_GOOD)  //make sure pulse counter value is 1 or greater and that we are in normal GPS state
 	{
-		if (wait_4_ten_second_boundary == 0)  //check that we have started counting on a 10 second boundary
+		if (!wait_4_ten_second_boundary)  //check that we have started counting on a 10 second boundary
 		{
-			wait_4_timestamp = 1;
+			wait_4_timestamp = TRUE;
 			Current_Count++;
 			if (Current_Count == Pulse_Counter)
 			{
 				Current_Count = 0;	      //reset current count for next frame count
-				wait_4_EOFtimestamp = 1;
-				pulse_timer = 1;	// set ccd intergrate pulse to 512uS long
-				if (gps_packet_proccessed == 1)
+				wait_4_EOFtimestamp = TRUE;
+				if (gps_packet_proccessed)
 				{
-					gps_record_synctime = 1;	//set end of frame flag so we know to record next time stamp as end of frame time
-					nextPacketisEOF = 0;
+					gps_record_synctime = TRUE;	//set end of frame flag so we know to record next time stamp as end of frame time
+					nextPacketisEOF = FALSE;
 				}
 				else
 				{
-					nextPacketisEOF = 1;
+					nextPacketisEOF = TRUE;
 				}
 				sync_pulse_trigger();
 			}
