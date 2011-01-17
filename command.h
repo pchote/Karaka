@@ -40,13 +40,10 @@ unsigned char size;
 void command_init(void);
 void command_process_packet(void);
 void command_send_packet(void);
-void sendDecimal(int number, unsigned char places);
+void command_write_number(int number, unsigned char places);
+void command_transmit_byte(unsigned char);
+unsigned char command_receive_byte(void);
 
-
-void USART_Init(unsigned int baudrate);
-void Usart_Tx(char);
-unsigned char Usart_Rx(void);
-void sendmsg (const char *s);
 char startBit_Rcvd;
 unsigned char userCommand;;		//buffer for incoming byte
 unsigned char checking_DLE_stuffing_flag;		//flag to check if packet has DLE stuffed

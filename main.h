@@ -73,7 +73,6 @@ unsigned char pulse_timer;			//variable to set length of CCD pulse (number * 512
 unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packet as EOF time
 
 void Delay(unsigned int millisec);
-
 unsigned char ascii_to_nibble(unsigned char a);
 unsigned char nibble_to_ascii(unsigned char n);
 

@@ -73,19 +73,19 @@ void command_process_packet(void)
 		case GET_UTCTIME:
 			if (wait_4_timestamp == 0)
 			{	
-				sendDecimal(UTCtime_lastPulse.year, 4);
+				command_write_number(UTCtime_lastPulse.year, 4);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_lastPulse.month, 2);
+				command_write_number(UTCtime_lastPulse.month, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_lastPulse.day, 2);
+				command_write_number(UTCtime_lastPulse.day, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_lastPulse.hours, 2);
+				command_write_number(UTCtime_lastPulse.hours, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_lastPulse.minutes, 2);
+				command_write_number(UTCtime_lastPulse.minutes, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_lastPulse.seconds, 2);
+				command_write_number(UTCtime_lastPulse.seconds, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(milliseconds, 3);
+				command_write_number(milliseconds, 3);
 			}
 			else
 			{
@@ -106,25 +106,25 @@ void command_process_packet(void)
 			sei();
 		
 		case GET_CCD_EXPOSURE:
-			sendDecimal(Pulse_Counter,4);
+			command_write_number(Pulse_Counter,4);
 		break;
 		
 		case GET_EOFTIME:
 			if (wait_4_EOFtimestamp == 0)
 			{
-				sendDecimal(UTCtime_endOfFrame.year, 4);
+				command_write_number(UTCtime_endOfFrame.year, 4);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_endOfFrame.month, 2);
+				command_write_number(UTCtime_endOfFrame.month, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_endOfFrame.day, 2);
+				command_write_number(UTCtime_endOfFrame.day, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_endOfFrame.hours, 2);
+				command_write_number(UTCtime_endOfFrame.hours, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_endOfFrame.minutes, 2);
+				command_write_number(UTCtime_endOfFrame.minutes, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(UTCtime_endOfFrame.seconds, 2);
+				command_write_number(UTCtime_endOfFrame.seconds, 2);
 				reply_Packet[reply_cntr++] = ':';
-				sendDecimal(0,3);
+				command_write_number(0,3);
 			}
 			else
 			{
@@ -169,18 +169,18 @@ void command_process_packet(void)
  */
 void command_send_packet(void)
 {
-	Usart_Tx(0x10);
+	command_transmit_byte(0x10);
 	for (unsigned char i = 0; i < reply_cntr; i++)
 	{
-		Usart_Tx(reply_Packet[i]);
+		command_transmit_byte(reply_Packet[i]);
 		if (reply_Packet[i] == 0x10)
-			Usart_Tx(0x10);
+			command_transmit_byte(0x10);
 	}
-	Usart_Tx(0x10);
-	Usart_Tx(0x03);
+	command_transmit_byte(0x10);
+	command_transmit_byte(0x03);
 }
 
-void sendDecimal(int number, unsigned char places)
+void command_write_number(int number, unsigned char places)
 {
 	// Calculate the divisor for the highest place
 	unsigned int div = 1;
@@ -199,7 +199,7 @@ void sendDecimal(int number, unsigned char places)
 /*
  * Send one byte through the USART
  */
-void Usart_Tx(char data)
+void command_transmit_byte(unsigned char data)
 {
     while (!(UCSR0A & (1<<UDRE0)));
     UDR0 = data;
@@ -208,7 +208,7 @@ void Usart_Tx(char data)
 /*
  * Receive one byte through the USART
  */
-unsigned char Usart_Rx(void)
+unsigned char command_receive_byte(void)
 {
     while (!(UCSR0A & (1<<RXC)));
     return UDR0;
@@ -221,7 +221,7 @@ unsigned char Usart_Rx(void)
  */
 SIGNAL(SIG_UART0_RECV)
 {
-	userCommand = Usart_Rx();
+	userCommand = command_receive_byte();
 	if ((userCommand == 0x10) && (startBit_Rcvd == 0))	//check if received byte is physical layer packet start byte
 	{		
 		startBit_Rcvd = 1; 
