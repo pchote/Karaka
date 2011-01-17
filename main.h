@@ -72,7 +72,6 @@ int command_cntr;
 unsigned char pulse_timer;			//variable to set length of CCD pulse (number * 512uS)
 unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packet as EOF time
 
-void InputSignal_Init(void);
 void Delay(unsigned int millisec);
 
 #endif

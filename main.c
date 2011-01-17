@@ -29,13 +29,10 @@ int main(void)
 	// Pin 0 is used to output the CCD sync pulse.
 	// Pins 1-5 used to input the (unimplemented) button controls
 	DDRA = (1<<CCD_PULSE)|(0<<UP)|(0<<LEFT)|(0<<DOWN)|(0<<RIGHT)|(0<<CENTER);
-	
-	// Pin 0 is initially set HIGH
-	// TODO: Why? shouldn't this be LOW? or is it inverted by later circuits?
+	// Set the pin HIGH so that the output bnc is set LOW.
 	PORTA = (1<<CCD_PULSE);	
 	
-	// Configure port B.
-	// Appears to be unused by code
+	// Configure port B; unused by code
 	PORTB = 0x00;
 	
 	// Configure port C.
@@ -75,27 +72,19 @@ int main(void)
 	msec_timer_init();		// Millisecond counter
 	sync_pulse_init();		// Pulse timer
 	display_init();
-	InputSignal_Init();	//set up interrupts.
-
-	// Enable interrupts (TODO: Again?)
-	sei();
-
-	// Wait. Main program logic is handled in interrupts.
-	while(1){}
-}
-
-/*
- * Initialise external interrupt pins
- * TODO: Describe what each interrupt is triggered by
- */
-void InputSignal_Init(void)
-{
+	
 	// initialise all external interupts to be rising edge triggered
 	EICRA = (1<<ISC31)|(1<<ISC30)|(1<<ISC21)|(1<<ISC20)|(1<<ISC11)|(1<<ISC10)|(1<<ISC01)|(0<<ISC00); 
 	EICRB = (0<<ISC71)|(1<<ISC70)|(0<<ISC61)|(1<<ISC60)|(0<<ISC51)|(1<<ISC50)|(0<<ISC41)|(1<<ISC40);
 	
-	// enable all external interrupts		
-	EIMSK = (0<<INT7)|(0<<INT6)|(0<<INT5)|(0<<INT4)|(0<<INT3)|(0<<INT2)|(0<<INT1)|(1<<INT0);		
+	// Enable interrupt 0 on PIND0 for incoming gps pulses	
+	EIMSK = (0<<INT7)|(0<<INT6)|(0<<INT5)|(0<<INT4)|(0<<INT3)|(0<<INT2)|(0<<INT1)|(1<<INT0);
+	
+	// Enable interrupts
+	sei();
+
+	// Wait. Main program logic is handled in interrupts.
+	while(1){}
 }
 
 /*
@@ -116,8 +105,7 @@ void Delay(unsigned int millisec)
  */
 SIGNAL(SIG_INTERRUPT0)
 {
-	// TODO: The single `&' looks like a bug
-	if((Pulse_Counter != 0) & (GPS_state == GPS_TIME_GOOD))  //make sure pulse counter value is 1 or greater and that we are in normal GPS state
+	if((Pulse_Counter != 0) && (GPS_state == GPS_TIME_GOOD))  //make sure pulse counter value is 1 or greater and that we are in normal GPS state
 	{
 		if (wait_4_ten_second_boundary == 0)  //check that we have started counting on a 10 second boundary
 		{
