@@ -29,6 +29,6 @@ void display_write_control(unsigned char value, int time);
 void display_write_string(const char *s);
 void display_write_number(int number, unsigned char places);
 void display_write_header(const char *msg);
-void display_set_state(unsigned char LCD_state);
+void display_update();
 
 #endif

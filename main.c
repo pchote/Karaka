@@ -88,7 +88,7 @@ int main(void)
  */
 SIGNAL(SIG_INTERRUPT0)
 {
-	if((Pulse_Counter != 0) && (GPS_state == GPS_TIME_GOOD))  //make sure pulse counter value is 1 or greater and that we are in normal GPS state
+	if((Pulse_Counter != 0) && (gps_state == GPS_TIME_GOOD))  //make sure pulse counter value is 1 or greater and that we are in normal GPS state
 	{
 		if (wait_4_ten_second_boundary == 0)  //check that we have started counting on a 10 second boundary
 		{
@@ -99,9 +99,9 @@ SIGNAL(SIG_INTERRUPT0)
 				Current_Count = 0;	      //reset current count for next frame count
 				wait_4_EOFtimestamp = 1;
 				pulse_timer = 1;	// set ccd intergrate pulse to 512uS long
-				if (packet_proccessed == 1)
+				if (gps_packet_proccessed == 1)
 				{
-					endOfFrame_pulse = 1;	//set end of frame flag so we know to record next time stamp as end of frame time
+					gps_record_synctime = 1;	//set end of frame flag so we know to record next time stamp as end of frame time
 					nextPacketisEOF = 0;
 				}
 				else

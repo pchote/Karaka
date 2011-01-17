@@ -52,17 +52,20 @@ typedef struct
 	unsigned char hours;
 	unsigned char minutes;
 	unsigned char seconds;
-} clock;
+} timestamp;
+
+timestamp gps_last_timestamp;
+timestamp gps_last_synctime;
 
 unsigned char status_register;
 unsigned char control_register;
 unsigned int Pulse_Counter;
 unsigned int Current_Count;
 
-clock UTCtime_lastPulse;
-clock UTCtime_endOfFrame;
+unsigned char error_state;
 
-unsigned char GPS_state;
+
+unsigned char gps_state;
 unsigned char wait_4_ten_second_boundary;
 unsigned char wait_4_timestamp;
 unsigned char wait_4_EOFtimestamp;

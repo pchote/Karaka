@@ -30,12 +30,13 @@
 #define GPS_TIME_NOT_LOCKED			0x20
 #define GPS_SERIAL_LOST				0x40
 
-unsigned char command_Packet[15];
-unsigned char reply_Packet[100];
-unsigned char reply_cntr;
-unsigned char stored_error_state;
-unsigned char error_state;
-unsigned char size;
+unsigned char command_packet[15];
+unsigned char command_reply_packet[100];
+unsigned char command_reply_cntr;
+unsigned char command_stored_error_state;
+unsigned char command_size;
+unsigned char command_have_startbit;
+unsigned char command_checking_DLE_stuffing; //flag to check if packet has DLE stuffed
 
 void command_init(void);
 void command_process_packet(void);
@@ -43,9 +44,5 @@ void command_send_packet(void);
 void command_write_number(int number, unsigned char places);
 void command_transmit_byte(unsigned char);
 unsigned char command_receive_byte(void);
-
-unsigned char startBit_Rcvd;
-unsigned char userCommand;;		//buffer for incoming byte
-unsigned char checking_DLE_stuffing_flag;		//flag to check if packet has DLE stuffed
 
 #endif

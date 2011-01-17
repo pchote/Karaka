@@ -35,8 +35,8 @@ void command_init(void)
 	// Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
 	UCSR0C = (0<<UMSEL0)|(0<<UPM00)|(0<<USBS0)|(3<<UCSZ00)|(0<<UCPOL0);
 	
-	checking_DLE_stuffing_flag = 0;
-	startBit_Rcvd = 0;
+	command_checking_DLE_stuffing = 0;
+	command_have_startbit = 0;
 	command_cntr = 0;
 }
 
@@ -45,59 +45,59 @@ void command_init(void)
  */
 void command_process_packet(void)
 {
-	reply_cntr = 0;
-	reply_Packet[reply_cntr++] = command_Packet[0];  //put same packet ID in reply packet
-	stored_error_state = error_state;
+	command_reply_cntr = 0;
+	command_reply_packet[command_reply_cntr++] = command_packet[0];  //put same packet ID in reply packet
+	command_stored_error_state = error_state;
 	error_state = NO_ERROR;
-	reply_Packet[reply_cntr++] = stored_error_state;  //put error code into reply packet
-	switch (command_Packet[0])	//get packet ID
+	command_reply_packet[command_reply_cntr++] = command_stored_error_state;  //put error code into reply packet
+	switch (command_packet[0])	//get packet ID
 	{
 		case ECHO:
 		break;
 		
 		case GET_STATUS:
-			reply_Packet[reply_cntr++] = nibble_to_ascii((status_register>>4)&0x0f);
-			reply_Packet[reply_cntr++] = nibble_to_ascii(status_register&0x0f);
+			command_reply_packet[command_reply_cntr++] = nibble_to_ascii((status_register>>4)&0x0f);
+			command_reply_packet[command_reply_cntr++] = nibble_to_ascii(status_register&0x0f);
 		break;
 		
 		case SET_CONTROL:
-			control_register = command_Packet[2];
+			control_register = command_packet[2];
 			
 		case GET_CONTROL:
-			reply_Packet[reply_cntr++] = nibble_to_ascii((control_register>>4)&0x0f);
-			reply_Packet[reply_cntr++] = nibble_to_ascii(control_register&0x0f);
+			command_reply_packet[command_reply_cntr++] = nibble_to_ascii((control_register>>4)&0x0f);
+			command_reply_packet[command_reply_cntr++] = nibble_to_ascii(control_register&0x0f);
 		break;
 		
 		case GET_UTCTIME:
 			if (wait_4_timestamp == 0)
 			{	
-				command_write_number(UTCtime_lastPulse.year, 4);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_lastPulse.month, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_lastPulse.day, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_lastPulse.hours, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_lastPulse.minutes, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_lastPulse.seconds, 2);
-				reply_Packet[reply_cntr++] = ':';
+				command_write_number(gps_last_timestamp.year, 4);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_timestamp.month, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_timestamp.day, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_timestamp.hours, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_timestamp.minutes, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_timestamp.seconds, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
 				command_write_number(milliseconds, 3);
 			}
 			else
 			{
-				stored_error_state |= UTC_ACCESS_ON_UPDATE;
-				stored_error_state = stored_error_state & 0xFE;
+				command_stored_error_state |= UTC_ACCESS_ON_UPDATE;
+				command_stored_error_state = command_stored_error_state & 0xFE;
 			}
 		break;
 		
 		case SET_CCD_EXPOSURE:
 			cli();
-			Pulse_Counter = ascii_to_nibble(command_Packet[2])*1000
-							+ ascii_to_nibble(command_Packet[3])*100
-							+ ascii_to_nibble(command_Packet[4])*10
-							+ ascii_to_nibble(command_Packet[5]);
+			Pulse_Counter = ascii_to_nibble(command_packet[2])*1000
+							+ ascii_to_nibble(command_packet[3])*100
+							+ ascii_to_nibble(command_packet[4])*10
+							+ ascii_to_nibble(command_packet[5]);
 			
 			Current_Count = 0;
 			wait_4_ten_second_boundary = 1;
@@ -110,55 +110,55 @@ void command_process_packet(void)
 		case GET_EOFTIME:
 			if (wait_4_EOFtimestamp == 0)
 			{
-				command_write_number(UTCtime_endOfFrame.year, 4);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_endOfFrame.month, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_endOfFrame.day, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_endOfFrame.hours, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_endOfFrame.minutes, 2);
-				reply_Packet[reply_cntr++] = ':';
-				command_write_number(UTCtime_endOfFrame.seconds, 2);
-				reply_Packet[reply_cntr++] = ':';
+				command_write_number(gps_last_synctime.year, 4);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_synctime.month, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_synctime.day, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_synctime.hours, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_synctime.minutes, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
+				command_write_number(gps_last_synctime.seconds, 2);
+				command_reply_packet[command_reply_cntr++] = ':';
 				command_write_number(0,3);
 			}
 			else
 			{
-				stored_error_state |= EOF_ACCESS_ON_UPDATE;
-				stored_error_state = stored_error_state & 0xFE;
+				command_stored_error_state |= EOF_ACCESS_ON_UPDATE;
+				command_stored_error_state = command_stored_error_state & 0xFE;
 			}
 		break;
 		
 		case GET_LAST_PACKET:
-			size = Last_Packet[0];
-			for (int i = 1; i < size+1; i++)
+			command_size = gps_last_trimble_packet[0];
+			for (int i = 1; i < command_size+1; i++)
 			{
-				reply_Packet[reply_cntr++] = nibble_to_ascii((Last_Packet[i]>>4)&0x0f);
-				reply_Packet[reply_cntr++] = nibble_to_ascii((Last_Packet[i])&0x0f);
+				command_reply_packet[command_reply_cntr++] = nibble_to_ascii((gps_last_trimble_packet[i]>>4)&0x0f);
+				command_reply_packet[command_reply_cntr++] = nibble_to_ascii((gps_last_trimble_packet[i])&0x0f);
 			}
 		break;
 		
 		case GET_ERROR_PACKET:
-			size = Error_Packet[0];
-			reply_Packet[reply_cntr++]  = '[';
-			reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[1]>>4)&0x0f);
-			reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[1])&0x0f);
-			reply_Packet[reply_cntr++]  = ']';
-			for (int i = 2; i < size+2; i++)
+			command_size = gps_trimble_error_packet[0];
+			command_reply_packet[command_reply_cntr++]  = '[';
+			command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[1]>>4)&0x0f);
+			command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[1])&0x0f);
+			command_reply_packet[command_reply_cntr++]  = ']';
+			for (int i = 2; i < command_size+2; i++)
 			{
-				reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[i]>>4)&0x0f);
-				reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[i])&0x0f);
+				command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[i]>>4)&0x0f);
+				command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[i])&0x0f);
 			}
 		break;
 		
 		default:
-			stored_error_state |= PACKETID_INVALID;
-			stored_error_state = stored_error_state & 0xFE;
+			command_stored_error_state |= PACKETID_INVALID;
+			command_stored_error_state = command_stored_error_state & 0xFE;
 		break;
 	}
-	reply_Packet[1] = stored_error_state;
+	command_reply_packet[1] = command_stored_error_state;
 	command_send_packet();
 }
 
@@ -168,10 +168,10 @@ void command_process_packet(void)
 void command_send_packet(void)
 {
 	command_transmit_byte(0x10);
-	for (unsigned char i = 0; i < reply_cntr; i++)
+	for (unsigned char i = 0; i < command_reply_cntr; i++)
 	{
-		command_transmit_byte(reply_Packet[i]);
-		if (reply_Packet[i] == 0x10)
+		command_transmit_byte(command_reply_packet[i]);
+		if (command_reply_packet[i] == 0x10)
 			command_transmit_byte(0x10);
 	}
 	command_transmit_byte(0x10);
@@ -190,7 +190,7 @@ void command_write_number(int number, unsigned char places)
 	{
 		p = number / div;
 		number %= div;
-		reply_Packet[reply_cntr++] = nibble_to_ascii(p);
+		command_reply_packet[command_reply_cntr++] = nibble_to_ascii(p);
 	}
 }
 
@@ -219,40 +219,40 @@ unsigned char command_receive_byte(void)
  */
 SIGNAL(SIG_UART0_RECV)
 {
-	userCommand = command_receive_byte();
-	if ((userCommand == 0x10) && (startBit_Rcvd == 0))	//check if received byte is physical layer packet start byte
+	unsigned char userCommand = command_receive_byte();
+	if ((userCommand == 0x10) && (command_have_startbit == 0))	//check if received byte is physical layer packet start byte
 	{		
-		startBit_Rcvd = 1; 
+		command_have_startbit = 1; 
 	}
-	else if (startBit_Rcvd == 1) //if already processing packet continue to scan for packet end byte
+	else if (command_have_startbit == 1) //if already processing packet continue to scan for packet end byte
 	{	
-		command_Packet[command_cntr++] = userCommand;		//save received byte to packet buffer
+		command_packet[command_cntr++] = userCommand;		//save received byte to packet buffer
 		if (userCommand == 0x10)  
 		{
-			if (checking_DLE_stuffing_flag == 1)
+			if (command_checking_DLE_stuffing == 1)
 			{
-				checking_DLE_stuffing_flag = 0;
-				command_cntr--;		//write over 2nd DLE byte in GPS_Packet
+				command_checking_DLE_stuffing = 0;
+				command_cntr--;		//write over 2nd DLE byte in gps_trimble_packet
 			}
 			else
 			{
-				checking_DLE_stuffing_flag = 1;
+				command_checking_DLE_stuffing = 1;
 			}
 		}
 		else if (userCommand == 0x03)
 		{
-			if (checking_DLE_stuffing_flag == 1)  //this is true if the last =byte received was an odd numbered DLE
+			if (command_checking_DLE_stuffing == 1)  //this is true if the last =byte received was an odd numbered DLE
 			{
 				command_cntr--;		//remove the ETX byte
 				command_cntr--;		//remove the DLE byte
-				startBit_Rcvd = 0;
+				command_have_startbit = 0;
 				command_process_packet();
 				command_cntr = 0;
 			}
 		}
 		else 
 		{
-			checking_DLE_stuffing_flag = 0;
+			command_checking_DLE_stuffing = 0;
 		}	
 	}
 }

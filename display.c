@@ -60,12 +60,13 @@ void display_write_header(const char *msg)
 /*
  * Set the message display mode for the LCD 
  */
-void display_set_state(unsigned char LCD_state)
+void display_update()
 {	
-	switch (LCD_state)
+	
+	switch (gps_state)
 	{
 		case SYNCING:
-			if (display_last_gps_state != LCD_state)
+			if (display_last_gps_state != gps_state)
 				display_write_header(PSTR("SYNCING TO GPS"));
 			
 			display_write_byte('.');
@@ -79,7 +80,7 @@ void display_set_state(unsigned char LCD_state)
 		break;
 		
 		case SETUP_GPS:
-			if (display_last_gps_state != LCD_state)
+			if (display_last_gps_state != gps_state)
 				display_write_header(PSTR("SETTING UP GPS"));
 			
 			display_write_byte('.');
@@ -94,7 +95,7 @@ void display_set_state(unsigned char LCD_state)
 		break;
 		
 		case CHECK_GPS_TIME_VALID:
-			if (display_last_gps_state != LCD_state)
+			if (display_last_gps_state != gps_state)
 				display_write_header(PSTR("CHECK GPS LOCK"));
 			
 			display_write_byte('.');
@@ -109,14 +110,14 @@ void display_set_state(unsigned char LCD_state)
 		break;
 		
 		case GPS_TIME_GOOD:
-			if (display_last_gps_state != LCD_state)
+			if (display_last_gps_state != gps_state)
 				display_write_header(PSTR("UTC TIME"));
 			
-			display_write_number(UTCtime_lastPulse.hours,2);
+			display_write_number(gps_last_timestamp.hours,2);
 			display_write_byte(':');
-			display_write_number(UTCtime_lastPulse.minutes,2);
+			display_write_number(gps_last_timestamp.minutes,2);
 			display_write_byte(':');
-			display_write_number(UTCtime_lastPulse.seconds,2);
+			display_write_number(gps_last_timestamp.seconds,2);
 			display_write_byte(' ');
 			display_write_byte('[');
 			display_write_number(Pulse_Counter - Current_Count,4);
@@ -124,7 +125,7 @@ void display_set_state(unsigned char LCD_state)
 			display_write_control(NEWLINE,10);	
 		break;
 	}
-	display_last_gps_state = LCD_state;
+	display_last_gps_state = gps_state;
 }
 
 /*
@@ -208,13 +209,13 @@ SIGNAL(SIG_OVERFLOW1)
 	// Reset the counter
 	TCNT1 = DISPLAY_TIMER_TICKS;
 	
-	display_set_state(GPS_state);
+	display_update();
 	
 	// Have we lost contact with the GPS?
-	if(GPS_state != SYNCING && check_GPS_present++ > 16)  
+	if(gps_state != SYNCING && check_GPS_present++ > 16)  
 	{
 		gps_usart_state = SYNCING_PACKETS;
-		GPS_state = SYNCING;
+		gps_state = SYNCING;
 		error_state |= GPS_SERIAL_LOST;
 		error_state = error_state & 0xFE;
 		check_GPS_present = 0;
