@@ -159,7 +159,6 @@ SIGNAL(SIG_UART1_RECV)
 					GPS_startBit_Rcvd = 1;		//set flag to indicate we are recording a valid packet
 					gps_usart_state = CAPTURE_PACKETS;		//change state as we are now synced to packets
 					GPS_sendPacketMask();		//send SETUP packet to switch off most automatic packets
-					//sendmsg(PSTR("SYNCED>"));
 					GPS_state = CHECK_GPS_TIME_VALID;	//change state to check time from GPS is valid
 					
 					reset_LCD();		//reset the LCD

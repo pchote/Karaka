@@ -27,9 +27,7 @@ void LCD_init(void)
 	LCD_WriteControl(0x38, 500);
 	LCD_WriteControl(CLEARLCD, 500);
 	LCD_WriteControl(CURSORON, 500);
-	
 	LCD_WriteControl(CURSORHOME, 500);
-	
 	LCD_WriteControl(0x06, 500);
 	
 	Delay(500);
@@ -55,9 +53,11 @@ void LCD_init(void)
  */
 void start_timer1(void)
 {
+	// Start the timer
 	TCNT1 = 0XF0BD;	//overflow after 7812 ticks ~ 0.5s
 	TCCR1B |= (1<<CS10)|(0<<CS11)|(1<<CS12);	//set tick time to 64uS
 }
+
 
 /*
  * Interrupt signal handler for timer1.
@@ -96,7 +96,6 @@ void update_LCD(unsigned char LCD_state)
 				LCD_WriteControl(CURSORHOME, 50);
 				LCD_WriteControl(CLEARLCD, 500);
 				LCD_sendmsg(PSTR("SYNCING TO GPS"));
-				//sendmsg(PSTR("SYNCING TO GPS>"));
 				LCD_WriteControl(NEWLINE,50);
 				putHeader = 1;
 			}
@@ -138,7 +137,6 @@ void update_LCD(unsigned char LCD_state)
 				LCD_WriteControl(CURSORHOME, 50);
 				LCD_WriteControl(CLEARLCD, 500);
 				LCD_sendmsg(PSTR("CHECK GPS LOCK"));
-				//sendmsg(PSTR("CHECKING GPS TIME>"));
 				LCD_WriteControl(NEWLINE,50);
 				putHeader = 1;
 			}
@@ -160,7 +158,6 @@ void update_LCD(unsigned char LCD_state)
 				LCD_WriteControl(CURSORHOME, 50);
 				LCD_WriteControl(CLEARLCD, 500);
 				LCD_sendmsg(PSTR("UTC TIME"));
-				//sendmsg(PSTR("GPS TIME GOOD>"));
 				LCD_WriteControl(NEWLINE,50);
 				putHeader = 1;
 			}
@@ -171,7 +168,7 @@ void update_LCD(unsigned char LCD_state)
 			LCD_sendDecimal(UTCtime_lastPulse.seconds,2);
 			LCD_WriteData(' ');
 			LCD_WriteData('[');
-			LCD_sendDecimal((Pulse_Counter-Current_Count),4);
+			LCD_sendDecimal(Pulse_Counter - Current_Count,4);
 			LCD_WriteData(']');
 			LCD_WriteControl(NEWLINE,50);	
 		break;
@@ -206,21 +203,21 @@ void LCD_WriteData(unsigned char value)
 }
 
 /*
- * Send a string to the LCD
+ * Display a string stored in flash memory
+ * The display is limited to 16 characters; longer strings will be truncated
  */
 void LCD_sendmsg(const char *s)
 {
-	unsigned char qcntr,sndcntr;	//indexes into the queue array holding the msg to send via UART
-	unsigned char queue[16];		//character queue array holding msg to send via UART
-	uint8_t i;
-	qcntr = 0;		//preset indices
-	sndcntr = 0;	
-	for (i = 0; pgm_read_byte(&s[i]) && i < 16; i++)
-		{
-		queue[qcntr++] = pgm_read_byte(&s[i]);
-		}
-		
-	while (qcntr != sndcntr) LCD_WriteData(queue[sndcntr++]); //send the god damn msg
+	// Read the message from flash memory into a buffer
+	unsigned char queue[16];
+	unsigned char qcntr;
+	for (qcntr = 0; pgm_read_byte(&s[qcntr]) && qcntr < 16; qcntr++)
+		queue[qcntr] = pgm_read_byte(&s[qcntr]);
+	
+	// Send the characters to the display
+	unsigned char sndcntr = 0;
+	while (sndcntr < qcntr)
+		LCD_WriteData(queue[sndcntr++]);
 }
 
 /*
