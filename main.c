@@ -11,7 +11,6 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include "main.h"
-#include "UART_Math.h"
 #include "usart1.h"
 #include "msec_timer.h"
 #include "sync_pulse.h"
@@ -129,4 +128,36 @@ SIGNAL(SIG_INTERRUPT0)
 		}
 		msec_timer_reset();
 	}
+}
+
+/*
+ * Convert an ascii character '0'-'F' to a nibble
+ */
+unsigned char ascii_to_nibble(unsigned char a)
+{
+	// '0' - '9'
+	if (a >= 0x30 && a <= 0x39)
+		return a - 0x30;
+	// 'A' - 'F'
+	else if (a >= 0x41 && a <= 0x46)
+		return a - 0x37;
+	// 'a' - 'f'
+	else if (a >= 0x61 && a <= 0x66)
+		return a - 0x57;
+	else return 0;
+}	
+
+/*
+ * Convert a nibble in the range 0-F to ascii
+ */
+unsigned char nibble_to_ascii(unsigned char n)
+{
+	// Ignore the high nibble
+	n &= 0x0F;
+	
+	// '0' to '9'
+	if (n >= 0 && n <= 9)
+		return n + 0x30;
+	// 'A' to 'F'
+	else return n + 0x37;
 }

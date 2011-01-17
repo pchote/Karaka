@@ -12,7 +12,6 @@
 #include "command.h"
 #include "usart1.h"
 #include "main.h"
-#include "UART_Math.h"
 #include "GPS.h"
 
 	
@@ -59,34 +58,34 @@ void command_process_packet(void)
 		break;
 		
 		case GET_STATUS:
-			reply_Packet[reply_cntr++] = hexToAscii((status_register>>4)&0x0f);
-			reply_Packet[reply_cntr++] = hexToAscii(status_register&0x0f);
+			reply_Packet[reply_cntr++] = nibble_to_ascii((status_register>>4)&0x0f);
+			reply_Packet[reply_cntr++] = nibble_to_ascii(status_register&0x0f);
 		break;
 		
 		case SET_CONTROL:
 			control_register = command_Packet[2];
 			
 		case GET_CONTROL:
-			reply_Packet[reply_cntr++] = hexToAscii((control_register>>4)&0x0f);
-			reply_Packet[reply_cntr++] = hexToAscii(control_register&0x0f);
+			reply_Packet[reply_cntr++] = nibble_to_ascii((control_register>>4)&0x0f);
+			reply_Packet[reply_cntr++] = nibble_to_ascii(control_register&0x0f);
 		break;
 		
 		case GET_UTCTIME:
 			if (wait_4_timestamp == 0)
 			{	
-				reply_cntr = sendDecimal(UTCtime_lastPulse.year, 4, reply_cntr);
+				sendDecimal(UTCtime_lastPulse.year, 4);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_lastPulse.month, 2, reply_cntr);
+				sendDecimal(UTCtime_lastPulse.month, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_lastPulse.day, 2, reply_cntr);
+				sendDecimal(UTCtime_lastPulse.day, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_lastPulse.hours,2, reply_cntr);
+				sendDecimal(UTCtime_lastPulse.hours, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_lastPulse.minutes,2, reply_cntr);
+				sendDecimal(UTCtime_lastPulse.minutes, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_lastPulse.seconds,2, reply_cntr);
+				sendDecimal(UTCtime_lastPulse.seconds, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(milliseconds,3, reply_cntr);
+				sendDecimal(milliseconds, 3);
 			}
 			else
 			{
@@ -97,35 +96,35 @@ void command_process_packet(void)
 		
 		case SET_CCD_EXPOSURE:
 			cli();
-			Pulse_Counter = convert_ASCII_to_HEX(command_Packet[2])*1000
-							+ convert_ASCII_to_HEX(command_Packet[3])*100
-							+ convert_ASCII_to_HEX(command_Packet[4])*10
-							+ convert_ASCII_to_HEX(command_Packet[5]);
+			Pulse_Counter = ascii_to_nibble(command_Packet[2])*1000
+							+ ascii_to_nibble(command_Packet[3])*100
+							+ ascii_to_nibble(command_Packet[4])*10
+							+ ascii_to_nibble(command_Packet[5]);
 			
 			Current_Count = 0;
 			wait_4_ten_second_boundary = 1;
 			sei();
 		
 		case GET_CCD_EXPOSURE:
-			reply_cntr = sendDecimal(Pulse_Counter,4, reply_cntr);
+			sendDecimal(Pulse_Counter,4);
 		break;
 		
 		case GET_EOFTIME:
 			if (wait_4_EOFtimestamp == 0)
 			{
-				reply_cntr = sendDecimal(UTCtime_endOfFrame.year, 4, reply_cntr);
+				sendDecimal(UTCtime_endOfFrame.year, 4);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_endOfFrame.month, 2, reply_cntr);
+				sendDecimal(UTCtime_endOfFrame.month, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_endOfFrame.day, 2, reply_cntr);
+				sendDecimal(UTCtime_endOfFrame.day, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_endOfFrame.hours,2, reply_cntr);
+				sendDecimal(UTCtime_endOfFrame.hours, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_endOfFrame.minutes,2, reply_cntr);
+				sendDecimal(UTCtime_endOfFrame.minutes, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(UTCtime_endOfFrame.seconds,2, reply_cntr);
+				sendDecimal(UTCtime_endOfFrame.seconds, 2);
 				reply_Packet[reply_cntr++] = ':';
-				reply_cntr = sendDecimal(0,3, reply_cntr);
+				sendDecimal(0,3);
 			}
 			else
 			{
@@ -138,21 +137,21 @@ void command_process_packet(void)
 			size = Last_Packet[0];
 			for (int i = 1; i < size+1; i++)
 			{
-				reply_Packet[reply_cntr++] = hexToAscii((Last_Packet[i]>>4)&0x0f);
-				reply_Packet[reply_cntr++] = hexToAscii((Last_Packet[i])&0x0f);
+				reply_Packet[reply_cntr++] = nibble_to_ascii((Last_Packet[i]>>4)&0x0f);
+				reply_Packet[reply_cntr++] = nibble_to_ascii((Last_Packet[i])&0x0f);
 			}
 		break;
 		
 		case GET_ERROR_PACKET:
 			size = Error_Packet[0];
 			reply_Packet[reply_cntr++]  = '[';
-			reply_Packet[reply_cntr++]  = hexToAscii((Error_Packet[1]>>4)&0x0f);
-			reply_Packet[reply_cntr++]  = hexToAscii((Error_Packet[1])&0x0f);
+			reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[1]>>4)&0x0f);
+			reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[1])&0x0f);
 			reply_Packet[reply_cntr++]  = ']';
 			for (int i = 2; i < size+2; i++)
 			{
-				reply_Packet[reply_cntr++]  = hexToAscii((Error_Packet[i]>>4)&0x0f);
-				reply_Packet[reply_cntr++]  = hexToAscii((Error_Packet[i])&0x0f);
+				reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[i]>>4)&0x0f);
+				reply_Packet[reply_cntr++]  = nibble_to_ascii((Error_Packet[i])&0x0f);
 			}
 		break;
 		
@@ -179,6 +178,22 @@ void command_send_packet(void)
 	}
 	Usart_Tx(0x10);
 	Usart_Tx(0x03);
+}
+
+void sendDecimal(int number, unsigned char places)
+{
+	// Calculate the divisor for the highest place
+	unsigned int div = 1;
+	for (unsigned char i = 1; i < places; i++)
+		div *= 10;
+	
+	// Loop over each digit in the number
+	for (unsigned char p = 0; div > 0; div /= 10)
+	{
+		p = number / div;
+		number %= div;
+		reply_Packet[reply_cntr++] = nibble_to_ascii(p);
+	}
 }
 
 /*

@@ -10,7 +10,6 @@
 #include <avr/pgmspace.h>
 #include "display.h"
 #include "main.h"
-#include "UART_Math.h"
 #include "usart1.h"
 #include "command.h"
 
@@ -207,6 +206,6 @@ void display_write_number(int number, unsigned char places)
 	{
 		p = number / div;
 		number %= div;
-		display_write_byte(hexToAscii(p));
+		display_write_byte(nibble_to_ascii(p));
 	}
 }

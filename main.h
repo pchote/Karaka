@@ -74,4 +74,7 @@ unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packe
 
 void Delay(unsigned int millisec);
 
+unsigned char ascii_to_nibble(unsigned char a);
+unsigned char nibble_to_ascii(unsigned char n);
+
 #endif

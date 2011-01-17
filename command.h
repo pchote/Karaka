@@ -40,6 +40,7 @@ unsigned char size;
 void command_init(void);
 void command_process_packet(void);
 void command_send_packet(void);
+void sendDecimal(int number, unsigned char places);
 
 
 void USART_Init(unsigned int baudrate);

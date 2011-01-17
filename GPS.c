@@ -13,7 +13,6 @@
 #include "main.h"
 #include "display.h"
 #include "GPS.h"
-#include "UART_Math.h"
 #include "command.h"
 	
 /*
