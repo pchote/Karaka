@@ -53,13 +53,13 @@ int main(void)
 	PORTF = 0x00;
 
 	// Initialise global variables
-	Pulse_Counter = 0;
-	Current_Count = 0;
+	exposure_total = 0;
+	exposure_current = 0;
 	status_register = 0;
 	control_register = 0;
 	wait_4_ten_second_boundary = TRUE;
 	wait_4_timestamp = FALSE;
-	wait_4_EOFtimestamp = FALSE;
+	gps_should_wait_for_synctime = FALSE;
 
 	// Initialise the hardware units
 	command_init();
@@ -73,7 +73,7 @@ int main(void)
 	EICRB = (0<<ISC71)|(1<<ISC70)|(0<<ISC61)|(1<<ISC60)|(0<<ISC51)|(1<<ISC50)|(0<<ISC41)|(1<<ISC40);
 	
 	// Enable interrupt 0 on PIND0 for incoming gps pulses	
-	EIMSK = (0<<INT7)|(0<<INT6)|(0<<INT5)|(0<<INT4)|(0<<INT3)|(0<<INT2)|(0<<INT1)|(1<<INT0);
+	EIMSK = (1<<INT0);
 	
 	// Enable interrupts
 	sei();
@@ -88,29 +88,35 @@ int main(void)
  */
 SIGNAL(SIG_INTERRUPT0)
 {
-	if((Pulse_Counter != 0) && gps_state == GPS_TIME_GOOD)  //make sure pulse counter value is 1 or greater and that we are in normal GPS state
+	// Don't count down unless we have a valid exposure time, and the GPS is locked
+	if(exposure_total != 0 && gps_state == GPS_TIME_GOOD)
 	{
-		if (!wait_4_ten_second_boundary)  //check that we have started counting on a 10 second boundary
+		msec_timer_reset();
+		
+		// Are we waiting for a 10s boundary before we start counting down?
+		if (!wait_4_ten_second_boundary)
 		{
 			wait_4_timestamp = TRUE;
-			Current_Count++;
-			if (Current_Count == Pulse_Counter)
+			exposure_current++;
+			
+			// End of exposure - send a syncpulse to the camera
+			// and store a flag so the gps can save the synctime.
+			if (exposure_current == exposure_total)
 			{
-				Current_Count = 0;	      //reset current count for next frame count
-				wait_4_EOFtimestamp = TRUE;
+				exposure_current = 0;
+				gps_should_wait_for_synctime = TRUE;
+				
 				if (gps_packet_proccessed)
 				{
 					gps_record_synctime = TRUE;	//set end of frame flag so we know to record next time stamp as end of frame time
 					nextPacketisEOF = FALSE;
 				}
 				else
-				{
 					nextPacketisEOF = TRUE;
-				}
+				
 				sync_pulse_trigger();
 			}
 		}
-		msec_timer_reset();
 	}
 }
 

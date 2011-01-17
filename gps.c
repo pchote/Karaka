@@ -201,8 +201,8 @@ void gps_process_trimble_packet(void)
 									gps_last_synctime.day = gps_last_timestamp.day;
 									gps_last_synctime.month = gps_last_timestamp.month;
 									gps_last_synctime.year = gps_last_timestamp.year;
-									if(wait_4_EOFtimestamp)
-										wait_4_EOFtimestamp = FALSE;
+									if(gps_should_wait_for_synctime)
+										gps_should_wait_for_synctime = FALSE;
 									
 									gps_record_synctime = FALSE;
 								}
@@ -240,6 +240,15 @@ void gps_process_trimble_packet(void)
 	gps_packet_proccessed = TRUE;
 }
 
+void gps_timeout(void)
+{
+	gps_usart_state = SYNCING_PACKETS;
+	gps_state = SYNCING;
+	error_state |= GPS_SERIAL_LOST;
+	error_state = error_state & 0xFE;
+	gps_timeout_count = 0;
+}
+
 /* 
  * Interrupt service routine for Data received from UART
  * Receives one byte of data from the USART. Determines
@@ -247,7 +256,7 @@ void gps_process_trimble_packet(void)
  */
 SIGNAL(SIG_UART1_RECV)
 {
-	check_GPS_present = 0;
+	gps_timeout_count = 0;
 	unsigned char incomingbyte = gps_receive_byte();
 	if (gps_usart_state == CAPTURE_PACKETS)
 	{

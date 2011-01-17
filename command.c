@@ -94,21 +94,27 @@ void command_process_packet(void)
 		
 		case SET_CCD_EXPOSURE:
 			cli();
-			Pulse_Counter = ascii_to_nibble(command_packet[2])*1000
+			exposure_total = ascii_to_nibble(command_packet[2])*1000
 							+ ascii_to_nibble(command_packet[3])*100
 							+ ascii_to_nibble(command_packet[4])*10
 							+ ascii_to_nibble(command_packet[5]);
 			
-			Current_Count = 0;
+			exposure_current = 0;
 			wait_4_ten_second_boundary = TRUE;
 			sei();
 		
 		case GET_CCD_EXPOSURE:
-			command_write_number(Pulse_Counter,4);
+			command_write_number(exposure_total, 4);
 		break;
 		
 		case GET_EOFTIME:
-			if (!wait_4_EOFtimestamp)
+			// GPS hasn't calculated the synctime yet
+			if (gps_should_wait_for_synctime)
+			{
+				command_stored_error_state |= EOF_ACCESS_ON_UPDATE;
+				command_stored_error_state = command_stored_error_state & 0xFE;
+			}			
+			else
 			{
 				command_write_number(gps_last_synctime.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
@@ -123,11 +129,6 @@ void command_process_packet(void)
 				command_write_number(gps_last_synctime.seconds, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
 				command_write_number(0,3);
-			}
-			else
-			{
-				command_stored_error_state |= EOF_ACCESS_ON_UPDATE;
-				command_stored_error_state = command_stored_error_state & 0xFE;
 			}
 		break;
 		

@@ -40,12 +40,6 @@
 
 #define LCD_DATA		PORTC	// Output data port for LCD
 
-#define	SYNCING					0	//trying to sync packets of GPS unit
-#define SETUP_GPS				1	//send packets to GPS to set up auto broadcast.
-#define CHECK_GPS_TIME_VALID	2	//check to see timing packets from GPS are from GPS clock
-#define GPS_TIME_GOOD			3	//gps is locked and working.
-#define INVALID                 4   // Invalid state
-
 typedef struct
 {
 	unsigned int year;
@@ -56,24 +50,19 @@ typedef struct
 	unsigned char seconds;
 } timestamp;
 
-timestamp gps_last_timestamp;
-timestamp gps_last_synctime;
+
 
 unsigned char status_register;
 unsigned char control_register;
-unsigned int Pulse_Counter;
-unsigned int Current_Count;
+unsigned int exposure_total;
+unsigned int exposure_current;
 
 unsigned char error_state;
 
 
-unsigned char gps_state;
 unsigned char wait_4_ten_second_boundary;
 unsigned char wait_4_timestamp;
-unsigned char wait_4_EOFtimestamp;
-unsigned char check_GPS_present;
 int command_cntr;
-unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packet as EOF time
 
 unsigned char ascii_to_nibble(unsigned char a);
 unsigned char nibble_to_ascii(unsigned char n);

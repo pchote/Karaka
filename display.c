@@ -120,7 +120,7 @@ void display_update()
 			display_write_number(gps_last_timestamp.seconds,2);
 			display_write_byte(' ');
 			display_write_byte('[');
-			display_write_number(Pulse_Counter - Current_Count, 4);
+			display_write_number(exposure_total - exposure_current, 4);
 			display_write_byte(']');
 			display_write_control(NEWLINE,10);	
 		break;
@@ -212,12 +212,6 @@ SIGNAL(SIG_OVERFLOW1)
 	display_update();
 	
 	// Have we lost contact with the GPS?
-	if(gps_state != SYNCING && check_GPS_present++ > 16)  
-	{
-		gps_usart_state = SYNCING_PACKETS;
-		gps_state = SYNCING;
-		error_state |= GPS_SERIAL_LOST;
-		error_state = error_state & 0xFE;
-		check_GPS_present = 0;
-	}
+	if(gps_state != SYNCING && gps_timeout_count++ > 16)
+		gps_timeout();
 }
