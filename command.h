@@ -18,7 +18,6 @@
 #define SET_CCD_EXPOSURE		0x44	// Set new CCD exposure time
 #define GET_CCD_EXPOSURE		0x24	// Request for CCD exposure time
 #define	GET_EOFTIME				0x25	// Request for End of frame time at last Sync pulse
-#define GET_LAST_PACKET			0x26	// Request for last GPS packet
 #define GET_ERROR_PACKET		0x27	// Request for last GPS packet that caused an error
 
 // Error codes

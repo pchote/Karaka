@@ -107,12 +107,7 @@ void gps_process_trimble_packet(void)
 {
 	gps_processing_packet = TRUE;
 	unsigned char packet_ptr = gps_packet_cntr;
-	for (int i = 0; i< packet_ptr; i++)
-	{
-		gps_last_trimble_packet[i+1] = gps_trimble_packet[i];
-	}
-	gps_last_trimble_packet[0] = packet_ptr;
-	
+
 	switch (gps_state)
 	{
 		case SETUP_GPS:
@@ -257,7 +252,6 @@ SIGNAL(SIG_UART1_RECV)
 {
 	// Signal that the gps is alive
 	gps_timeout_count = 0;
-	
 	
 	unsigned char incomingbyte = gps_receive_byte();
 	if (gps_usart_state == CAPTURE_PACKETS)

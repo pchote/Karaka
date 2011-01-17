@@ -50,9 +50,7 @@ timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
 
 unsigned char gps_trimble_packet[100];
-unsigned char gps_last_trimble_packet[101];   // [0] holds packet size
 unsigned char gps_trimble_error_packet[102];  // [0] holds packet size, [1] holds error code resulting in packet storage
-
 
 void gps_init(void);
 void gps_timeout(void);

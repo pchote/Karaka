@@ -131,15 +131,6 @@ void command_process_packet(void)
 			}
 		break;
 		
-		case GET_LAST_PACKET:
-			command_size = gps_last_trimble_packet[0];
-			for (int i = 1; i < command_size+1; i++)
-			{
-				command_reply_packet[command_reply_cntr++] = nibble_to_ascii((gps_last_trimble_packet[i]>>4)&0x0f);
-				command_reply_packet[command_reply_cntr++] = nibble_to_ascii((gps_last_trimble_packet[i])&0x0f);
-			}
-		break;
-		
 		case GET_ERROR_PACKET:
 			command_size = gps_trimble_error_packet[0];
 			command_reply_packet[command_reply_cntr++]  = '[';
