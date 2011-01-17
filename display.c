@@ -33,8 +33,7 @@ void display_init(void)
 	Delay(65000);
 	Delay(65000);
 	cursor_ptr = 0;
-	putHeader = 0;
-	
+	display_last_gps_state = INVALID;
 	// Initialise the lcd update timer on timer1
 	TCCR1A = 0x00;
 	TIMSK |= (1<<TOIE1);
@@ -59,29 +58,16 @@ SIGNAL(SIG_OVERFLOW1)
 		GPS_state = SYNCING;
 		error_state |= GPS_SERIAL_LOST;
 		error_state = error_state & 0xFE;
-		display_reset_header();
 		check_GPS_present = 0;
 	}
 }
 
 void display_write_header(const char *msg)
 {
-	if (putHeader == 0)
-	{
-		display_write_control(CURSORHOME, 50);
-		display_write_control(CLEARLCD, 500);
-		display_write_string(msg);
-		display_write_control(NEWLINE,50);
-		putHeader = 1;
-	}
-}
-
-/*
- * Returns the LCD cursor to the start of the display
- */
-void display_reset_header(void)
-{
-	putHeader = 0;
+	display_write_control(CURSORHOME, 50);
+	display_write_control(CLEARLCD, 500);
+	display_write_string(msg);
+	display_write_control(NEWLINE,50);
 }
 
 /*
@@ -92,7 +78,9 @@ void display_set_state(unsigned char LCD_state)
 	switch (LCD_state)
 	{
 		case SYNCING:
-			display_write_header(PSTR("SYNCING TO GPS"));
+			if (display_last_gps_state != LCD_state)
+				display_write_header(PSTR("SYNCING TO GPS"));
+			
 			display_write_byte('.');
 			if (cursor_ptr++ == 15)
 			{
@@ -104,7 +92,9 @@ void display_set_state(unsigned char LCD_state)
 		break;
 		
 		case SETUP_GPS:
-			display_write_header(PSTR("SETTING UP GPS"));
+			if (display_last_gps_state != LCD_state)
+				display_write_header(PSTR("SETTING UP GPS"));
+			
 			display_write_byte('.');
 			
 			if (cursor_ptr++ == 15)
@@ -117,7 +107,9 @@ void display_set_state(unsigned char LCD_state)
 		break;
 		
 		case CHECK_GPS_TIME_VALID:
-			display_write_header(PSTR("CHECK GPS LOCK"));
+			if (display_last_gps_state != LCD_state)
+				display_write_header(PSTR("CHECK GPS LOCK"));
+			
 			display_write_byte('.');
 			
 			if (cursor_ptr++ == 15)
@@ -130,7 +122,9 @@ void display_set_state(unsigned char LCD_state)
 		break;
 		
 		case GPS_TIME_GOOD:
-			display_write_header(PSTR("UTC TIME"));
+			if (display_last_gps_state != LCD_state)
+				display_write_header(PSTR("UTC TIME"));
+			
 			display_write_number(UTCtime_lastPulse.hours,2);
 			display_write_byte(':');
 			display_write_number(UTCtime_lastPulse.minutes,2);
@@ -143,6 +137,7 @@ void display_set_state(unsigned char LCD_state)
 			display_write_control(NEWLINE,50);	
 		break;
 	}
+	display_last_gps_state = LCD_state;
 }
 
 /*

@@ -76,10 +76,6 @@ int main(void)
 	sync_pulse_init();		// Pulse timer
 	display_init();
 	InputSignal_Init();	//set up interrupts.
-	display_reset_header();
-	
-	// Say hello via usb
-	//sendmsg(PSTR("GPS Karaka Interface Module - Kia Ora>"));
 
 	// Enable interrupts (TODO: Again?)
 	sei();

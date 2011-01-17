@@ -42,6 +42,7 @@
 #define SETUP_GPS				1	//send packets to GPS to set up auto broadcast.
 #define CHECK_GPS_TIME_VALID	2	//check to see timing packets from GPS are from GPS clock
 #define GPS_TIME_GOOD			3	//gps is locked and working.
+#define INVALID                 4   // Invalid state
 
 typedef struct
 {

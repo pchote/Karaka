@@ -20,10 +20,9 @@
 #define DISPLAY_TIMER_TICKS 0XF0BD
 
 unsigned char cursor_ptr;
-unsigned char putHeader;
+unsigned char display_last_gps_state;
 
 void display_init(void);
-void display_reset_header(void);
 void display_write_byte(unsigned char value);
 void display_write_control(unsigned char value, int time);
 void display_write_string(const char *s);
