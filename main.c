@@ -59,7 +59,6 @@ int main(void)
 	control_register = 0;
 	wait_4_ten_second_boundary = TRUE;
 	wait_4_timestamp = FALSE;
-	synctime_ready = FALSE;
 
 	// Initialise the hardware units
 	command_init();
@@ -104,17 +103,9 @@ SIGNAL(SIG_INTERRUPT0)
 			if (exposure_current == exposure_total)
 			{
 				exposure_current = 0;
-				synctime_ready = FALSE;
 				
-				// If the gps is currently processing a packet, use it as the synctime
-				if (gps_processing_packet)
-				{
-					gps_record_synctime = TRUE;	//set end of frame flag so we know to record next time stamp as end of frame time
-					nextPacketisEOF = FALSE;
-				}
-				else
-					nextPacketisEOF = TRUE;
-				
+				// If the gps is currently processing a packet, wait for the next one
+				gps_record_synctime = gps_processing_packet ? RECORD_NEXT_PACKET : RECORD_THIS_PACKET;				
 				sync_pulse_trigger();
 			}
 		}

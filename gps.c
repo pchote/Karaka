@@ -191,8 +191,7 @@ void gps_process_trimble_packet(void)
 								gps_last_timestamp.month = gps_trimble_packet[15];
 								gps_last_timestamp.year = ((gps_trimble_packet[16]<<8)&0xFF00) | (gps_trimble_packet[17]& 0x00FF);
 
-								// If this is a synctime and CCD pulse wasn't set halfway thru processing packet
-								if (gps_record_synctime && !nextPacketisEOF)
+								if (gps_record_synctime == RECORD_THIS_PACKET)
 								{
 									// Store the UTC bytes to EOF clock
 									gps_last_synctime.seconds = gps_last_timestamp.seconds;
@@ -201,10 +200,8 @@ void gps_process_trimble_packet(void)
 									gps_last_synctime.day = gps_last_timestamp.day;
 									gps_last_synctime.month = gps_last_timestamp.month;
 									gps_last_synctime.year = gps_last_timestamp.year;
-									if(!synctime_ready)
-										synctime_ready = TRUE;
-									
-									gps_record_synctime = FALSE;
+
+									gps_record_synctime = SYNCTIME_VALID;
 								}
 								
 								if (wait_4_ten_second_boundary)  //if we are waiting for a 10 second boundary
@@ -236,10 +233,10 @@ void gps_process_trimble_packet(void)
 			}
 		break;
 	}
-	if (nextPacketisEOF)
-		nextPacketisEOF = FALSE;	//check to see if end of frame pulse came while processing packet
-
+	
 	gps_processing_packet = FALSE;
+	if (gps_record_synctime == RECORD_NEXT_PACKET)
+		gps_record_synctime = RECORD_THIS_PACKET;
 }
 
 void gps_timeout(void)
@@ -258,7 +255,10 @@ void gps_timeout(void)
  */
 SIGNAL(SIG_UART1_RECV)
 {
+	// Signal that the gps is alive
 	gps_timeout_count = 0;
+	
+	
 	unsigned char incomingbyte = gps_receive_byte();
 	if (gps_usart_state == CAPTURE_PACKETS)
 	{

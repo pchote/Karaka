@@ -108,7 +108,7 @@ void command_process_packet(void)
 		break;
 		
 		case GET_EOFTIME:
-			if (!synctime_ready)
+			if (gps_record_synctime != SYNCTIME_VALID)
 			{
 				command_stored_error_state |= EOF_ACCESS_ON_UPDATE;
 				command_stored_error_state = command_stored_error_state & 0xFE;
