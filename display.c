@@ -221,67 +221,21 @@ void LCD_sendmsg(const char *s)
 }
 
 /*
- * Send a decimal number to the LCD
+ * Display an integer with a given number of digits
  */
 void LCD_sendDecimal(int number, unsigned char places)
 {
-	unsigned char thousands = 0;
-	unsigned char hundreds = 0;
-	unsigned char tens = 0;
-	unsigned char ones = 0;
-
-	// TODO: Use integer division and the modulus operator. This is just ridiculous.
-	while (number >= 0)
-	{
-		number = number - 1000;
-		thousands++;
-	}
-	thousands--;
-	number = number + 1000;
+	// Calculate the divisor for the highest place
+	unsigned int div = 1;
+	for (unsigned char i = 1; i < places; i++)
+		div *= 10;
 	
-	if (places == 0x04)
+	// Loop over each digit in the number
+	for (unsigned char p = 0; div > 0; div /= 10)
 	{
-		LCD_WriteData(hexToAscii(thousands));
-		places--;
-	}
-	
-	while (number >= 0)
-	{
-		number -= 100;
-		hundreds++;
-	}
-	hundreds--;
-	number += 100;
-	if (places == 3)
-	{
-		LCD_WriteData(hexToAscii(hundreds));
-		places--;
-	}
-	
-	while (number >= 0)
-	{
-		number -= 10;
-		tens++;
-	}
-	tens--;
-	number += 10;
-	if (places == 2)
-	{
-		LCD_WriteData(hexToAscii(tens));
-		places--;
-	}
-	
-	while (number >= 0)
-	{
-		number -= 1;
-		ones++;
-	}
-	ones--;
-	number += 1;
-	if (places == 1)
-	{
-		LCD_WriteData(hexToAscii(ones));
-		places--;
+		p = number / div;
+		number %= div;
+		LCD_WriteData(hexToAscii(p));
 	}
 }
  

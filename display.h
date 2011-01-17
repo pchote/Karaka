@@ -26,6 +26,5 @@ void LCD_WriteControl(unsigned char value, int time);
 void LCD_sendmsg (const char *s);
 void LCD_sendDecimal(int number, unsigned char places);
 void update_LCD(unsigned char LCD_state);
-void start_timer1(void);
 
 #endif
