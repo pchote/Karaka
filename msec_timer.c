@@ -13,7 +13,6 @@
 #include <avr/sleep.h>
 #include <inttypes.h>
 #include "msec_timer.h"
-#include "LCD_LIB.h"
 #include "main.h"
 
 /*

@@ -120,22 +120,3 @@ SIGNAL(SIG_UART0_RECV)
 		}	
 	}
 }
-
-/* 
- * Read a float (4 Bytes) from PROGMEM
- * the idea using a union is from Joerg Wunsch, found
- * on the avr-gcc mailing-list, marked as "public domain",
- * modifications by Martin Thomas, KL, .de
- */
-static inline float pgm_read_float_hlp(const float *addr)
-{
-	union
-	{
-		int i[2];	// uint16_t 
-		float f;
-	} u;
-	
-	u.i[0] = pgm_read_word((PGM_P)addr);
-	u.i[1] = pgm_read_word((PGM_P)addr+2);
-	return u.f;
-}

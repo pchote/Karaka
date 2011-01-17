@@ -1,12 +1,12 @@
 //***************************************************************************
 //
-//  File........: LCD_LIB.c
+//  File........: display.c
 //  Author(s)...: Johnny McClymont, Paul Chote
-//  Description.: LCD routines
+//  Description.: LCD display routines
 //
 //***************************************************************************
 
-#include "LCD_LIB.h"
+#include "display.h"
 #include "main.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -15,6 +15,8 @@
 #include <inttypes.h>
 #include "UART_Math.h"
 #include "usart.h"
+#include "usart1.h"
+#include "Command_Layer.h"
 
 /*
  * Initialise the LCD
@@ -38,6 +40,47 @@ void LCD_init(void)
 	Delay(65000);
 	cursor_ptr = 0;
 	putHeader = 0;
+	
+	// Initialise the lcd update timer on timer1
+	TCCR1A = 0x00;
+	TCCR1B &= ~((1<<CS10)|(1<<CS11)|(1<<CS12));
+	TIMSK |= (1<<TOIE1);
+	TCNT1 = 0XF0BD;
+	
+	start_timer1();
+}
+
+/*
+ * Start the timer to trigger an overflow interrupt every ~0.5 seconds
+ */
+void start_timer1(void)
+{
+	TCNT1 = 0XF0BD;	//overflow after 7812 ticks ~ 0.5s
+	TCCR1B |= (1<<CS10)|(0<<CS11)|(1<<CS12);	//set tick time to 64uS
+}
+
+/*
+ * Interrupt signal handler for timer1.
+ * This signals that the lcd should be updated
+ */
+SIGNAL(SIG_OVERFLOW1)
+{
+	TCCR1B &= ~((1<<CS10)|(1<<CS11)|(1<<CS12));	//stop timer 1 clock
+	update_LCD(GPS_state);
+	start_timer1();
+	
+	if (GPS_state != SYNCING)
+	{
+		if(check_GPS_present++ > 16)  
+		{
+			gps_usart_state = SYNCING_PACKETS;
+			GPS_state = SYNCING;
+			error_state |= GPS_SERIAL_LOST;
+			error_state = error_state & 0xFE;
+			reset_LCD();
+			check_GPS_present = 0;
+		}
+	}
 }
 
 /*
@@ -53,7 +96,7 @@ void update_LCD(unsigned char LCD_state)
 				LCD_WriteControl(CURSORHOME, 50);
 				LCD_WriteControl(CLEARLCD, 500);
 				LCD_sendmsg(PSTR("SYNCING TO GPS"));
-				sendmsg(PSTR("SYNCING TO GPS>"));
+				//sendmsg(PSTR("SYNCING TO GPS>"));
 				LCD_WriteControl(NEWLINE,50);
 				putHeader = 1;
 			}
@@ -95,7 +138,7 @@ void update_LCD(unsigned char LCD_state)
 				LCD_WriteControl(CURSORHOME, 50);
 				LCD_WriteControl(CLEARLCD, 500);
 				LCD_sendmsg(PSTR("CHECK GPS LOCK"));
-				sendmsg(PSTR("CHECKING GPS TIME>"));
+				//sendmsg(PSTR("CHECKING GPS TIME>"));
 				LCD_WriteControl(NEWLINE,50);
 				putHeader = 1;
 			}
@@ -117,7 +160,7 @@ void update_LCD(unsigned char LCD_state)
 				LCD_WriteControl(CURSORHOME, 50);
 				LCD_WriteControl(CLEARLCD, 500);
 				LCD_sendmsg(PSTR("UTC TIME"));
-				sendmsg(PSTR("GPS TIME GOOD>"));
+				//sendmsg(PSTR("GPS TIME GOOD>"));
 				LCD_WriteControl(NEWLINE,50);
 				putHeader = 1;
 			}

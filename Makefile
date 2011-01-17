@@ -5,7 +5,7 @@
 
 DEVICE     = atmega128
 PROGRAMMER = -c dragon_jtag -P usb:7d:af
-OBJECTS    = main.o Command_Layer.o GPS.o LCD_LIB.o msec_timer.o sync_pulse.o timer1.o UART_Math.o usart.o usart1.o
+OBJECTS    = main.o Command_Layer.o GPS.o display.o msec_timer.o sync_pulse.o UART_Math.o usart.o usart1.o
 FUSES      = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 
 # Tune the lines below only if you know what you are doing:

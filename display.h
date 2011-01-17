@@ -1,13 +1,13 @@
 //***************************************************************************
 //
-//  File........: LCD_LIB.h
+//  File........: display.h
 //  Author(s)...: Johnny McClymont, Paul Chote
 //  Description.: LCD routines
 //
 //***************************************************************************
 
-#ifndef KARAKA_LCD_H
-#define KARAKA_LCD_H
+#ifndef KARAKA_DISPLAY_H
+#define KARAKA_DISPLAY_H
 
 #define NEWLINE			0xC0
 #define CLEARLCD		0x01
@@ -26,5 +26,6 @@ void LCD_WriteControl(unsigned char value, int time);
 void LCD_sendmsg (const char *s);
 void LCD_sendDecimal(int number, unsigned char places);
 void update_LCD(unsigned char LCD_state);
+void start_timer1(void);
 
 #endif

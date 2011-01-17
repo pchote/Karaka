@@ -36,6 +36,8 @@
 /****************************************************************************************/
 
 unsigned char convert_ASCII_to_HEX(int ASCII_Char){
+	
+	// TODO: simply return ASCII_Char - 48 if it is in the right range
 	unsigned char HEX_Char;
 	switch(ASCII_Char){
 		case 48:	//'0' 

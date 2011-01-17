@@ -16,9 +16,8 @@
 #include "usart1.h"
 #include "msec_timer.h"
 #include "sync_pulse.h"
-#include "timer1.h"
 #include "GPS.h"
-#include "LCD_LIB.h"
+#include "display.h"
 #include "Command_Layer.h"
 	
 /*
@@ -75,14 +74,12 @@ int main(void)
 	GPS_Init();
 	msec_timer_init();		// Millisecond counter
 	sync_pulse_init();		// Pulse timer
-	timer1_init();		// LCD update timer
-	InputSignal_Init();	//set up interrupts.
 	LCD_init();
+	InputSignal_Init();	//set up interrupts.
 	reset_LCD();
-	start_timer1();
-
+	
 	// Say hello via usb
-	sendmsg(PSTR("GPS Karaka Interface Module - Kia Ora>"));
+	//sendmsg(PSTR("GPS Karaka Interface Module - Kia Ora>"));
 
 	// Enable interrupts (TODO: Again?)
 	sei();
