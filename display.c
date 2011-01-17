@@ -34,11 +34,17 @@ void display_init(void)
 	Delay(65000);
 	cursor_ptr = 0;
 	display_last_gps_state = INVALID;
-	// Initialise the lcd update timer on timer1
-	TCCR1A = 0x00;
+	
+	// Enable the timer1 overflow interrupt and set initial ticks
 	TIMSK |= (1<<TOIE1);
 	TCNT1 = DISPLAY_TIMER_TICKS;
-	TCCR1B |= (1<<CS10)|(0<<CS11)|(1<<CS12);	//set tick time to 64uS
+	
+	// Select `normal' counter mode
+	TCCR1A = 0x00;
+	
+	// Set the prescaler to 1/1024; each tick = 64us.
+	// Also starts the timer counting
+	TCCR1B |= (1<<CS12)|(0<<CS11)|(1<<CS10);
 }
 
 /*
@@ -48,7 +54,8 @@ void display_init(void)
 SIGNAL(SIG_OVERFLOW1)
 {
 	// Reset the counter
-	TCNT1 = DISPLAY_TIMER_TICKS;	
+	TCNT1 = DISPLAY_TIMER_TICKS;
+	
 	display_set_state(GPS_state);
 	
 	// Have we lost contact with the GPS?

@@ -19,11 +19,11 @@
  */
 void sync_pulse_init(void)
 {
-	TCCR0 = 0x00;
-	TCNT0 = 0X00;
-	
 	// Enable timer 0 overflow interrupt
 	TIMSK |= (1<<TOIE0);
+	
+	// Disable the timer until it is needed
+	TCCR0 = 0x00;
 }
 
 /*
@@ -32,16 +32,15 @@ void sync_pulse_init(void)
  */
 void sync_pulse_trigger(void)
 {
-	// Set the Sync output HIGH.
-	// TODO: Why is this GPS_PULSE? Shouldn't it be CCD_PULSE?
-	PORTA &= ~(1<<GPS_PULSE);
+	// Set the CCD_PULSE pin LOW to start the sync pulse
+	PORTA &= ~(1<<CCD_PULSE);
 
-	// Overflow after 8 ticks
-	// TODO: Why is this TCNT2? Shouldn't it be TCNT0?
-	TCNT2 = 248;
+	// Overflow after 8 ticks (0.512ms)
+	TCNT0 = 248;
 	
-	// Set tick length to 64us
-	TCCR0 = (1<<CS00)|(1<<CS01)|(1<<CS02);
+	// Set the prescaler to 1/1024; each tick = 64us.
+	// Also starts the timer counting
+	TCCR0 = (1<<CS02)|(1<<CS01)|(1<<CS00);
 }
 
 /*
@@ -50,13 +49,9 @@ void sync_pulse_trigger(void)
  */
 SIGNAL(SIG_OVERFLOW0)
 {
-	TCNT0 = 248;  //reset timer counter to overflow in 8 ticks
-	if (pulse_timer-- == 1)
-	{
-		// Set the Sync pulse LOW to end the pulse.
-		PORTA |= (1<<CCD_PULSE);
+	// Set the CCD_PULSE pin HIGH to end the pulse.
+	PORTA |= (1<<CCD_PULSE);
 		
-		// Turn off the timer clock
-		TCCR0 &= ~((1<<CS00)|(1<<CS01)|(1<<CS02));
-	}
+	// Turn off the timer
+	TCCR0 &= ~(1<<CS00)|(1<<CS01)|(1<<CS02);
 }

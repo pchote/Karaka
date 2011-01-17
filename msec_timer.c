@@ -17,35 +17,26 @@
 
 /*
  * Initialise the timer on timer2
+ * The timer is not started until the first time pulse is recieved from the gps
  */
 void msec_timer_init(void)
 {
-	// Set the pre-scaler to XXXX
-	// 20Mhz / XXXX gives a YYYYus tick rate?
-	TCCR2 = 0x00;
-	TCCR2 &= ~((1<<CS20)|(1<<CS21)|(1<<CS22));
-	
-	// Enable the timer2 overflow interrupt
+	// Enable the timer2 overflow interrupt and set initial ticks
 	TIMSK |= (1<<TOIE2);
-	TCNT2 = 6;
+	TCNT2 = MSEC_TIMER_TICKS;
+	
+	// Set the prescaler to 1/64; each tick = 4us.
+	// Also starts the timer counting
+	TCCR2 = (0<<CS22)|(1<<CS21)|(1<<CS20);
 }
 
 /*
- * Start a counter to fire an interrupt after 1 millisecond
+ * Reset the timer and start timing from zero
  */
-void msec_timer_start(void)
+void msec_timer_reset(void)
 {
-	TCNT2 = 6;	//set time to overflow after 250 ticks
-	TCCR2 |= (1<<CS20)|(1<<CS21)|(0<<CS22);	// set ticks to be every 4 useconds
-}
-
-/*
- * Stop the timer
- */
-void msec_timer_stop(void)
-{
-	// TODO: What is this actually doing?
-	TCCR2 &= ~((1<<CS20)|(1<<CS21)|(1<<CS22));
+	TCNT2 = MSEC_TIMER_TICKS;
+	milliseconds = 0;
 }
 
 /*
@@ -53,10 +44,11 @@ void msec_timer_stop(void)
  */
 SIGNAL(SIG_OVERFLOW2)
 {
-	TCNT2 = 6;  // reset timer counter to overflow in 250 ticks
-	milliseconds++;
+	// Reset timer
+	TCNT2 = MSEC_TIMER_TICKS;
 	
-	// TODO: Why isn't this reset to zero?
-	if(milliseconds >= 999)
-		milliseconds = 999;
+	// Cap the milliseconds counter at 999. The gps listener will reset
+	// the timer to 0 when it recieves a `second boundary' pulse.
+	if (milliseconds < 999)
+		milliseconds++;
 }

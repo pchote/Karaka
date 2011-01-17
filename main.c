@@ -128,8 +128,6 @@ SIGNAL(SIG_INTERRUPT0)
 				sync_pulse_trigger();
 			}
 		}
-		msec_timer_stop();
-		milliseconds = 0;
-		msec_timer_start();
+		msec_timer_reset();
 	}
 }
