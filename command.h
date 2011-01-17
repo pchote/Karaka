@@ -1,13 +1,13 @@
 //***************************************************************************
 //
-//  File........: Command_Layer.h
+//  File........: command.h
 //  Author(s)...: Johnny McClymont, Paul Chote
-//  Description.: Responds to user queries over usb
+//  Description.: Responds to user commands over usb
 //
 //***************************************************************************
 
-#ifndef KARAKA_COMMAND_LAYER_H
-#define KARAKA_COMMAND_LAYER_H
+#ifndef KARAKA_COMMAND_H
+#define KARAKA_COMMAND_H
 
 // Packet IDs
 #define ECHO	    			0x01   	// Echo packet
@@ -37,8 +37,17 @@ unsigned char stored_error_state;
 unsigned char error_state;
 unsigned char size;
 
-void Command_Init(void);
-void Command_processPacket(void);
-void Command_sendPacket(void);
+void command_init(void);
+void command_process_packet(void);
+void command_send_packet(void);
+
+
+void USART_Init(unsigned int baudrate);
+void Usart_Tx(char);
+unsigned char Usart_Rx(void);
+void sendmsg (const char *s);
+char startBit_Rcvd;
+unsigned char userCommand;;		//buffer for incoming byte
+unsigned char checking_DLE_stuffing_flag;		//flag to check if packet has DLE stuffed
 
 #endif

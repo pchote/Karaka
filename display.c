@@ -12,7 +12,7 @@
 #include "main.h"
 #include "UART_Math.h"
 #include "usart1.h"
-#include "Command_Layer.h"
+#include "command.h"
 
 /*
  * Initialise the LCD

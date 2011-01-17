@@ -11,14 +11,13 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include "main.h"
-#include "usart.h"
 #include "UART_Math.h"
 #include "usart1.h"
 #include "msec_timer.h"
 #include "sync_pulse.h"
 #include "GPS.h"
 #include "display.h"
-#include "Command_Layer.h"
+#include "command.h"
 	
 /*
  * Initialise the unit and wait for interrupts.
@@ -67,7 +66,7 @@ int main(void)
 	wait_4_EOFtimestamp = 0;
 
 	// Initialise the hardware units
-	Command_Init();
+	command_init();
 	GPS_Init();
 	msec_timer_init();		// Millisecond counter
 	sync_pulse_init();		// Pulse timer

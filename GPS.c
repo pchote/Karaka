@@ -13,9 +13,8 @@
 #include "main.h"
 #include "display.h"
 #include "GPS.h"
-#include "usart.h"
 #include "UART_Math.h"
-#include "Command_Layer.h"
+#include "command.h"
 	
 /*
  * Initialise the Trimble gps listener

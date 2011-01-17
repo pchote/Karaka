@@ -5,7 +5,7 @@
 
 DEVICE     = atmega128
 PROGRAMMER = -c dragon_jtag -P usb:7d:af
-OBJECTS    = main.o Command_Layer.o GPS.o display.o msec_timer.o sync_pulse.o UART_Math.o usart.o usart1.o
+OBJECTS    = main.o command.o GPS.o display.o msec_timer.o sync_pulse.o UART_Math.o usart1.o
 FUSES      = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 
 # Tune the lines below only if you know what you are doing:
@@ -13,7 +13,7 @@ FUSES      = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
 
 # Everything after -Os is copied from the AVR studio output
-COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Os -std=gnu99 -funsigned-char -funsigned-bitfields -fshort-enums
+COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Os -std=gnu99 -funsigned-bitfields -fshort-enums
 
 # symbolic targets:
 all:	main.hex

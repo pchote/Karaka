@@ -10,7 +10,6 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include "usart1.h"
-#include "usart.h"
 #include "main.h"
 #include "GPS.h"
 #include "display.h"

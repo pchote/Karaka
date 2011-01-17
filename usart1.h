@@ -1,6 +1,6 @@
 //***************************************************************************
 //
-//  File........: usart.h
+//  File........: usart1.h
 //  Author(s)...: Johnny McClymont, Paul Chote
 //  Description.: ATMega128 USART routines
 //
