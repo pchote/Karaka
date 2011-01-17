@@ -41,7 +41,7 @@ void gps_init(void)
 	gps_last_timestamp.seconds = 0;
 	gps_last_timestamp.minutes = 0;
 	gps_last_timestamp.hours = 0;
-	gps_last_timestamp.day =0;
+	gps_last_timestamp.day = 0;
 	gps_last_timestamp.month = 0;
 	gps_last_timestamp.year = 0;
 	
@@ -52,7 +52,7 @@ void gps_init(void)
 	gps_last_synctime.month = 0;
 	gps_last_synctime.year = 0;
 	
-	gps_record_synctime = 0;	//set to 0 to indicate end of frame pulse not received
+	gps_record_synctime = FALSE;
 	gps_state = SYNCING;	//set GPS state to syncing, as we need to sync with incoming packets
 }
 
@@ -105,7 +105,7 @@ void gps_send_trimble_init(void)
  */
 void gps_process_trimble_packet(void)
 {
-	gps_packet_proccessed = FALSE;
+	gps_processing_packet = TRUE;
 	unsigned char packet_ptr = gps_packet_cntr;
 	for (int i = 0; i< packet_ptr; i++)
 	{
@@ -116,7 +116,7 @@ void gps_process_trimble_packet(void)
 	switch (gps_state)
 	{
 		case SETUP_GPS:
-			if ((gps_trimble_packet[0] == 0x8E) & (gps_trimble_packet[1] == 0xA5))  //check that a valid reply to our SETUP packet was received
+			if ((gps_trimble_packet[0] == 0x8E) && (gps_trimble_packet[1] == 0xA5))  //check that a valid reply to our SETUP packet was received
 				gps_state = CHECK_GPS_TIME_VALID;	//change state to check time from GPS is valid
 			else
 				gps_send_trimble_init();	//else resend SETUP packet
@@ -183,7 +183,7 @@ void gps_process_trimble_packet(void)
 									error_state = error_state & 0xFE;
 								}
 								
-								//store the UTC bytes to UTC clock
+								// Store the UTC bytes to UTC clock
 								gps_last_timestamp.seconds = gps_trimble_packet[11];
 								gps_last_timestamp.minutes = gps_trimble_packet[12];
 								gps_last_timestamp.hours = gps_trimble_packet[13];
@@ -191,21 +191,22 @@ void gps_process_trimble_packet(void)
 								gps_last_timestamp.month = gps_trimble_packet[15];
 								gps_last_timestamp.year = ((gps_trimble_packet[16]<<8)&0xFF00) | (gps_trimble_packet[17]& 0x00FF);
 
-								//if this is an EOF time stamp and CCD pulse wasn't set halfway thru processing packet
+								// If this is a synctime and CCD pulse wasn't set halfway thru processing packet
 								if (gps_record_synctime && !nextPacketisEOF)
 								{
-									//store the UTC bytes to EOF clock
+									// Store the UTC bytes to EOF clock
 									gps_last_synctime.seconds = gps_last_timestamp.seconds;
 									gps_last_synctime.minutes = gps_last_timestamp.minutes;
 									gps_last_synctime.hours = gps_last_timestamp.hours;
 									gps_last_synctime.day = gps_last_timestamp.day;
 									gps_last_synctime.month = gps_last_timestamp.month;
 									gps_last_synctime.year = gps_last_timestamp.year;
-									if(gps_should_wait_for_synctime)
-										gps_should_wait_for_synctime = FALSE;
+									if(!synctime_ready)
+										synctime_ready = TRUE;
 									
 									gps_record_synctime = FALSE;
 								}
+								
 								if (wait_4_ten_second_boundary)  //if we are waiting for a 10 second boundary
 								{
 									switch(gps_last_timestamp.seconds)		//check latest time stamp from GPS
@@ -237,7 +238,8 @@ void gps_process_trimble_packet(void)
 	}
 	if (nextPacketisEOF)
 		nextPacketisEOF = FALSE;	//check to see if end of frame pulse came while processing packet
-	gps_packet_proccessed = TRUE;
+
+	gps_processing_packet = FALSE;
 }
 
 void gps_timeout(void)

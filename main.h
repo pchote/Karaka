@@ -59,6 +59,9 @@ unsigned int exposure_current;
 
 unsigned char error_state;
 
+unsigned char synctime_ready; // Do we have a valid synctime recorded?
+
+
 
 unsigned char wait_4_ten_second_boundary;
 unsigned char wait_4_timestamp;

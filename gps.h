@@ -18,12 +18,12 @@
 
 // gps_sync_state values
 #define LOOK_FOR_DLE		0
-#define	LOOK_FOR_ETX		1
+#define LOOK_FOR_ETX		1
 #define LOOK_FOR_2ND_DLE	2
 #define LOOK_FOR_NO_DLE		3
 
 // gps_state values
-#define	SYNCING					0	// Trying to sync packets of GPS unit
+#define SYNCING					0	// Trying to sync packets of GPS unit
 #define SETUP_GPS				1	// Send packets to GPS to set up auto broadcast.
 #define CHECK_GPS_TIME_VALID	2	// Check to see timing packets from GPS are from GPS clock
 #define GPS_TIME_GOOD			3	// Gps is locked and working.
@@ -34,8 +34,6 @@ unsigned char gps_timeout_count; // Number of counts since the last gps packet w
 unsigned char gps_state;         // 
 unsigned char gps_usart_state;   // State used to determine if we are synced to GPS packets
 unsigned char gps_sync_state;    // State to check usart data string to try and sync with GPS packet
-
-unsigned char gps_should_wait_for_synctime; // Flag to indicate that the next packet contains synctime info
 unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packet as EOF time
 
 
@@ -47,7 +45,7 @@ unsigned char gps_last_trimble_packet[101];   // [0] holds packet size
 unsigned char gps_trimble_error_packet[102];  // [0] holds packet size, [1] holds error code resulting in packet storage
 
 unsigned char gps_record_synctime;            // Flag to indicate next time stamp is EOF timestamp
-unsigned char gps_packet_proccessed;          // Flag to indicate if CCD pulse was set halfway through processing packet
+unsigned char gps_processing_packet;          // Flag to indicate when the gps is currently processing a packet
 
 unsigned char gps_checking_DLE_stuffing;      // Flag to check if packet has DLE stuffed
 unsigned char gps_received_startbit;          // Flag to indicate we a recording a GPS packet
