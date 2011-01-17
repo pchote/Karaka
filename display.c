@@ -18,19 +18,19 @@
  */
 void display_init(void)
 {
-	Delay(50000);
+	display_wait_usec(50000);
 	display_write_control(0x38, 500);
 	display_write_control(CLEARLCD, 500);
 	display_write_control(CURSORON, 500);
 	display_write_control(CURSORHOME, 500);
 	display_write_control(0x06, 500);
 	
-	Delay(500);
+	display_wait_usec(500);
 	display_write_string(PSTR("GPS KARAKA UNIT"));
 	display_write_control(NEWLINE,500);
 	display_write_string(PSTR("Kia Ora"));
-	Delay(65000);
-	Delay(65000);
+	display_wait_usec(65000);
+	display_wait_usec(65000);
 	cursor_ptr = 0;
 	display_last_gps_state = INVALID;
 	
@@ -47,33 +47,14 @@ void display_init(void)
 }
 
 /*
- * Interrupt signal handler for timer1.
- * This signals that the lcd should be updated
+ * Write a string to the header line of the LCD
  */
-SIGNAL(SIG_OVERFLOW1)
-{
-	// Reset the counter
-	TCNT1 = DISPLAY_TIMER_TICKS;
-	
-	display_set_state(GPS_state);
-	
-	// Have we lost contact with the GPS?
-	if(GPS_state != SYNCING && check_GPS_present++ > 16)  
-	{
-		gps_usart_state = SYNCING_PACKETS;
-		GPS_state = SYNCING;
-		error_state |= GPS_SERIAL_LOST;
-		error_state = error_state & 0xFE;
-		check_GPS_present = 0;
-	}
-}
-
 void display_write_header(const char *msg)
 {
 	display_write_control(CURSORHOME, 50);
 	display_write_control(CLEARLCD, 500);
 	display_write_string(msg);
-	display_write_control(NEWLINE,50);
+	display_write_control(NEWLINE,10);
 }
 
 /*
@@ -91,9 +72,9 @@ void display_set_state(unsigned char LCD_state)
 			if (cursor_ptr++ == 15)
 			{
 				cursor_ptr = 0;
-				display_write_control(NEWLINE,50);
+				display_write_control(NEWLINE,10);
 				display_write_string(PSTR("                "));
-				display_write_control(NEWLINE,50);
+				display_write_control(NEWLINE,10);
 			}
 		break;
 		
@@ -106,9 +87,9 @@ void display_set_state(unsigned char LCD_state)
 			if (cursor_ptr++ == 15)
 			{
 				cursor_ptr = 0;
-				display_write_control(NEWLINE,50);
+				display_write_control(NEWLINE,10);
 				display_write_string(PSTR("                "));
-				display_write_control(NEWLINE,50);
+				display_write_control(NEWLINE,10);
 			}
 		break;
 		
@@ -121,9 +102,9 @@ void display_set_state(unsigned char LCD_state)
 			if (cursor_ptr++ == 15)
 			{
 				cursor_ptr = 0;
-				display_write_control(NEWLINE,50);
+				display_write_control(NEWLINE,10);
 				display_write_string(PSTR("                "));
-				display_write_control(NEWLINE,50);
+				display_write_control(NEWLINE,10);
 			}
 		break;
 		
@@ -140,7 +121,7 @@ void display_set_state(unsigned char LCD_state)
 			display_write_byte('[');
 			display_write_number(Pulse_Counter - Current_Count,4);
 			display_write_byte(']');
-			display_write_control(NEWLINE,50);	
+			display_write_control(NEWLINE,10);	
 		break;
 	}
 	display_last_gps_state = LCD_state;
@@ -154,10 +135,9 @@ void display_write_control(unsigned char value, int time)
 	LCD_DATA = value;
 	PORTF = (0<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
 	PORTF |= (1<<LCD_ENABLE);
-	Delay(time);
+	display_wait_usec(time);
 	PORTF &= ~(1<<LCD_ENABLE);
-	Delay(time);
-
+	display_wait_usec(time);
 }
 
 /*
@@ -168,9 +148,8 @@ void display_write_byte(unsigned char value)
 	LCD_DATA = value;
 	PORTF = (1<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
 	PORTF |= (1<<LCD_ENABLE);
-	Delay(5);
+	display_wait_usec(10);
 	PORTF &= ~(1<<LCD_ENABLE);
-	//Delay(5);
 }
 
 /*
@@ -207,5 +186,37 @@ void display_write_number(int number, unsigned char places)
 		p = number / div;
 		number %= div;
 		display_write_byte(nibble_to_ascii(p));
+	}
+}
+
+/*
+ * Wait for a specified number of usec
+ */
+void display_wait_usec(unsigned int usec)
+{
+	while (usec--)
+		for (unsigned char i = 0; i < 16; i++)  
+			asm volatile ("nop"::);
+}
+
+/*
+ * Interrupt signal handler for timer1.
+ * This signals that the lcd should be updated
+ */
+SIGNAL(SIG_OVERFLOW1)
+{
+	// Reset the counter
+	TCNT1 = DISPLAY_TIMER_TICKS;
+	
+	display_set_state(GPS_state);
+	
+	// Have we lost contact with the GPS?
+	if(GPS_state != SYNCING && check_GPS_present++ > 16)  
+	{
+		gps_usart_state = SYNCING_PACKETS;
+		GPS_state = SYNCING;
+		error_state |= GPS_SERIAL_LOST;
+		error_state = error_state & 0xFE;
+		check_GPS_present = 0;
 	}
 }

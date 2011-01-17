@@ -9,7 +9,6 @@
 
 #include <avr/interrupt.h>
 #include "msec_timer.h"
-#include "main.h"
 
 /*
  * Initialise the timer on timer2

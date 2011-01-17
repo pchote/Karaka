@@ -7,11 +7,8 @@
 //
 //***************************************************************************
 
-#include <avr/io.h>
 #include <avr/interrupt.h>
-#include <avr/pgmspace.h>
 #include "main.h"
-#include "usart1.h"
 #include "msec_timer.h"
 #include "sync_pulse.h"
 #include "GPS.h"
@@ -83,18 +80,6 @@ int main(void)
 
 	// Wait. Main program logic is handled in interrupts.
 	while(1){}
-}
-
-/*
- * Wait for a specified number of milliseconds
- * TODO: Isn't this usec?
- */
-void Delay(unsigned int millisec)
-{
-	int i;
-	while (millisec--)
-		for (i=0; i<20; i++)  
-			asm volatile ("nop"::);
 }
 
 /*

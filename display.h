@@ -23,6 +23,7 @@ unsigned char cursor_ptr;
 unsigned char display_last_gps_state;
 
 void display_init(void);
+void display_wait_usec(unsigned int millisec);
 void display_write_byte(unsigned char value);
 void display_write_control(unsigned char value, int time);
 void display_write_string(const char *s);

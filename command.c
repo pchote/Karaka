@@ -6,13 +6,11 @@
 //
 //***************************************************************************
 
-#include <avr/io.h>
 #include <avr/interrupt.h>
-#include <avr/pgmspace.h>
 #include "command.h"
-#include "usart1.h"
 #include "main.h"
 #include "GPS.h"
+#include "msec_timer.h"
 
 	
 /*

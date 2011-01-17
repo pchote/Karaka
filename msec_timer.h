@@ -13,6 +13,8 @@
 // Overflow after 250 ticks
 #define MSEC_TIMER_TICKS 6
 
+unsigned int milliseconds;
+
 void msec_timer_init(void);
 void msec_timer_reset(void);
 
