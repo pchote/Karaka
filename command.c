@@ -9,7 +9,7 @@
 #include <avr/interrupt.h>
 #include "command.h"
 #include "main.h"
-#include "GPS.h"
+#include "gps.h"
 #include "msec_timer.h"
 
 	

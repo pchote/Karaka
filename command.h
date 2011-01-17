@@ -44,7 +44,7 @@ void command_write_number(int number, unsigned char places);
 void command_transmit_byte(unsigned char);
 unsigned char command_receive_byte(void);
 
-char startBit_Rcvd;
+unsigned char startBit_Rcvd;
 unsigned char userCommand;;		//buffer for incoming byte
 unsigned char checking_DLE_stuffing_flag;		//flag to check if packet has DLE stuffed
 

@@ -10,8 +10,8 @@
 #include <avr/pgmspace.h>
 #include "display.h"
 #include "main.h"
-#include "usart1.h"
 #include "command.h"
+#include "gps.h"
 
 /*
  * Initialise the LCD

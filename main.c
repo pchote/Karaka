@@ -11,7 +11,7 @@
 #include "main.h"
 #include "msec_timer.h"
 #include "sync_pulse.h"
-#include "GPS.h"
+#include "gps.h"
 #include "display.h"
 #include "command.h"
 	
@@ -63,7 +63,7 @@ int main(void)
 
 	// Initialise the hardware units
 	command_init();
-	GPS_Init();
+	gps_init();
 	msec_timer_init();		// Millisecond counter
 	sync_pulse_init();		// Pulse timer
 	display_init();
