@@ -13,6 +13,8 @@
 #include "usart.h"
 #include "main.h"
 #include "GPS.h"
+#include "display.h"
+
 	
 /*
  * Initialise the USART
@@ -161,7 +163,7 @@ SIGNAL(SIG_UART1_RECV)
 					GPS_sendPacketMask();		//send SETUP packet to switch off most automatic packets
 					GPS_state = CHECK_GPS_TIME_VALID;	//change state to check time from GPS is valid
 					
-					reset_LCD();		//reset the LCD
+					display_reset_header();		//reset the LCD
 				}
 				sync_state = LOOK_FOR_DLE;
 			break;

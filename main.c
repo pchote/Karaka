@@ -74,9 +74,9 @@ int main(void)
 	GPS_Init();
 	msec_timer_init();		// Millisecond counter
 	sync_pulse_init();		// Pulse timer
-	LCD_init();
+	display_init();
 	InputSignal_Init();	//set up interrupts.
-	reset_LCD();
+	display_reset_header();
 	
 	// Say hello via usb
 	//sendmsg(PSTR("GPS Karaka Interface Module - Kia Ora>"));

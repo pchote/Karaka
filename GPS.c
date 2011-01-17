@@ -11,6 +11,7 @@
 #include <avr/pgmspace.h>
 #include "usart1.h"
 #include "main.h"
+#include "display.h"
 #include "GPS.h"
 #include "usart.h"
 #include "UART_Math.h"
@@ -59,7 +60,7 @@ void GPS_processPacket(void)
 		case SETUP_GPS:
 			if ((GPS_Packet[0] == 0x8E) & (GPS_Packet[1] == 0xA5))  //check that a valid reply to our SETUP packet was received
 			{
-				reset_LCD();	//if setup successful reset LCD
+				display_reset_header();	//if setup successful reset LCD
 				GPS_state = CHECK_GPS_TIME_VALID;	//change state to check time from GPS is valid
 				
 			}
@@ -93,7 +94,7 @@ void GPS_processPacket(void)
 									UTCtime_lastPulse.day = GPS_Packet[14];
 									UTCtime_lastPulse.month = GPS_Packet[15];
 									UTCtime_lastPulse.year = ((GPS_Packet[16]<<8)&0xFF00) | (GPS_Packet[17]& 0x00FF);
-									reset_LCD();		//reset LCD
+									display_reset_header();		//reset LCD
 									if(wait_4_timestamp == 1)
 									{
 										wait_4_timestamp = 0;

@@ -73,7 +73,5 @@ unsigned char nextPacketisEOF;		//flag to inform GPS module to record next packe
 
 void InputSignal_Init(void);
 void Delay(unsigned int millisec);
-void reset_LCD(void);
-
 
 #endif

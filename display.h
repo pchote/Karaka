@@ -13,18 +13,22 @@
 #define CLEARLCD		0x01
 #define CURSORON		0x0E
 #define CURSORHOME		0x02
-#define DISPLAYOFF		0x08;
+#define DISPLAYOFF		0x08
 #define DISPLAYON		0x0F
+
+// Reset to overflow after 7812 ticks
+#define DISPLAY_TIMER_TICKS 0XF0BD
 
 unsigned char cursor_ptr;
 unsigned char putHeader;
 
-void LCD_init(void);
-void LCD_ClearDisplay(void);
-void LCD_WriteData(unsigned char value);
-void LCD_WriteControl(unsigned char value, int time);
-void LCD_sendmsg (const char *s);
-void LCD_sendDecimal(int number, unsigned char places);
-void update_LCD(unsigned char LCD_state);
+void display_init(void);
+void display_reset_header(void);
+void display_write_byte(unsigned char value);
+void display_write_control(unsigned char value, int time);
+void display_write_string(const char *s);
+void display_write_number(int number, unsigned char places);
+void display_write_header(const char *msg);
+void display_set_state(unsigned char LCD_state);
 
 #endif

@@ -6,34 +6,30 @@
 //
 //***************************************************************************
 
-#include "display.h"
-#include "main.h"
-#include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/sleep.h>
-#include <inttypes.h>
+#include "display.h"
+#include "main.h"
 #include "UART_Math.h"
-#include "usart.h"
 #include "usart1.h"
 #include "Command_Layer.h"
 
 /*
  * Initialise the LCD
  */
-void LCD_init(void)
+void display_init(void)
 {
 	Delay(50000);
-	LCD_WriteControl(0x38, 500);
-	LCD_WriteControl(CLEARLCD, 500);
-	LCD_WriteControl(CURSORON, 500);
-	LCD_WriteControl(CURSORHOME, 500);
-	LCD_WriteControl(0x06, 500);
+	display_write_control(0x38, 500);
+	display_write_control(CLEARLCD, 500);
+	display_write_control(CURSORON, 500);
+	display_write_control(CURSORHOME, 500);
+	display_write_control(0x06, 500);
 	
 	Delay(500);
-	LCD_sendmsg(PSTR("GPS KARAKA UNIT"));
-	LCD_WriteControl(NEWLINE,500);
-	LCD_sendmsg(PSTR("Kia Ora"));
+	display_write_string(PSTR("GPS KARAKA UNIT"));
+	display_write_control(NEWLINE,500);
+	display_write_string(PSTR("Kia Ora"));
 	Delay(65000);
 	Delay(65000);
 	cursor_ptr = 0;
@@ -41,23 +37,10 @@ void LCD_init(void)
 	
 	// Initialise the lcd update timer on timer1
 	TCCR1A = 0x00;
-	TCCR1B &= ~((1<<CS10)|(1<<CS11)|(1<<CS12));
 	TIMSK |= (1<<TOIE1);
-	TCNT1 = 0XF0BD;
-	
-	start_timer1();
-}
-
-/*
- * Start the timer to trigger an overflow interrupt every ~0.5 seconds
- */
-void start_timer1(void)
-{
-	// Start the timer
-	TCNT1 = 0XF0BD;	//overflow after 7812 ticks ~ 0.5s
+	TCNT1 = DISPLAY_TIMER_TICKS;
 	TCCR1B |= (1<<CS10)|(0<<CS11)|(1<<CS12);	//set tick time to 64uS
 }
-
 
 /*
  * Interrupt signal handler for timer1.
@@ -65,112 +48,99 @@ void start_timer1(void)
  */
 SIGNAL(SIG_OVERFLOW1)
 {
-	TCCR1B &= ~((1<<CS10)|(1<<CS11)|(1<<CS12));	//stop timer 1 clock
-	update_LCD(GPS_state);
-	start_timer1();
+	// Reset the counter
+	TCNT1 = DISPLAY_TIMER_TICKS;	
+	display_set_state(GPS_state);
 	
-	if (GPS_state != SYNCING)
+	// Have we lost contact with the GPS?
+	if(GPS_state != SYNCING && check_GPS_present++ > 16)  
 	{
-		if(check_GPS_present++ > 16)  
-		{
-			gps_usart_state = SYNCING_PACKETS;
-			GPS_state = SYNCING;
-			error_state |= GPS_SERIAL_LOST;
-			error_state = error_state & 0xFE;
-			reset_LCD();
-			check_GPS_present = 0;
-		}
+		gps_usart_state = SYNCING_PACKETS;
+		GPS_state = SYNCING;
+		error_state |= GPS_SERIAL_LOST;
+		error_state = error_state & 0xFE;
+		display_reset_header();
+		check_GPS_present = 0;
 	}
+}
+
+void display_write_header(const char *msg)
+{
+	if (putHeader == 0)
+	{
+		display_write_control(CURSORHOME, 50);
+		display_write_control(CLEARLCD, 500);
+		display_write_string(msg);
+		display_write_control(NEWLINE,50);
+		putHeader = 1;
+	}
+}
+
+/*
+ * Returns the LCD cursor to the start of the display
+ */
+void display_reset_header(void)
+{
+	putHeader = 0;
 }
 
 /*
  * Set the message display mode for the LCD 
  */
-void update_LCD(unsigned char LCD_state)
+void display_set_state(unsigned char LCD_state)
 {	
 	switch (LCD_state)
 	{
 		case SYNCING:
-			if (putHeader == 0)
-			{
-				LCD_WriteControl(CURSORHOME, 50);
-				LCD_WriteControl(CLEARLCD, 500);
-				LCD_sendmsg(PSTR("SYNCING TO GPS"));
-				LCD_WriteControl(NEWLINE,50);
-				putHeader = 1;
-			}
-			
-			LCD_WriteData('.');
+			display_write_header(PSTR("SYNCING TO GPS"));
+			display_write_byte('.');
 			if (cursor_ptr++ == 15)
 			{
 				cursor_ptr = 0;
-				LCD_WriteControl(NEWLINE,50);
-				LCD_sendmsg(PSTR("                "));
-				LCD_WriteControl(NEWLINE,50);
+				display_write_control(NEWLINE,50);
+				display_write_string(PSTR("                "));
+				display_write_control(NEWLINE,50);
 			}
 		break;
 		
 		case SETUP_GPS:
-			if (putHeader == 0)
-			{
-				LCD_WriteControl(CURSORHOME, 50);
-				LCD_WriteControl(CLEARLCD, 500);
-				LCD_sendmsg(PSTR("SETTING UP GPS"));
-				LCD_WriteControl(NEWLINE,50);
-				putHeader = 1;
-			}
-			
-			LCD_WriteData('.');
+			display_write_header(PSTR("SETTING UP GPS"));
+			display_write_byte('.');
 			
 			if (cursor_ptr++ == 15)
 			{
 				cursor_ptr = 0;
-				LCD_WriteControl(NEWLINE,50);
-				LCD_sendmsg(PSTR("                "));
-				LCD_WriteControl(NEWLINE,50);
+				display_write_control(NEWLINE,50);
+				display_write_string(PSTR("                "));
+				display_write_control(NEWLINE,50);
 			}
 		break;
 		
 		case CHECK_GPS_TIME_VALID:
-			if (putHeader == 0)
-			{
-				LCD_WriteControl(CURSORHOME, 50);
-				LCD_WriteControl(CLEARLCD, 500);
-				LCD_sendmsg(PSTR("CHECK GPS LOCK"));
-				LCD_WriteControl(NEWLINE,50);
-				putHeader = 1;
-			}
-			
-			LCD_WriteData('.');
+			display_write_header(PSTR("CHECK GPS LOCK"));
+			display_write_byte('.');
 			
 			if (cursor_ptr++ == 15)
 			{
 				cursor_ptr = 0;
-				LCD_WriteControl(NEWLINE,50);
-				LCD_sendmsg(PSTR("                "));
-				LCD_WriteControl(NEWLINE,50);
+				display_write_control(NEWLINE,50);
+				display_write_string(PSTR("                "));
+				display_write_control(NEWLINE,50);
 			}
 		break;
 		
 		case GPS_TIME_GOOD:
-			if (putHeader == 0)
-			{
-				LCD_WriteControl(CURSORHOME, 50);
-				LCD_WriteControl(CLEARLCD, 500);
-				LCD_sendmsg(PSTR("UTC TIME"));
-				LCD_WriteControl(NEWLINE,50);
-				putHeader = 1;
-			}
-			LCD_sendDecimal(UTCtime_lastPulse.hours,2);
-			LCD_WriteData(':');
-			LCD_sendDecimal(UTCtime_lastPulse.minutes,2);
-			LCD_WriteData(':');
-			LCD_sendDecimal(UTCtime_lastPulse.seconds,2);
-			LCD_WriteData(' ');
-			LCD_WriteData('[');
-			LCD_sendDecimal(Pulse_Counter - Current_Count,4);
-			LCD_WriteData(']');
-			LCD_WriteControl(NEWLINE,50);	
+			display_write_header(PSTR("UTC TIME"));
+			display_write_number(UTCtime_lastPulse.hours,2);
+			display_write_byte(':');
+			display_write_number(UTCtime_lastPulse.minutes,2);
+			display_write_byte(':');
+			display_write_number(UTCtime_lastPulse.seconds,2);
+			display_write_byte(' ');
+			display_write_byte('[');
+			display_write_number(Pulse_Counter - Current_Count,4);
+			display_write_byte(']');
+			display_write_control(NEWLINE,50);	
 		break;
 	}
 }
@@ -178,7 +148,7 @@ void update_LCD(unsigned char LCD_state)
 /*
  * Send a control byte to the LCD
  */
-void LCD_WriteControl(unsigned char value, int time)
+void display_write_control(unsigned char value, int time)
 {
 	LCD_DATA = value;
 	PORTF = (0<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
@@ -192,7 +162,7 @@ void LCD_WriteControl(unsigned char value, int time)
 /*
  * Send a data byte to the LCD
  */
-void LCD_WriteData(unsigned char value)
+void display_write_byte(unsigned char value)
 {
 	LCD_DATA = value;
 	PORTF = (1<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
@@ -206,7 +176,7 @@ void LCD_WriteData(unsigned char value)
  * Display a string stored in flash memory
  * The display is limited to 16 characters; longer strings will be truncated
  */
-void LCD_sendmsg(const char *s)
+void display_write_string(const char *s)
 {
 	// Read the message from flash memory into a buffer
 	unsigned char queue[16];
@@ -217,13 +187,13 @@ void LCD_sendmsg(const char *s)
 	// Send the characters to the display
 	unsigned char sndcntr = 0;
 	while (sndcntr < qcntr)
-		LCD_WriteData(queue[sndcntr++]);
+		display_write_byte(queue[sndcntr++]);
 }
 
 /*
  * Display an integer with a given number of digits
  */
-void LCD_sendDecimal(int number, unsigned char places)
+void display_write_number(int number, unsigned char places)
 {
 	// Calculate the divisor for the highest place
 	unsigned int div = 1;
@@ -235,14 +205,6 @@ void LCD_sendDecimal(int number, unsigned char places)
 	{
 		p = number / div;
 		number %= div;
-		LCD_WriteData(hexToAscii(p));
+		display_write_byte(hexToAscii(p));
 	}
-}
- 
-/*
- * Returns the LCD cursor to the start of the display
- */
-void reset_LCD(void)
-{
-	putHeader = 0;
 }
