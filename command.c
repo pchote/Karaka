@@ -131,19 +131,6 @@ void command_process_packet(void)
 			}
 		break;
 		
-		case GET_ERROR_PACKET:
-			command_size = gps_trimble_error_packet[0];
-			command_reply_packet[command_reply_cntr++]  = '[';
-			command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[1]>>4)&0x0f);
-			command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[1])&0x0f);
-			command_reply_packet[command_reply_cntr++]  = ']';
-			for (int i = 2; i < command_size+2; i++)
-			{
-				command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[i]>>4)&0x0f);
-				command_reply_packet[command_reply_cntr++]  = nibble_to_ascii((gps_trimble_error_packet[i])&0x0f);
-			}
-		break;
-		
 		default:
 			command_stored_error_state |= PACKETID_INVALID;
 			command_stored_error_state = command_stored_error_state & 0xFE;
@@ -221,7 +208,7 @@ SIGNAL(SIG_UART0_RECV)
 			if (command_checking_DLE_stuffing)
 			{
 				command_checking_DLE_stuffing = FALSE;
-				command_cntr--;		//write over 2nd DLE byte in gps_trimble_packet
+				command_cntr--;		//write over 2nd DLE byte in gps_packet
 			}
 			else
 				command_checking_DLE_stuffing = TRUE;

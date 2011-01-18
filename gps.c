@@ -33,10 +33,6 @@ void gps_init(void)
 	UBRR1H = 0x00;
 	UBRR1L = 0xCF;
 	
-	gps_checking_DLE_stuffing = FALSE;
-	gps_usart_state = SYNCING_PACKETS;
-	gps_sync_state = LOOK_FOR_DLE;
-	
 	// Initialise the clocks to zero
 	gps_last_timestamp.seconds = 0;
 	gps_last_timestamp.minutes = 0;
@@ -54,6 +50,7 @@ void gps_init(void)
 	
 	gps_record_synctime = FALSE;
 	gps_state = SYNCING;	//set GPS state to syncing, as we need to sync with incoming packets
+	//gps_send_magellan_init();
 }
 
 /*
@@ -78,165 +75,18 @@ unsigned char gps_receive_byte(void)
 }
 
 /*
- * Store a packet that caused an error for later retrieval
+ * Send Magellan initialisation strings
  */
-void store_error_packet(unsigned char code)
+void gps_send_magellan_init(void)
 {
-	for (int i = 0; i< gps_packet_cntr; i++)
-	{
-		gps_trimble_error_packet[i+2] = gps_trimble_packet[i];
-	}
-	gps_trimble_error_packet[0] = gps_packet_cntr;
-	gps_trimble_error_packet[1] = code;
-}
-
-/*
- * Send a packet mask to the Trimble unit to supress automatic packets
- */
-void gps_send_trimble_init(void)
-{
-	unsigned char thisPacket[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
-	for (unsigned char i = 0; i < 7; i++)
-		gps_transmit_byte(thisPacket[i]);
-}
-
-/*
- * Process a packet from the Trimble GPS
- */
-void gps_process_trimble_packet(void)
-{
-	gps_processing_packet = TRUE;
-	unsigned char packet_ptr = gps_packet_cntr;
-
-	switch (gps_state)
-	{
-		case SETUP_GPS:
-			if ((gps_trimble_packet[0] == 0x8E) && (gps_trimble_packet[1] == 0xA5))  //check that a valid reply to our SETUP packet was received
-				gps_state = CHECK_GPS_TIME_VALID;	//change state to check time from GPS is valid
-			else
-				gps_send_trimble_init();	//else resend SETUP packet
-		break;
-		
-		case CHECK_GPS_TIME_VALID:
-			switch (gps_trimble_packet[0])		//get packet ID
-			{
-				case 0x8F:		//if packet ID is an extended packet ID
-					switch(gps_trimble_packet[1])		//get thesubcode of the extended packet ID
-					{ 
-						case 0xAB:		//Primary Timing Packet
-							if (packet_ptr != 18)	//make sure we have a correct amount of bytes
-							{
-								error_state |= PACKET_8FAB_LENGTH_WRONG;
-								store_error_packet(PACKET_8FAB_LENGTH_WRONG);
-								error_state = error_state & 0xFE;
-							}
-							if (packet_ptr >= 10)
-							{
-								if (gps_trimble_packet[10] == 0x03)		//check to ensure time is good
-								{	
-									gps_state = GPS_TIME_GOOD;  //if time good then change state to run main application
-									gps_last_timestamp.seconds = gps_trimble_packet[11];
-									gps_last_timestamp.minutes = gps_trimble_packet[12];
-									gps_last_timestamp.hours = gps_trimble_packet[13];
-									gps_last_timestamp.day = gps_trimble_packet[14];
-									gps_last_timestamp.month = gps_trimble_packet[15];
-									gps_last_timestamp.year = ((gps_trimble_packet[16]<<8)&0xFF00) | (gps_trimble_packet[17]& 0x00FF);
-
-									if(wait_4_timestamp)
-										wait_4_timestamp = FALSE;
-								}
-							}	
-						break;
-					}
-				break;
-			}
-		break;
-
-		case GPS_TIME_GOOD:
-			switch (gps_trimble_packet[0])	//get packet ID
-			{
-				case 0x41:
-			
-				break;
-		
-				case 0x8F:	//if packet ID is an extended packet ID
-					switch(gps_trimble_packet[1])		//get thesubcode of the extended packet ID
-					{ 
-						case 0xAB:		//Primary Timing Packet
-							if (packet_ptr != 18)	//make sure we have a correct amount of bytes
-							{
-								error_state |= PACKET_8FAB_LENGTH_WRONG;
-								store_error_packet(PACKET_8FAB_LENGTH_WRONG);
-								error_state = error_state & 0xFE;
-							}
-							if (packet_ptr >= 10)
-							{	
-								if (gps_trimble_packet[10] != 0x03)	//check to ensure time is still good
-								{
-									error_state |= GPS_TIME_NOT_LOCKED;
-									store_error_packet(GPS_TIME_NOT_LOCKED);
-									error_state = error_state & 0xFE;
-								}
-								
-								// Store the UTC bytes to UTC clock
-								gps_last_timestamp.seconds = gps_trimble_packet[11];
-								gps_last_timestamp.minutes = gps_trimble_packet[12];
-								gps_last_timestamp.hours = gps_trimble_packet[13];
-								gps_last_timestamp.day = gps_trimble_packet[14];
-								gps_last_timestamp.month = gps_trimble_packet[15];
-								gps_last_timestamp.year = ((gps_trimble_packet[16]<<8)&0xFF00) | (gps_trimble_packet[17]& 0x00FF);
-
-								if (gps_record_synctime == RECORD_THIS_PACKET)
-								{
-									// Store the UTC bytes to EOF clock
-									gps_last_synctime.seconds = gps_last_timestamp.seconds;
-									gps_last_synctime.minutes = gps_last_timestamp.minutes;
-									gps_last_synctime.hours = gps_last_timestamp.hours;
-									gps_last_synctime.day = gps_last_timestamp.day;
-									gps_last_synctime.month = gps_last_timestamp.month;
-									gps_last_synctime.year = gps_last_timestamp.year;
-
-									gps_record_synctime = SYNCTIME_VALID;
-								}
-								
-								if (wait_4_ten_second_boundary)  //if we are waiting for a 10 second boundary
-								{
-									switch(gps_last_timestamp.seconds)		//check latest time stamp from GPS
-									{
-										case 0:		//if seconds count is 9,19,29,39,49,59 then next pulse will
-										case 10:	//be on the ten second boundary.
-										case 20:
-										case 30:
-										case 40:
-										case 50:
-											wait_4_ten_second_boundary = FALSE;
-										break;
-										
-										default:
-											wait_4_ten_second_boundary = TRUE;
-										break;
-									}
-								}
-								
-								if(wait_4_timestamp)
-									wait_4_timestamp = FALSE;
-							}	
-						break;
-					}
-				break;
-			
-			}
-		break;
-	}
-	
-	gps_processing_packet = FALSE;
-	if (gps_record_synctime == RECORD_NEXT_PACKET)
-		gps_record_synctime = RECORD_THIS_PACKET;
+	// Enable binary timing and status packets
+	char *msg = PSTR("$PMGLI,00,A00,2,B\r\n$PMGLI,00,H00,2,B");
+	for (int i = 0; i < 36; i++)
+		gps_transmit_byte(msg[i]);
 }
 
 void gps_timeout(void)
 {
-	gps_usart_state = SYNCING_PACKETS;
 	gps_state = SYNCING;
 	error_state |= GPS_SERIAL_LOST;
 	error_state = error_state & 0xFE;
@@ -254,86 +104,79 @@ SIGNAL(SIG_UART1_RECV)
 	gps_timeout_count = 0;
 	
 	unsigned char incomingbyte = gps_receive_byte();
-	if (gps_usart_state == CAPTURE_PACKETS)
+	
+	// Binary data packets must start with `$$'
+	if ((gps_packet_cntr == 0 && incomingbyte != '$') ||
+		(gps_packet_cntr == 1 && incomingbyte != '$'))
 	{
-		if ((incomingbyte == 0x10) && !gps_received_startbit)	//check if received byte is physical layer packet start byte
-			gps_received_startbit = TRUE;
-		else if (gps_received_startbit) //if already processing packet continue to scan for packet end byte
-		{	
-			gps_trimble_packet[gps_packet_cntr++] = incomingbyte;		//save received byte to packet buffer
-			if (incomingbyte == 0x10)  
-			{
-				if (gps_checking_DLE_stuffing)
-				{
-					gps_checking_DLE_stuffing = FALSE;
-					gps_packet_cntr--;		//write over 2nd DLE byte in gps_trimble_packet
-				}
-				else
-					gps_checking_DLE_stuffing = TRUE;
-			}
-			else if (incomingbyte == 0x03)
-			{
-				if (gps_checking_DLE_stuffing)  //this is true if the last =byte received was an odd numbered DLE
-				{
-					gps_packet_cntr--;		//remove the ETX byte
-					gps_packet_cntr--;		//remove the DLE byte
-					gps_received_startbit = FALSE;
-					gps_process_trimble_packet();		//process this packet
-					gps_packet_cntr = 0;
-				}
-			}
-			else
-				gps_checking_DLE_stuffing = FALSE;
-		}
+		gps_packet_cntr = 0;
+		gps_state = SYNCING;
+		return;
 	}
 	
-	/*
-	The uC tries to sync to GPS packets by looking for the following byte string
-	<DLE><ETX><DLE><some char besides DLE>
-	We know we have located a valid packet start byte if we find a complete <DLE><ETX> packet terminator
-	NOTE.  The leading <DLE> could of followed a <DLE> and be part of the data string of a packet but
-			if we then receive a single <DLE> followed by a byte that's not DLE or ETX then we must have
-			the start of a new packet, thus we know where we are.
-	*/
-	else if (gps_usart_state == SYNCING_PACKETS) //if we are trying to sync to GPS packets
+	// TODO: Use the other gps_states sanely
+	gps_state = GPS_TIME_GOOD;
+	
+	// Store the packet
+	gps_packet[gps_packet_cntr++] = incomingbyte;
+	
+	// End of command is given by a linefeed
+	if (incomingbyte == 0x0A)
 	{
-		gps_state = SYNCING;
-		switch(gps_sync_state)
+		gps_processing_packet = TRUE;
+
+		// Check the command checksum.
+		//   gps_packet_cntr points at the next memory loc.
+		//   gps_packet_cntr - 1 is linefeed
+		//   gps_packet_cntr - 2 is the checksum
+		unsigned char csm = gps_packet[2];
+		for (int i = 3; i < gps_packet_cntr-2; i++)
+			csm ^= gps_packet[i];
+
+		// Process the packet if the checksum is valid
+		if (csm == gps_packet[gps_packet_cntr-2])
 		{
-			case LOOK_FOR_DLE:
-				if (incomingbyte == 0x10)
-					gps_sync_state = LOOK_FOR_ETX;
-			break;
+			// status packet - check that time is valid
+			if (gps_packet[2] == 'H')
+			{
+				//error_state |= GPS_TIME_NOT_LOCKED;
+				//error_state = error_state & 0xFE;					
+			}
 			
-			case LOOK_FOR_ETX:
-				if (incomingbyte == 0x03)
-					gps_sync_state = LOOK_FOR_2ND_DLE;
-				else
-					gps_sync_state = LOOK_FOR_DLE;
-			break;
-			
-			case LOOK_FOR_2ND_DLE:
-				if (incomingbyte == 0x10)
-					gps_sync_state = LOOK_FOR_NO_DLE;
-				else
-					gps_sync_state = LOOK_FOR_DLE;
-			break;
-			
-			case LOOK_FOR_NO_DLE:
-				if (incomingbyte != 0x10) 
+			// time packet
+			else if (gps_packet[2] == 'A')
+			{
+				gps_last_timestamp.hours = gps_packet[4];
+				gps_last_timestamp.minutes = gps_packet[5];
+				gps_last_timestamp.seconds = gps_packet[6];
+				gps_last_timestamp.day = gps_packet[7];
+				gps_last_timestamp.month = gps_packet[8];
+				gps_last_timestamp.year = ((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF);
+				
+				
+				// TODO: Reimplement wait for 10 second boundary
+				if(wait_4_timestamp)
+					wait_4_timestamp = FALSE;
+					
+				if (gps_record_synctime == RECORD_THIS_PACKET)
 				{
-					gps_trimble_packet[gps_packet_cntr++] = incomingbyte; //save the first byte of this new packet to the buffer
-					gps_received_startbit = TRUE;      //set flag to indicate we are recording a valid packet
-					gps_usart_state = CAPTURE_PACKETS; //change state as we are now synced to packets
-					gps_send_trimble_init();           //send SETUP packet to switch off most automatic packets
-					gps_state = CHECK_GPS_TIME_VALID;  //change state to check time from GPS is valid
+					gps_last_synctime.seconds = gps_last_timestamp.seconds;
+					gps_last_synctime.minutes = gps_last_timestamp.minutes;
+					gps_last_synctime.hours = gps_last_timestamp.hours;
+					gps_last_synctime.day = gps_last_timestamp.day;
+					gps_last_synctime.month = gps_last_timestamp.month;
+					gps_last_synctime.year = gps_last_timestamp.year;
+
+					gps_record_synctime = SYNCTIME_VALID;
 				}
-				gps_sync_state = LOOK_FOR_DLE;
-			break;
-			
-			default:
-				gps_sync_state = LOOK_FOR_DLE;
-			break;
+			}
 		}
+		
+		// Reset for the next packet
+		gps_packet_cntr = 0;
+		
+		gps_processing_packet = FALSE;
+		if (gps_record_synctime == RECORD_NEXT_PACKET)
+			gps_record_synctime = RECORD_THIS_PACKET;
 	}
 }
