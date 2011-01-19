@@ -19,7 +19,7 @@
 // Reset to overflow after 7812 ticks
 #define DISPLAY_TIMER_TICKS 0XF0BD
 
-unsigned char cursor_ptr;
+unsigned char display_cursor;
 unsigned char display_last_gps_state;
 
 void display_init(void);

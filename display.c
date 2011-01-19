@@ -31,8 +31,8 @@ void display_init(void)
 	display_write_string(PSTR("Kia Ora"));
 	display_wait_usec(65000);
 	display_wait_usec(65000);
-	cursor_ptr = 0;
-	display_last_gps_state = INVALID;
+	display_cursor = 0;
+	display_last_gps_state = NO_GPS;
 	
 	// Enable the timer1 overflow interrupt and set initial ticks
 	TIMSK |= (1<<TOIE1);
@@ -69,9 +69,9 @@ void display_update()
 				display_write_header(PSTR("SYNCING TO GPS"));
 			
 			display_write_byte('.');
-			if (cursor_ptr++ == 15)
+			if (display_cursor++ == 15)
 			{
-				cursor_ptr = 0;
+				display_cursor = 0;
 				display_write_control(NEWLINE,10);
 				display_write_string(PSTR("                "));
 				display_write_control(NEWLINE,10);
@@ -84,9 +84,9 @@ void display_update()
 			
 			display_write_byte('.');
 			
-			if (cursor_ptr++ == 15)
+			if (display_cursor++ == 15)
 			{
-				cursor_ptr = 0;
+				display_cursor = 0;
 				display_write_control(NEWLINE,10);
 				display_write_string(PSTR("                "));
 				display_write_control(NEWLINE,10);
@@ -104,7 +104,7 @@ void display_update()
 			display_write_number(gps_last_timestamp.seconds,2);
 			display_write_byte(' ');
 			display_write_byte('[');
-			display_write_number(exposure_total - exposure_current, 4);
+			display_write_number(exposure_total - exposure_count, 4);
 			display_write_byte(']');
 			display_write_control(NEWLINE,10);	
 		break;

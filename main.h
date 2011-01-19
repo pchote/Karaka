@@ -53,11 +53,11 @@ typedef struct
 unsigned char status_register;
 unsigned char control_register;
 unsigned int exposure_total;
-unsigned int exposure_current;
+unsigned int exposure_count;
 unsigned char error_state;
 
-unsigned char wait_4_ten_second_boundary;
-unsigned char wait_4_timestamp;
+unsigned char exposure_syncing;
+
 int command_cntr;
 
 unsigned char ascii_to_nibble(unsigned char a);

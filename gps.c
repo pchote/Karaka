@@ -173,6 +173,8 @@ SIGNAL(SIG_UART1_RECV)
 					case MAGELLAN_STATUS_PACKET:
 						//error_state |= GPS_TIME_NOT_LOCKED;
 						//error_state = error_state & 0xFE;
+						
+						// TODO: Handle locked/not locked
 					break;
 					case MAGELLAN_TIME_PACKET:
 						gps_last_timestamp.hours = gps_packet[4];
@@ -181,10 +183,14 @@ SIGNAL(SIG_UART1_RECV)
 						gps_last_timestamp.day = gps_packet[7];
 						gps_last_timestamp.month = gps_packet[8];
 						gps_last_timestamp.year = ((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF);
-				
-						// TODO: Reimplement wait for 10 second boundary
-						if(wait_4_timestamp)
-							wait_4_timestamp = FALSE;
+						
+						// Mark that we have a valid timestamp
+						gps_timestamp_stale = FALSE;
+						gps_state = GPS_TIME_GOOD;
+						
+						// Synchronize the exposure countdown with the 10 second mark
+						if (exposure_syncing && (gps_last_timestamp.seconds % 10 == 0))
+							exposure_syncing = FALSE;
 					
 						if (gps_record_synctime == RECORD_THIS_PACKET)
 						{
@@ -194,10 +200,8 @@ SIGNAL(SIG_UART1_RECV)
 							gps_last_synctime.day = gps_last_timestamp.day;
 							gps_last_synctime.month = gps_last_timestamp.month;
 							gps_last_synctime.year = gps_last_timestamp.year;
-
-							gps_record_synctime = SYNCTIME_VALID;
+							gps_record_synctime = FALSE;
 						}
-						gps_state = GPS_TIME_GOOD;
 					break;
 				}
 			}

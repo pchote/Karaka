@@ -69,7 +69,12 @@ void command_process_packet(void)
 		break;
 		
 		case GET_UTCTIME:
-			if (!wait_4_timestamp)
+			if (gps_timestamp_stale)
+			{
+				command_stored_error_state |= UTC_ACCESS_ON_UPDATE;
+				command_stored_error_state = command_stored_error_state & 0xFE;
+			}
+			else
 			{	
 				command_write_number(gps_last_timestamp.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
@@ -85,11 +90,6 @@ void command_process_packet(void)
 				command_reply_packet[command_reply_cntr++] = ':';
 				command_write_number(milliseconds, 3);
 			}
-			else
-			{
-				command_stored_error_state |= UTC_ACCESS_ON_UPDATE;
-				command_stored_error_state = command_stored_error_state & 0xFE;
-			}
 		break;
 		
 		case SET_CCD_EXPOSURE:
@@ -99,8 +99,8 @@ void command_process_packet(void)
 							+ ascii_to_nibble(command_packet[4])*10
 							+ ascii_to_nibble(command_packet[5]);
 			
-			exposure_current = 0;
-			wait_4_ten_second_boundary = TRUE;
+			exposure_count = 0;
+			exposure_syncing = TRUE;
 			sei();
 		
 		case GET_CCD_EXPOSURE:
@@ -108,7 +108,7 @@ void command_process_packet(void)
 		break;
 		
 		case GET_EOFTIME:
-			if (gps_record_synctime != SYNCTIME_VALID)
+			if (gps_timestamp_stale)
 			{
 				command_stored_error_state |= EOF_ACCESS_ON_UPDATE;
 				command_stored_error_state = command_stored_error_state & 0xFE;

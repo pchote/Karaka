@@ -15,11 +15,10 @@
 // gps_state values
 #define NO_GPS					0
 #define SYNCING				    1
-#define GPS_TIME_GOOD			3	// Gps is locked and working.
-#define INVALID                 4   // Invalid state
+#define GPS_TIME_GOOD			2	// Gps is locked and working.
 
 // gps_record_synctime statues
-#define SYNCTIME_VALID 1
+// set to FALSE if not recording
 #define RECORD_THIS_PACKET 1
 #define RECORD_NEXT_PACKET 2
 
@@ -28,10 +27,11 @@
 #define MAGELLAN_STATUS_PACKET 1
 #define MAGELLAN_TIME_PACKET 2
 
-unsigned char gps_timeout_count; // Number of counts since the last gps packet was recieved. Incremented by display.c
-unsigned char gps_state;         // 
-unsigned char gps_record_synctime;            // Flag to indicate whether the gps should process a packet as synctime
-unsigned char gps_processing_packet;          // Flag to indicate when the gps is currently processing a packet
+unsigned char gps_timeout_count;     // Number of counts since the last gps packet was recieved. Incremented by display.c
+unsigned char gps_state;             // State of the gps listener (NO_GPS, SYNCING, GPS_TIME_GOOD)
+unsigned char gps_record_synctime;   // Flag to indicate whether the gps should process a packet as synctime
+unsigned char gps_processing_packet; // Flag to indicate when the gps is currently processing a packet
+unsigned char gps_timestamp_stale;   // Set to true when a second pulse has been recieved, but the time packet hasn't
 
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
