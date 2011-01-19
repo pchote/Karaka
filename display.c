@@ -62,7 +62,6 @@ void display_write_header(const char *msg)
  */
 void display_update()
 {	
-	
 	switch (gps_state)
 	{
 		case SYNCING:
@@ -79,24 +78,9 @@ void display_update()
 			}
 		break;
 		
-		case SETUP_GPS:
+		case NO_GPS:
 			if (display_last_gps_state != gps_state)
-				display_write_header(PSTR("SETTING UP GPS"));
-			
-			display_write_byte('.');
-			
-			if (cursor_ptr++ == 15)
-			{
-				cursor_ptr = 0;
-				display_write_control(NEWLINE,10);
-				display_write_string(PSTR("                "));
-				display_write_control(NEWLINE,10);
-			}
-		break;
-		
-		case CHECK_GPS_TIME_VALID:
-			if (display_last_gps_state != gps_state)
-				display_write_header(PSTR("CHECK GPS LOCK"));
+				display_write_header(PSTR("GPS NOT FOUND"));
 			
 			display_write_byte('.');
 			
@@ -212,6 +196,6 @@ SIGNAL(SIG_OVERFLOW1)
 	display_update();
 	
 	// Have we lost contact with the GPS?
-	if(gps_state != SYNCING && gps_timeout_count++ > 16)
+	if(gps_timeout_count++ > 16)
 		gps_timeout();
 }

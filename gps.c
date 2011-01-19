@@ -48,8 +48,13 @@ void gps_init(void)
 	gps_last_synctime.month = 0;
 	gps_last_synctime.year = 0;
 	
+	
+	gps_packet_type = UNKNOWN_PACKET;
+	gps_packet_length = 0;
+	gps_packet_received = 0;
+	
 	gps_record_synctime = FALSE;
-	gps_state = SYNCING;	//set GPS state to syncing, as we need to sync with incoming packets
+	gps_state = NO_GPS;
 	//gps_send_magellan_init();
 }
 
@@ -87,8 +92,13 @@ void gps_send_magellan_init(void)
 
 void gps_timeout(void)
 {
-	gps_state = SYNCING;
+	gps_state = NO_GPS;
 	error_state |= GPS_SERIAL_LOST;
+	
+	gps_packet_type = UNKNOWN_PACKET;
+	gps_packet_length = 0;
+	gps_packet_received = 0;
+	
 	error_state = error_state & 0xFE;
 	gps_timeout_count = 0;
 }
@@ -98,82 +108,104 @@ void gps_timeout(void)
  * Receives one byte of data from the USART. Determines
  * command char received and execute code as required.
  */
+
 SIGNAL(SIG_UART1_RECV)
 {
 	// Signal that the gps is alive
 	gps_timeout_count = 0;
 	
-	unsigned char incomingbyte = gps_receive_byte();
+	unsigned char b = gps_receive_byte();
 	
 	// Binary data packets must start with `$$'
-	if ((gps_packet_cntr == 0 && incomingbyte != '$') ||
-		(gps_packet_cntr == 1 && incomingbyte != '$'))
+	if ((gps_packet_received == 0 && b != '$') ||
+		(gps_packet_received == 1 && b != '$'))
 	{
-		gps_packet_cntr = 0;
+		gps_packet_received = 0;
 		gps_state = SYNCING;
 		return;
 	}
 	
-	// TODO: Use the other gps_states sanely
-	gps_state = GPS_TIME_GOOD;
+	if (gps_packet_received == 2)
+	{
+		switch (b)
+		{
+			case 'A':
+				gps_packet_type = MAGELLAN_TIME_PACKET;
+				gps_packet_length = 13;
+			break;
+			case 'H':
+				gps_packet_type = MAGELLAN_STATUS_PACKET;
+				gps_packet_length = 16;
+			break;
+			default:
+				gps_packet_type = UNKNOWN_PACKET;
+				gps_packet_length = 0;
+				gps_packet_received = 0;
+			break;
+		}
+	}
 	
 	// Store the packet
-	gps_packet[gps_packet_cntr++] = incomingbyte;
+	gps_packet[gps_packet_received++] = b;
 	
-	// End of command is given by a linefeed
-	if (incomingbyte == 0x0A)
+	if (gps_packet_received == gps_packet_length)
 	{
+		// TODO: Is this still necessary?
 		gps_processing_packet = TRUE;
-
-		// Check the command checksum.
-		//   gps_packet_cntr points at the next memory loc.
-		//   gps_packet_cntr - 1 is linefeed
-		//   gps_packet_cntr - 2 is the checksum
-		unsigned char csm = gps_packet[2];
-		for (int i = 3; i < gps_packet_cntr-2; i++)
-			csm ^= gps_packet[i];
-
-		// Process the packet if the checksum is valid
-		if (csm == gps_packet[gps_packet_cntr-2])
+		
+		// Check that the packet is valid.
+		// A valid packet will have the final byte as a linefeed (0x0A)
+		// and the second-to-last byte will be a checksum which will match
+		// the XORed bytes between the $$ and checksum.
+		//   gps_packet_received - 1 is the linefeed
+		//   gps_packet_received - 2 is the checksum byte
+		if (b == 0x0A)
 		{
-			// status packet - check that time is valid
-			if (gps_packet[2] == 'H')
-			{
-				//error_state |= GPS_TIME_NOT_LOCKED;
-				//error_state = error_state & 0xFE;					
-			}
-			
-			// time packet
-			else if (gps_packet[2] == 'A')
-			{
-				gps_last_timestamp.hours = gps_packet[4];
-				gps_last_timestamp.minutes = gps_packet[5];
-				gps_last_timestamp.seconds = gps_packet[6];
-				gps_last_timestamp.day = gps_packet[7];
-				gps_last_timestamp.month = gps_packet[8];
-				gps_last_timestamp.year = ((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF);
-				
-				
-				// TODO: Reimplement wait for 10 second boundary
-				if(wait_4_timestamp)
-					wait_4_timestamp = FALSE;
-					
-				if (gps_record_synctime == RECORD_THIS_PACKET)
-				{
-					gps_last_synctime.seconds = gps_last_timestamp.seconds;
-					gps_last_synctime.minutes = gps_last_timestamp.minutes;
-					gps_last_synctime.hours = gps_last_timestamp.hours;
-					gps_last_synctime.day = gps_last_timestamp.day;
-					gps_last_synctime.month = gps_last_timestamp.month;
-					gps_last_synctime.year = gps_last_timestamp.year;
+			unsigned char csm = gps_packet[2];
+			for (int i = 3; i < gps_packet_received-2; i++)
+				csm ^= gps_packet[i];
 
-					gps_record_synctime = SYNCTIME_VALID;
+			// Verify the checksum
+			if (csm == gps_packet[gps_packet_received-2])
+			{
+				switch (gps_packet_type)
+				{
+					case MAGELLAN_STATUS_PACKET:
+						//error_state |= GPS_TIME_NOT_LOCKED;
+						//error_state = error_state & 0xFE;
+					break;
+					case MAGELLAN_TIME_PACKET:
+						gps_last_timestamp.hours = gps_packet[4];
+						gps_last_timestamp.minutes = gps_packet[5];
+						gps_last_timestamp.seconds = gps_packet[6];
+						gps_last_timestamp.day = gps_packet[7];
+						gps_last_timestamp.month = gps_packet[8];
+						gps_last_timestamp.year = ((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF);
+				
+						// TODO: Reimplement wait for 10 second boundary
+						if(wait_4_timestamp)
+							wait_4_timestamp = FALSE;
+					
+						if (gps_record_synctime == RECORD_THIS_PACKET)
+						{
+							gps_last_synctime.seconds = gps_last_timestamp.seconds;
+							gps_last_synctime.minutes = gps_last_timestamp.minutes;
+							gps_last_synctime.hours = gps_last_timestamp.hours;
+							gps_last_synctime.day = gps_last_timestamp.day;
+							gps_last_synctime.month = gps_last_timestamp.month;
+							gps_last_synctime.year = gps_last_timestamp.year;
+
+							gps_record_synctime = SYNCTIME_VALID;
+						}
+						gps_state = GPS_TIME_GOOD;
+					break;
 				}
 			}
 		}
-		
+		// Finished parsing packet, or packet is invalid.
 		// Reset for the next packet
-		gps_packet_cntr = 0;
+		gps_packet_received = 0;
+		gps_packet_type = UNKNOWN_PACKET;
 		
 		gps_processing_packet = FALSE;
 		if (gps_record_synctime == RECORD_NEXT_PACKET)
