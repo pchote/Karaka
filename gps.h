@@ -12,6 +12,9 @@
 #ifndef KARAKA_GPS_H
 #define KARAKA_GPS_H
 
+#define ETX 0x03
+#define DLE 0x10
+
 // gps_state values
 #define NO_GPS					0
 #define SYNCING				    1
@@ -24,22 +27,28 @@
 
 // gps packet types
 #define UNKNOWN_PACKET 0
-#define MAGELLAN_STATUS_PACKET 1
-#define MAGELLAN_TIME_PACKET 2
+#define MAGELLAN_PACKET 1
+#define TRIMBLE_PACKET 2
+
 
 unsigned char gps_timeout_count;     // Number of counts since the last gps packet was recieved. Incremented by display.c
 unsigned char gps_state;             // State of the gps listener (NO_GPS, SYNCING, GPS_TIME_GOOD)
 unsigned char gps_record_synctime;   // Flag to indicate whether the gps should process a packet as synctime
-unsigned char gps_processing_packet; // Flag to indicate when the gps is currently processing a packet
+unsigned char gps_timestamp_locked; // Flag to indicate when the gps is currently processing a packet
 unsigned char gps_timestamp_stale;   // Set to true when a second pulse has been recieved, but the time packet hasn't
+
+unsigned char max_recv;
 
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
 
+unsigned char gps_recv_buf[4];
+
+#define GPS_PACKET_LENGTH 32
 unsigned char gps_packet_type;
-unsigned char gps_packet_received;
 unsigned char gps_packet_length;
-unsigned char gps_packet[32];
+unsigned char gps_packet[GPS_PACKET_LENGTH];
+unsigned char gps_magellan_length;
 
 void gps_init(void);
 void gps_timeout(void);

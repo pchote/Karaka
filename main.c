@@ -104,7 +104,7 @@ SIGNAL(SIG_INTERRUPT0)
 			{
 				exposure_count = 0;
 				// If the gps is currently processing a packet, wait for the next one
-				gps_record_synctime = gps_processing_packet ? RECORD_NEXT_PACKET : RECORD_THIS_PACKET;				
+				gps_record_synctime = gps_timestamp_locked ? RECORD_NEXT_PACKET : RECORD_THIS_PACKET;				
 				sync_pulse_trigger();
 			}
 		}
@@ -137,7 +137,7 @@ unsigned char nibble_to_ascii(unsigned char n)
 	n &= 0x0F;
 	
 	// '0' to '9'
-	if (n >= 0 && n <= 9)
+	if (n <= 9)
 		return n + 0x30;
 	// 'A' to 'F'
 	else return n + 0x37;
