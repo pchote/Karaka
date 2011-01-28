@@ -13,7 +13,7 @@ FUSES      = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 
 # Tune the lines below only if you know what you are doing:
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Os -std=gnu99 -funsigned-bitfields -fshort-enums
+COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums
 
 all:	main.hex
 
