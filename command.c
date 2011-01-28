@@ -76,6 +76,12 @@ void command_process_packet(void)
 			}
 			else
 			{	
+				if (!gps_last_timestamp.locked)
+        		{
+        			command_stored_error_state |= GPS_TIME_NOT_LOCKED;
+        			command_stored_error_state = command_stored_error_state & 0xFE;					
+        		}
+        		
 				command_write_number(gps_last_timestamp.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
 				command_write_number(gps_last_timestamp.month, 2);
@@ -115,6 +121,12 @@ void command_process_packet(void)
 			}			
 			else
 			{
+				if (!gps_last_synctime.locked)
+        		{
+        			command_stored_error_state |= GPS_TIME_NOT_LOCKED;
+        			command_stored_error_state = command_stored_error_state & 0xFE;					
+        		}
+        		
 				command_write_number(gps_last_synctime.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
 				command_write_number(gps_last_synctime.month, 2);

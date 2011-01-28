@@ -48,11 +48,11 @@ void gps_init(void)
 	gps_last_synctime.month = 0;
 	gps_last_synctime.year = 0;
 	
-	
 	gps_packet_type = UNKNOWN_PACKET;
     gps_recv_buf[3] = gps_recv_buf[2] = gps_recv_buf[1] = gps_recv_buf[0] = 0;
     gps_packet_length = 0;
     gps_magellan_length = 0;
+    gps_magellan_locked = FALSE;
 	gps_record_synctime = FALSE;
 	gps_state = NO_GPS;
     
@@ -112,7 +112,8 @@ static void gps_set_time(unsigned char hours,
 						 unsigned char day,
 						 unsigned char month,
 						 unsigned char year_high,
-						 unsigned char year_low)
+						 unsigned char year_low,
+						 unsigned char locked)
 {
 	gps_last_timestamp.hours = hours;
 	gps_last_timestamp.minutes = minutes;
@@ -120,7 +121,8 @@ static void gps_set_time(unsigned char hours,
 	gps_last_timestamp.day = day;
 	gps_last_timestamp.month = month;
 	gps_last_timestamp.year = ((year_high << 8) & 0xFF00) | (year_low & 0x00FF);
-
+    gps_last_timestamp.locked = locked;
+    
 	// Mark that we have a valid timestamp
 	gps_timestamp_stale = FALSE;
 	gps_state = GPS_TIME_GOOD;
@@ -137,6 +139,7 @@ static void gps_set_time(unsigned char hours,
 		gps_last_synctime.day = gps_last_timestamp.day;
 		gps_last_synctime.month = gps_last_timestamp.month;
 		gps_last_synctime.year = gps_last_timestamp.year;
+        gps_last_synctime.locked = gps_last_timestamp.locked;
 		gps_record_synctime = FALSE;
 	}
 }
@@ -206,21 +209,14 @@ SIGNAL(SIG_UART1_RECV)
 
         	// Time packet
         	if (gps_packet[1] == 0x8F && gps_packet[2] == 0xAB)
-        	{
-            	// TODO: why 0x03? seems wrong
-        		if (gps_packet[11] != 0x03)
-        		{
-        			error_state |= GPS_TIME_NOT_LOCKED;
-        			error_state = error_state & 0xFE;					
-        		}
         		gps_set_time(gps_packet[14], // hours
         					 gps_packet[13], // minutes
         					 gps_packet[12], // seconds
         					 gps_packet[15], // day
         					 gps_packet[16], // month
         					 gps_packet[17], // year (high byte)
-        					 gps_packet[18]); // year (low byte)
-        	}
+        					 gps_packet[18], // year (low byte)
+                             gps_packet[11] == 0x03 ? TRUE : FALSE); // lock status
         	
     		// Reset for the next packet
     		gps_packet_type = UNKNOWN_PACKET;
@@ -276,7 +272,7 @@ SIGNAL(SIG_UART1_RECV)
 					switch (gps_packet[2])
 					{
 						case 'H': // Status
-							// TODO: Handle locked/not locked
+                            gps_magellan_locked = (gps_packet[13] == 6);
 						break;
 						case 'A': // Time
 							gps_set_time(gps_packet[4], // hours
@@ -285,7 +281,8 @@ SIGNAL(SIG_UART1_RECV)
 										 gps_packet[7], // day
 										 gps_packet[8], // month
 										 gps_packet[9], // year (high byte)
-										 gps_packet[10]); // year (low byte)
+										 gps_packet[10],// year (low byte)
+                                         gps_magellan_locked); // lock status
 						break;
 					}
     			}

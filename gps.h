@@ -31,6 +31,18 @@
 #define TRIMBLE_PACKET 2
 
 
+typedef struct
+{
+	unsigned int year;
+	unsigned char month;
+	unsigned char day;
+	unsigned char hours;
+	unsigned char minutes;
+	unsigned char seconds;
+    unsigned char locked;
+} timestamp;
+
+
 unsigned char gps_timeout_count;     // Number of counts since the last gps packet was recieved. Incremented by display.c
 unsigned char gps_state;             // State of the gps listener (NO_GPS, SYNCING, GPS_TIME_GOOD)
 unsigned char gps_record_synctime;   // Flag to indicate whether the gps should process a packet as synctime
@@ -49,6 +61,7 @@ unsigned char gps_packet_type;
 unsigned char gps_packet_length;
 unsigned char gps_packet[GPS_PACKET_LENGTH];
 unsigned char gps_magellan_length;
+unsigned char gps_magellan_locked;
 
 void gps_init(void);
 void gps_timeout(void);

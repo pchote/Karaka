@@ -32,6 +32,7 @@ void display_init(void)
 	display_wait_usec(65000);
 	display_wait_usec(65000);
 	display_cursor = 0;
+    display_gps_was_locked = FALSE;
 	display_last_gps_state = NO_GPS;
 	
 	// Enable the timer1 overflow interrupt and set initial ticks
@@ -94,14 +95,18 @@ void display_update()
 		break;
 		
 		case GPS_TIME_GOOD:
-			if (display_last_gps_state != gps_state)
-				display_write_header(PSTR("UTC TIME"));
+			if (display_last_gps_state != gps_state || gps_last_timestamp.locked != display_gps_was_locked)
+			{
+                display_write_header(gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:"));
+                display_gps_was_locked = gps_last_timestamp.locked;
+			}
 			
 			display_write_number(gps_last_timestamp.hours,2);
 			display_write_byte(':');
 			display_write_number(gps_last_timestamp.minutes,2);
 			display_write_byte(':');
 			display_write_number(gps_last_timestamp.seconds,2);
+			display_write_byte(' ');
 			display_write_byte(' ');
 			display_write_byte('[');
 			display_write_number(exposure_total - exposure_count, 4);

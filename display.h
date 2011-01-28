@@ -21,6 +21,7 @@
 
 unsigned char display_cursor;
 unsigned char display_last_gps_state;
+unsigned char display_gps_was_locked;
 
 void display_init(void);
 void display_wait_usec(unsigned int millisec);

@@ -40,16 +40,6 @@
 
 #define LCD_DATA		PORTC	// Output data port for LCD
 
-typedef struct
-{
-	unsigned int year;
-	unsigned char month;
-	unsigned char day;
-	unsigned char hours;
-	unsigned char minutes;
-	unsigned char seconds;
-} timestamp;
-
 unsigned char status_register;
 unsigned char control_register;
 unsigned int exposure_total;
