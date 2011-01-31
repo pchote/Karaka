@@ -24,12 +24,5 @@ unsigned char display_last_gps_state;
 unsigned char display_gps_was_locked;
 
 void display_init(void);
-void display_wait_usec(unsigned int millisec);
-void display_write_byte(unsigned char value);
-void display_write_control(unsigned char value, int time);
-void display_write_string(const char *s);
-void display_write_number(int number, unsigned char places);
-void display_write_header(const char *msg);
-void display_update();
 
 #endif

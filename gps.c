@@ -14,7 +14,53 @@
 #include "display.h"
 #include "gps.h"
 #include "command.h"
+
+
+/*
+ * Send one byte through USART1
+ */
+static void transmit_byte(unsigned char data)
+{
+	while (!(UCSR1A & (1<<UDRE1)));	
+	UDR1 = data;
 	
+	// Wait until transmission is complete.
+	while (!(UCSR1A & (1<<TXC1)));
+}
+
+/*
+ * Receive one byte through USART1
+ */
+static unsigned char receive_byte(void)
+{
+	while (!(UCSR1A & (1<<RXC1)));
+	return UDR1;
+}
+
+/*
+ * Send Magellan initialisation strings
+ */
+static void send_magellan_init(void)
+{
+	// Enable binary timing and status packets
+    unsigned char msg[38] = {'$','P','M','G','L','I',',','0','0',',',
+                             'A','0','0',',','2',',','B','\r','\n','$',
+                             'P','M','G','L','I',',','0','0',',','H',
+                             '0','0',',','2',',','B','\r','\n'};
+	for (unsigned char i = 0; i < 38; i++)
+		transmit_byte(msg[i]);
+}
+
+/*
+ * Send a packet mask to the Trimble unit to supress automatic packets
+ */
+void send_trimble_init(void)
+{
+    unsigned char thisPacket[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
+    for (unsigned char i = 0; i < 7; i++)
+        transmit_byte(thisPacket[i]);
+}
+
 /*
  * Initialise the gps listener on USART1
  */
@@ -56,53 +102,8 @@ void gps_init(void)
 	gps_record_synctime = FALSE;
 	gps_state = NO_GPS;
     
-	gps_send_magellan_init();
-    gps_send_trimble_init();
-}
-
-/*
- * Send one byte through USART1
- */
-void gps_transmit_byte(unsigned char data)
-{
-	while (!(UCSR1A & (1<<UDRE1)));	
-	UDR1 = data;
-	
-	// Wait until transmission is complete.
-	while (!(UCSR1A & (1<<TXC1)));
-}
-
-/*
- * Receive one byte through USART1
- */
-unsigned char gps_receive_byte(void)
-{
-	while (!(UCSR1A & (1<<RXC1)));
-	return UDR1;
-}
-
-/*
- * Send Magellan initialisation strings
- */
-void gps_send_magellan_init(void)
-{
-	// Enable binary timing and status packets
-    unsigned char msg[38] = {'$','P','M','G','L','I',',','0','0',',',
-                             'A','0','0',',','2',',','B','\r','\n','$',
-                             'P','M','G','L','I',',','0','0',',','H',
-                             '0','0',',','2',',','B','\r','\n'};
-	for (unsigned char i = 0; i < 38; i++)
-		gps_transmit_byte(msg[i]);
-}
-
-/*
- * Send a packet mask to the Trimble unit to supress automatic packets
- */
-void gps_send_trimble_init(void)
-{
-    unsigned char thisPacket[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
-    for (unsigned char i = 0; i < 7; i++)
-        gps_transmit_byte(thisPacket[i]);
+	send_magellan_init();
+    send_trimble_init();
 }
 
 void gps_timeout(void)
@@ -118,7 +119,7 @@ void gps_timeout(void)
 }
 
 
-static void gps_set_time(unsigned char hours,
+static void set_time(unsigned char hours,
 						 unsigned char minutes,
 						 unsigned char seconds,
 						 unsigned char day,
@@ -171,7 +172,7 @@ SIGNAL(SIG_UART1_RECV)
     gps_recv_buf[3] = gps_recv_buf[2];
     gps_recv_buf[2] = gps_recv_buf[1];
     gps_recv_buf[1] = gps_recv_buf[0];
-    gps_recv_buf[0] = gps_receive_byte();
+    gps_recv_buf[0] = receive_byte();
     
     // Detect packet type from boundary between packets
     if (gps_packet_type == UNKNOWN_PACKET)
@@ -221,7 +222,7 @@ SIGNAL(SIG_UART1_RECV)
 
         	// Time packet
         	if (gps_packet[1] == 0x8F && gps_packet[2] == 0xAB)
-        		gps_set_time(gps_packet[14], // hours
+        		set_time(gps_packet[14], // hours
         					 gps_packet[13], // minutes
         					 gps_packet[12], // seconds
         					 gps_packet[15], // day
@@ -287,7 +288,7 @@ SIGNAL(SIG_UART1_RECV)
                             gps_magellan_locked = (gps_packet[13] == 6);
 						break;
 						case 'A': // Time
-							gps_set_time(gps_packet[4], // hours
+							set_time(gps_packet[4], // hours
 										 gps_packet[5], // minutes
 										 gps_packet[6], // seconds
 										 gps_packet[7], // day

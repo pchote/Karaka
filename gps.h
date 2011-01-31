@@ -65,11 +65,5 @@ unsigned char gps_magellan_locked;
 
 void gps_init(void);
 void gps_timeout(void);
-void gps_transmit_byte(unsigned char);
-unsigned char gps_receive_byte(void);
-void store_error_packet(unsigned char code);
-void gps_send_trimble_init(void);
-void gps_send_magellan_init(void);
-void gps_process_trimble_packet(void);
 
 #endif

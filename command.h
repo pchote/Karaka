@@ -38,10 +38,5 @@ unsigned char command_have_startbit;
 unsigned char command_checking_DLE_stuffing; //flag to check if packet has DLE stuffed
 
 void command_init(void);
-void command_process_packet(void);
-void command_send_packet(void);
-void command_write_number(int number, unsigned char places);
-void command_transmit_byte(unsigned char);
-unsigned char command_receive_byte(void);
 
 #endif

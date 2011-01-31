@@ -41,9 +41,59 @@ void command_init(void)
 }
 
 /*
+ * Send one byte through the USART
+ */
+static void transmit_byte(unsigned char data)
+{
+    while (!(UCSR0A & (1<<UDRE0)));
+    UDR0 = data;
+}
+
+/*
+ * Receive one byte through the USART
+ */
+static unsigned char receive_byte(void)
+{
+    while (!(UCSR0A & (1<<RXC)));
+    return UDR0;
+}
+
+/*
+ * Respond to a command packet using buffered data
+ */
+static void send_packet(void)
+{
+	transmit_byte(0x10);
+	for (unsigned char i = 0; i < command_reply_cntr; i++)
+	{
+		transmit_byte(command_reply_packet[i]);
+		if (command_reply_packet[i] == 0x10)
+			transmit_byte(0x10);
+	}
+	transmit_byte(0x10);
+	transmit_byte(0x03);
+}
+
+static void write_number(int number, unsigned char places)
+{
+	// Calculate the divisor for the highest place
+	unsigned int div = 1;
+	for (unsigned char i = 1; i < places; i++)
+		div *= 10;
+	
+	// Loop over each digit in the number
+	for (unsigned char p = 0; div > 0; div /= 10)
+	{
+		p = number / div;
+		number %= div;
+		command_reply_packet[command_reply_cntr++] = nibble_to_ascii(p);
+	}
+}
+
+/*
  * Process a command packet
  */
-void command_process_packet(void)
+static void process_packet(void)
 {
 	command_reply_cntr = 0;
 	command_reply_packet[command_reply_cntr++] = command_packet[0];  //put same packet ID in reply packet
@@ -82,19 +132,19 @@ void command_process_packet(void)
         			command_stored_error_state = command_stored_error_state & 0xFE;					
         		}
         		
-				command_write_number(gps_last_timestamp.year, 4);
+				write_number(gps_last_timestamp.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_timestamp.month, 2);
+				write_number(gps_last_timestamp.month, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_timestamp.day, 2);
+				write_number(gps_last_timestamp.day, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_timestamp.hours, 2);
+				write_number(gps_last_timestamp.hours, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_timestamp.minutes, 2);
+				write_number(gps_last_timestamp.minutes, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_timestamp.seconds, 2);
+				write_number(gps_last_timestamp.seconds, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(milliseconds, 3);
+				write_number(milliseconds, 3);
 			}
 		break;
 		
@@ -110,7 +160,7 @@ void command_process_packet(void)
 			sei();
 		
 		case GET_CCD_EXPOSURE:
-			command_write_number(exposure_total, 4);
+			write_number(exposure_total, 4);
 		break;
 		
 		case GET_EOFTIME:
@@ -127,19 +177,19 @@ void command_process_packet(void)
         			command_stored_error_state = command_stored_error_state & 0xFE;					
         		}
         		
-				command_write_number(gps_last_synctime.year, 4);
+				write_number(gps_last_synctime.year, 4);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_synctime.month, 2);
+				write_number(gps_last_synctime.month, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_synctime.day, 2);
+				write_number(gps_last_synctime.day, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_synctime.hours, 2);
+				write_number(gps_last_synctime.hours, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_synctime.minutes, 2);
+				write_number(gps_last_synctime.minutes, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(gps_last_synctime.seconds, 2);
+				write_number(gps_last_synctime.seconds, 2);
 				command_reply_packet[command_reply_cntr++] = ':';
-				command_write_number(0,3);
+				write_number(0,3);
 			}
 		break;
 		
@@ -149,57 +199,7 @@ void command_process_packet(void)
 		break;
 	}
 	command_reply_packet[1] = command_stored_error_state;
-	command_send_packet();
-}
-
-/*
- * Respond to a command packet using buffered data
- */
-void command_send_packet(void)
-{
-	command_transmit_byte(0x10);
-	for (unsigned char i = 0; i < command_reply_cntr; i++)
-	{
-		command_transmit_byte(command_reply_packet[i]);
-		if (command_reply_packet[i] == 0x10)
-			command_transmit_byte(0x10);
-	}
-	command_transmit_byte(0x10);
-	command_transmit_byte(0x03);
-}
-
-void command_write_number(int number, unsigned char places)
-{
-	// Calculate the divisor for the highest place
-	unsigned int div = 1;
-	for (unsigned char i = 1; i < places; i++)
-		div *= 10;
-	
-	// Loop over each digit in the number
-	for (unsigned char p = 0; div > 0; div /= 10)
-	{
-		p = number / div;
-		number %= div;
-		command_reply_packet[command_reply_cntr++] = nibble_to_ascii(p);
-	}
-}
-
-/*
- * Send one byte through the USART
- */
-void command_transmit_byte(unsigned char data)
-{
-    while (!(UCSR0A & (1<<UDRE0)));
-    UDR0 = data;
-}
-
-/*
- * Receive one byte through the USART
- */
-unsigned char command_receive_byte(void)
-{
-    while (!(UCSR0A & (1<<RXC)));
-    return UDR0;
+	send_packet();
 }
 
 /*
@@ -209,7 +209,7 @@ unsigned char command_receive_byte(void)
  */
 SIGNAL(SIG_UART0_RECV)
 {
-	unsigned char userCommand = command_receive_byte();
+	unsigned char userCommand = receive_byte();
 	if ((userCommand == 0x10) && !command_have_startbit) //check if received byte is physical layer packet start byte		
 		command_have_startbit = TRUE;
 	else if (command_have_startbit) //if already processing packet continue to scan for packet end byte
@@ -232,7 +232,7 @@ SIGNAL(SIG_UART0_RECV)
 				command_cntr--;		//remove the ETX byte
 				command_cntr--;		//remove the DLE byte
 				command_have_startbit = FALSE;
-				command_process_packet();
+				process_packet();
 				command_cntr = 0;
 			}
 		}
