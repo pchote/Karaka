@@ -38,7 +38,7 @@ int main(void)
 	// Configure Port D.
 	// Used for communication with the GPS
 	// Pin 0 is set to trigger SIG_INTERRUPT0 when a pulse from the gps arrives
-	DDRD &= ~(1<<GPS_PULSE);
+	DDRD &= ~(1<<GPS_PULSE)|(1<<TXD1)|(0<<RXD1);
 	PORTD = 0x00;
 	
 	// Configure Port E.

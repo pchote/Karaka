@@ -56,9 +56,8 @@ void gps_init(void)
 	gps_record_synctime = FALSE;
 	gps_state = NO_GPS;
     
-	// TODO: Init magellan
-	// TODO: Init trimble
-	//gps_send_magellan_init();
+	gps_send_magellan_init();
+    gps_send_trimble_init();
 }
 
 /*
@@ -88,9 +87,22 @@ unsigned char gps_receive_byte(void)
 void gps_send_magellan_init(void)
 {
 	// Enable binary timing and status packets
-	char *msg = PSTR("$PMGLI,00,A00,2,B\r\n$PMGLI,00,H00,2,B");
-	for (int i = 0; i < 36; i++)
+    unsigned char msg[38] = {'$','P','M','G','L','I',',','0','0',',',
+                             'A','0','0',',','2',',','B','\r','\n','$',
+                             'P','M','G','L','I',',','0','0',',','H',
+                             '0','0',',','2',',','B','\r','\n'};
+	for (unsigned char i = 0; i < 38; i++)
 		gps_transmit_byte(msg[i]);
+}
+
+/*
+ * Send a packet mask to the Trimble unit to supress automatic packets
+ */
+void gps_send_trimble_init(void)
+{
+    unsigned char thisPacket[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
+    for (unsigned char i = 0; i < 7; i++)
+        gps_transmit_byte(thisPacket[i]);
 }
 
 void gps_timeout(void)
