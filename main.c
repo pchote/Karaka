@@ -81,8 +81,20 @@ int main(void)
 	// Enable interrupts
 	sei();
 
-	// Wait. Main program logic is handled in interrupts.
-	while(1){}
+    unsigned char time_updated;
+    unsigned char was_stale = gps_timestamp_stale;
+	while(1)
+	{
+        time_updated = gps_process_buffer();
+	    
+        if (gps_timestamp_stale != was_stale)
+        {
+            if (gps_timestamp_stale)
+                PORTA |= (1<<CCD_PULSE);
+            else
+                PORTA &= ~(1<<CCD_PULSE);
+        }
+	}
 }
 
 /*
@@ -107,9 +119,8 @@ SIGNAL(SIG_INTERRUPT0)
 			if (exposure_count == exposure_total)
 			{
 				exposure_count = 0;
-				// If the gps is currently processing a packet, wait for the next one
-				gps_record_synctime = gps_timestamp_locked ? RECORD_NEXT_PACKET : RECORD_THIS_PACKET;				
-				sync_pulse_trigger();
+                gps_record_synctime = TRUE;
+				//sync_pulse_trigger();
 			}
 		}
 	}

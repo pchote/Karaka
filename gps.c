@@ -20,6 +20,22 @@
 #include "command.h"
 
 
+static unsigned char gps_magellan_length;
+static unsigned char gps_magellan_locked;
+
+// NOTE: If buffer length is changed the read/write offsets
+// must be changed to int, and explicit overflow code added
+static unsigned char gps_input_buffer[256];
+static unsigned char gps_input_read;
+static volatile unsigned char gps_input_write;
+
+
+#define GPS_PACKET_LENGTH 32
+static unsigned char gps_packet_type;
+static unsigned char gps_packet_length;
+static unsigned char gps_packet[GPS_PACKET_LENGTH];
+
+
 /*
  * Send one byte through USART1
  */
@@ -99,13 +115,14 @@ void gps_init(void)
 	gps_last_synctime.year = 0;
 	
 	gps_packet_type = UNKNOWN_PACKET;
-    gps_recv_buf[3] = gps_recv_buf[2] = gps_recv_buf[1] = gps_recv_buf[0] = 0;
     gps_packet_length = 0;
     gps_magellan_length = 0;
     gps_magellan_locked = FALSE;
 	gps_record_synctime = FALSE;
 	gps_state = NO_GPS;
     
+    
+    gps_input_read = gps_input_write = 0;
 	send_magellan_init();
     send_trimble_init();
 }
@@ -148,7 +165,7 @@ static void set_time(unsigned char hours,
 	if (exposure_syncing && (gps_last_timestamp.seconds % 10 == 0))
 		exposure_syncing = FALSE;
 
-	if (gps_record_synctime == RECORD_THIS_PACKET)
+	if (gps_record_synctime)
 	{
 		gps_last_synctime.seconds = gps_last_timestamp.seconds;
 		gps_last_synctime.minutes = gps_last_timestamp.minutes;
@@ -162,154 +179,170 @@ static void set_time(unsigned char hours,
 }
 
 
-/* 
- * Interrupt service routine for Data received from UART
- * Receives one byte of data from the USART. Determines
- * command char received and execute code as required.
- */
+// TODO: the code in receive_byte looks like overkill
 SIGNAL(SIG_UART1_RECV)
 {
-	// Signal that the gps is alive
-	gps_timeout_count = 0;
-	
-	// Add byte to history buffer
-    gps_recv_buf[3] = gps_recv_buf[2];
-    gps_recv_buf[2] = gps_recv_buf[1];
-    gps_recv_buf[1] = gps_recv_buf[0];
-    gps_recv_buf[0] = receive_byte();
+    gps_input_buffer[gps_input_write++] = receive_byte();
+    // reset gps alive timer
+    gps_timeout_count = 0;
+}
+
+// Process any data in the received buffer
+// Parses at most one time packet - so must be called frequently
+// Returns true if the timestamp or status info has changed
+// Note: this relies on the gps_input_buffer being 256 chars long so that
+// the data pointers automatically overflow at 256 to give a circular buffer
+int gps_process_buffer()
+{
+    // Take a local copy of gps_input_write as it can be modified by interrupts
+    unsigned char temp_write = gps_input_write;
     
-    // Detect packet type from boundary between packets
-    if (gps_packet_type == UNKNOWN_PACKET)
+    // No new data has arrived
+    if (gps_input_read == temp_write)
+        return FALSE;
+    
+    // Sync to the start of a packet if necessary
+    for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++)
     {
-        if (gps_recv_buf[2] == 0x0A &&
-            gps_recv_buf[1] == '$' &&
-            gps_recv_buf[0] == '$')
+        // Magellan packet
+        if (gps_input_buffer[gps_input_read - 1] == '$' &&
+            gps_input_buffer[gps_input_read - 2] == '$' &&
+            // End of previous packet
+            gps_input_buffer[gps_input_read - 3] == 0x0A)
         {
-            gps_packet_type = MAGELLAN_PACKET;
-            gps_packet_length = 1;
-            gps_packet[0] = '$';
+            if (gps_input_buffer[gps_input_read] == 'A')
+            {
+                gps_packet_type = MAGELLAN_TIME_PACKET;
+                gps_magellan_length = 13;
+        	}
+            else if (gps_input_buffer[gps_input_read] == 'H')
+            {
+                gps_packet_type = MAGELLAN_STATUS_PACKET;
+                gps_magellan_length = 16;
+            }
+            else // Some other Magellan packet - ignore it
+                continue;
+            
+            // Rewind to the start of the packet
+            gps_input_read -= 2;
+            break;
         }
         
-        if (gps_recv_buf[3] != DLE &&
-            gps_recv_buf[2] == DLE &&
-            gps_recv_buf[1] == ETX &&
-            gps_recv_buf[0] == DLE)
+        // Trimble
+        if ( // Start of timing packet
+            gps_input_buffer[gps_input_read] == 0xAB &&
+            gps_input_buffer[gps_input_read - 1] == 0x8F &&
+            gps_input_buffer[gps_input_read - 2] == DLE &&
+            // End of previous packet
+            gps_input_buffer[gps_input_read - 3] == ETX &&
+            gps_input_buffer[gps_input_read - 4] == DLE)
         {
             gps_packet_type = TRIMBLE_PACKET;
-            gps_packet_length = 0;
+            // Rewind to the start of the packet
+            gps_input_read -= 2;
+            break;
         }
     }
     
-    if (gps_packet_type == TRIMBLE_PACKET)
+    switch (gps_packet_type)
     {
-        // Ignore padding byte
-        if (gps_recv_buf[1] == DLE && gps_recv_buf[0] == DLE)
-            return;
-        
-        // Buffer is full (something went wrong)
-        if (gps_packet_length == GPS_PACKET_LENGTH)
-        {
-    		gps_packet_type = UNKNOWN_PACKET;
-            return;
-        }
-        
-    	// Append the byte to the stored packet
-    	gps_packet[gps_packet_length++] = gps_recv_buf[0];
-        
-        // End of packet
-    	if (gps_packet_length > 3 &&
-    	        gps_packet[gps_packet_length-1] == ETX && 
-    	        gps_packet[gps_packet_length-2] == DLE &&
-    	        gps_packet[gps_packet_length-3] != DLE)
-    	{
-        	gps_timestamp_locked = TRUE;
+        case UNKNOWN_PACKET:
+            // Still haven't synced to a packet
+        return FALSE;
+        case TRIMBLE_PACKET:
+            // Write bytes into the packet buffer
+            for (; gps_input_read != temp_write; gps_input_read++)
+            {
+                // Skip the padding byte that occurs after a legitimate DLE
+                // Don't loop this: we want to parse the 3rd DLE if you have
+                // 4 in a row
+                if (gps_input_buffer[gps_input_read] == DLE &&
+                    gps_input_buffer[gps_input_read - 1] == DLE)
+                    gps_input_read++;
 
-        	// Time packet
-        	if (gps_packet[1] == 0x8F && gps_packet[2] == 0xAB)
-        		set_time(gps_packet[14], // hours
-        					 gps_packet[13], // minutes
-        					 gps_packet[12], // seconds
-        					 gps_packet[15], // day
-        					 gps_packet[16], // month
-        					 gps_packet[17], // year (high byte)
-        					 gps_packet[18], // year (low byte)
-                             gps_packet[11] == 0x03 ? TRUE : FALSE); // lock status
-        	
-    		// Reset for the next packet
-    		gps_packet_type = UNKNOWN_PACKET;
-    		gps_timestamp_locked = FALSE;
-    		if (gps_record_synctime == RECORD_NEXT_PACKET)
-    			gps_record_synctime = RECORD_THIS_PACKET;
-    	}
-    }
-    
-    if (gps_packet_type == MAGELLAN_PACKET)
-	{
-        // Determine packet type
-        if (gps_packet_length == 2)
-    	{
-    		switch (gps_recv_buf[0])
-    		{
-    		    case 'A': // Time
-    			    gps_magellan_length = 13;
-                break;
-                case 'H': // Status
-        			gps_magellan_length = 16;
-                break;
-                default: // Wait for the next packet
-                    gps_packet_type = UNKNOWN_PACKET;
-                    return;
-                break;
-    		}
-        }
+                gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
+            
+                // End of packet (Trimble timing packet is 21 bytes)
+                if (gps_packet_length == 22)
+                {
+                    // Sanity check: Ensure the packet ends correctly
+                    if (gps_packet[21] == ETX && 
+            	        gps_packet[20] == DLE &&
+            	        gps_packet[19] != DLE)
+            	    {
+                		set_time(gps_packet[14], // hours
+                				 gps_packet[13], // minutes
+                				 gps_packet[12], // seconds
+                				 gps_packet[15], // day
+                				 gps_packet[16], // month
+                				 gps_packet[17], // year (high byte)
+                				 gps_packet[18], // year (low byte)
+                                 gps_packet[11] == 0x03 ? TRUE : FALSE); // lock status
+            	    }
+            	    else
+            	    {
+        	            // Bad packet - uh oh.
+        	            // Do we want to set a flag somewhere?
+            	    }
+        	    
+            	    // Reset for next packet
+            	    gps_packet_type = UNKNOWN_PACKET;
+                    gps_packet_length = 0;
+                    return TRUE;
+                }
+            }
+        break;
         
-        // Store the packet
-    	gps_packet[gps_packet_length++] = gps_recv_buf[0];
-    	
-    	// End of packet
-    	if (gps_packet_length == gps_magellan_length)
-    	{
-    		gps_timestamp_locked = TRUE;
+        case MAGELLAN_TIME_PACKET:
+        case MAGELLAN_STATUS_PACKET:
+            for (; gps_input_read != temp_write; gps_input_read++)
+            {
+                // Store the packet
+            	gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
+    	    
+            	// End of packet
+            	if (gps_packet_length == gps_magellan_length)
+            	{    			
+        			// Check that the packet is valid.
+        			// A valid packet will have the final byte as a linefeed (0x0A)
+        			// and the second-to-last byte will be a checksum which will match
+        			// the XORed bytes between the $$ and checksum.
+        			//   gps_packet_length - 1 is the linefeed
+        			//   gps_packet_length - 2 is the checksum byte
+        			if (gps_packet[gps_packet_length-1] == 0x0A)
+        			{
+        				unsigned char csm = gps_packet[2];
+        				for (int i = 3; i < gps_packet_length-2; i++)
+        					csm ^= gps_packet[i];
 
-			// Check that the packet is valid.
-			// A valid packet will have the final byte as a linefeed (0x0A)
-			// and the second-to-last byte will be a checksum which will match
-			// the XORed bytes between the $$ and checksum.
-			//   gps_packet_length - 1 is the linefeed
-			//   gps_packet_length - 2 is the checksum byte
-			if (gps_packet[gps_packet_length-1] == 0x0A)
-			{
-				unsigned char csm = gps_packet[2];
-				for (int i = 3; i < gps_packet_length-2; i++)
-					csm ^= gps_packet[i];
-
-				// Verify the checksum
-				if (csm == gps_packet[gps_packet_length-2])
-				{
-					switch (gps_packet[2])
-					{
-						case 'H': // Status
-                            gps_magellan_locked = (gps_packet[13] == 6);
-						break;
-						case 'A': // Time
-							set_time(gps_packet[4], // hours
-										 gps_packet[5], // minutes
-										 gps_packet[6], // seconds
-										 gps_packet[7], // day
-										 gps_packet[8], // month
-										 gps_packet[9], // year (high byte)
-										 gps_packet[10],// year (low byte)
+        				// Verify the checksum
+        				if (csm == gps_packet[gps_packet_length-2])
+        				{
+        					if (gps_packet_type == MAGELLAN_TIME_PACKET)
+        					{
+        					    set_time(gps_packet[4], // hours
+        								gps_packet[5], // minutes
+    									 gps_packet[6], // seconds
+    									 gps_packet[7], // day
+    									 gps_packet[8], // month
+    									 gps_packet[9], // year (high byte)
+    									 gps_packet[10],// year (low byte)
                                          gps_magellan_locked); // lock status
-						break;
-					}
-    			}
-    		}
+        					}
+        					else // Status packet
+        					{
+        					    gps_magellan_locked = (gps_packet[13] == 6);
+        					}
+            			}
+            		}
     		
-    		// Reset buffer for the next packet
-    		gps_packet_type = UNKNOWN_PACKET;
-    		gps_timestamp_locked = FALSE;
-    		if (gps_record_synctime == RECORD_NEXT_PACKET)
-    			gps_record_synctime = RECORD_THIS_PACKET;
-    	}
-	}
+            		// Reset buffer for the next packet
+            		gps_packet_type = UNKNOWN_PACKET;
+                    gps_packet_length = 0;
+                    return TRUE;
+            	}
+            }
+        break;
+    }
+    return FALSE;
 }
