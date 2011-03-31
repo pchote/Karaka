@@ -36,7 +36,7 @@ void sync_pulse_trigger(void)
 	PORTA &= ~(1<<CCD_PULSE);
 
 	// Overflow after 8 ticks (0.512ms)
-	TCNT0 = 248;
+	TCNT0 = 200;
 	
 	// Set the prescaler to 1/1024; each tick = 64us.
 	// Also starts the timer counting

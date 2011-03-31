@@ -19,7 +19,7 @@
 #include "gps.h"
 #include "command.h"
 
-
+#include "sync_pulse.h"
 static unsigned char gps_magellan_length;
 static unsigned char gps_magellan_locked;
 
@@ -178,10 +178,18 @@ static void set_time(unsigned char hours,
 	}
 }
 
-
+unsigned char first = TRUE;
 // TODO: the code in receive_byte looks like overkill
 SIGNAL(SIG_UART1_RECV)
 {
+    if (gps_timestamp_stale && first)
+    {
+        sync_pulse_trigger();
+        first = FALSE;
+    }
+    else if (!gps_timestamp_stale)
+        first = TRUE;
+        
     gps_input_buffer[gps_input_write++] = receive_byte();
     // reset gps alive timer
     gps_timeout_count = 0;
@@ -299,7 +307,7 @@ int gps_process_buffer()
             {
                 // Store the packet
             	gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
-    	    
+                    
             	// End of packet
             	if (gps_packet_length == gps_magellan_length)
             	{    			

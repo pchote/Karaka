@@ -57,7 +57,7 @@ int main(void)
 	PORTF = 0x00;
 
 	// Initialise global variables
-	exposure_total = 0;
+	exposure_total = 5;
 	exposure_count = 0;
 	status_register = 0;
 	control_register = 0;
@@ -80,20 +80,17 @@ int main(void)
 	
 	// Enable interrupts
 	sei();
-
-    unsigned char time_updated;
     unsigned char was_stale = gps_timestamp_stale;
+    unsigned char time_updated;
 	while(1)
 	{
         time_updated = gps_process_buffer();
-	    
-        if (gps_timestamp_stale != was_stale)
+
+        if (!gps_timestamp_stale && was_stale)
         {
-            if (gps_timestamp_stale)
-                PORTA |= (1<<CCD_PULSE);
-            else
-                PORTA &= ~(1<<CCD_PULSE);
+            sync_pulse_trigger();
         }
+        was_stale = gps_timestamp_stale;
 	}
 }
 
