@@ -82,7 +82,9 @@ int main(void)
 	sei();
     unsigned char was_stale = gps_timestamp_stale;
     unsigned char time_updated;
-	while(1)
+    
+    // Main program loop
+	while(TRUE)
 	{
         time_updated = gps_process_buffer();
 
@@ -91,6 +93,12 @@ int main(void)
             sync_pulse_trigger();
         }
         was_stale = gps_timestamp_stale;
+        
+        if (time_updated)
+        {
+            send_timestamp();
+            update_display();
+        }
 	}
 }
 

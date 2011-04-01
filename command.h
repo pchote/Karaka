@@ -42,5 +42,5 @@ unsigned char command_have_startbit;
 unsigned char command_checking_DLE_stuffing; //flag to check if packet has DLE stuffed
 
 void command_init(void);
-
+void send_timestamp();
 #endif

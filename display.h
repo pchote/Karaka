@@ -28,5 +28,5 @@ unsigned char display_last_gps_state;
 unsigned char display_gps_was_locked;
 
 void display_init(void);
-
+void update_display();
 #endif

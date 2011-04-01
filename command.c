@@ -14,9 +14,17 @@
 #include "command.h"
 #include "main.h"
 #include "gps.h"
-#include "msec_timer.h"
 
-	
+// Note: 256 size is used to allow overflow -> circular buffer
+// If buffer size is changed you will need to add explicit overflow checks
+static unsigned char usart_input_buffer[256];
+static unsigned char usart_input_read;
+static volatile unsigned char usart_input_write;
+
+static unsigned char usart_output_buffer[256];
+static volatile unsigned char usart_output_read;
+static unsigned char usart_output_write;
+
 /*
  * Initialise the command parser
  */
@@ -24,79 +32,91 @@ void command_init(void)
 {	
 	error_state = NO_ERROR;
 
-	// Initialise USART usb connection
-	// Baudrate
-	unsigned int baudrate = 16;
+	// Set the baudrate prescaler
+	// scale = (f_cpu / (16*baud)) - 1
+	unsigned int baudrate = 16; // has a 2.5% error
 	UBRR0H = (unsigned char)(baudrate>>8);
 	UBRR0L = (unsigned char)baudrate;
 
-	// Enable 2x speed
-	UCSR0A = (1<<U2X0);
 
 	// Enable receiver and transmitter. Enable Receive interrupt, disable transmit interrupt.
-	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0)|(0<<UDRIE0);
+	// Set USART capabilities
+	// RXEN0 = 1: enable recieve
+	// TXEN0 = 1: enable transmit
+	// RXCIE0 = 1: enable recieve interrupt
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
 
-	// Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
+	// Set the data frame format
+	// UMSEL0 = 0: set async operation
+	// UPM00 = 0: no parity
+	// USBS0 = 0: 1 stop bit
+	// UCSZ00 = 3: 8 data bits
+	// UCPOL0 = 0: ???
 	UCSR0C = (0<<UMSEL0)|(0<<UPM00)|(0<<USBS0)|(3<<UCSZ00)|(0<<UCPOL0);
 	
+    // Double the prescaler frequency
+	UCSR0A = (1<<U2X0);
+
 	command_checking_DLE_stuffing = FALSE;
 	command_have_startbit = FALSE;
 	command_cntr = 0;
-}
-
-/*
- * Send one byte through the USART
- */
-static void transmit_byte(unsigned char data)
-{
-    while (!(UCSR0A & (1<<UDRE0)));
-    UDR0 = data;
-}
-
-/*
- * Receive one byte through the USART
- */
-static unsigned char receive_byte(void)
-{
-    while (!(UCSR0A & (1<<RXC)));
-    return UDR0;
-}
-
-/*
- * Respond to a command packet using buffered data
- */
-static void send_packet(void)
-{
-	transmit_byte(0x10);
-	for (unsigned char i = 0; i < command_reply_cntr; i++)
-	{
-		transmit_byte(command_reply_packet[i]);
-		if (command_reply_packet[i] == 0x10)
-			transmit_byte(0x10);
-	}
-	transmit_byte(0x10);
-	transmit_byte(0x03);
-}
-
-static void write_number(int number, unsigned char places)
-{
-	// Calculate the divisor for the highest place
-	unsigned int div = 1;
-	for (unsigned char i = 1; i < places; i++)
-		div *= 10;
 	
-	// Loop over each digit in the number
-	for (unsigned char p = 0; div > 0; div /= 10)
-	{
-		p = number / div;
-		number %= div;
-		command_reply_packet[command_reply_cntr++] = nibble_to_ascii(p);
-	}
+    usart_input_write = 0;
+    usart_input_read = 0;
+    usart_output_write = 0;
+    usart_output_read = 0;
+}
+
+/*
+ * Data received interrupt
+ */
+SIGNAL(SIG_UART0_RECV)
+{
+    usart_input_buffer[usart_input_write++] = UDR1;
+}
+
+static void queue_send_byte(unsigned char b)
+{
+    // TODO: check to ensure we don't overwrite data we haven't sent yet
+    usart_output_buffer[usart_output_write++] = b;
+    
+    // Enable Transmit data register empty interrupt if necessary to send bytes down the line
+    cli();
+    if ((UCSR0B & (1<<UDRIE0)) == 0)
+        UCSR0B |= (1<<UDRIE0);
+    sei();
+}
+
+void send_timestamp()
+{
+	queue_send_byte('$');
+	queue_send_byte(gps_last_timestamp.hours);
+	queue_send_byte(gps_last_timestamp.minutes);
+	queue_send_byte(gps_last_timestamp.seconds);
+	queue_send_byte(gps_last_timestamp.day);
+	queue_send_byte(gps_last_timestamp.month);
+	queue_send_byte(gps_last_timestamp.year >> 8);
+	queue_send_byte(gps_last_timestamp.year & 0x00FF);
+	queue_send_byte('%');
+}
+
+/*
+ * data register empty interrupt to send a byte down the wire
+ */
+SIGNAL(SIG_UART0_DATA)
+{
+    if(usart_output_write != usart_output_read)
+        UDR0 = usart_output_buffer[usart_output_read++];
+    
+    // Ran out of data to send - disable the interrupt
+    if(usart_output_write == usart_output_read) 
+        UCSR0B &= ~(1<<UDRIE0);
 }
 
 /*
  * Process a command packet
  */
+/*
 static void process_packet(void)
 {
 	command_reply_cntr = 0;
@@ -172,7 +192,7 @@ static void process_packet(void)
 			{
 				command_stored_error_state |= EOF_ACCESS_ON_UPDATE;
 				command_stored_error_state = command_stored_error_state & 0xFE;
-			}			
+			}
 			else
 			{
 				if (!gps_last_synctime.locked)
@@ -205,14 +225,20 @@ static void process_packet(void)
 	command_reply_packet[1] = command_stored_error_state;
 	send_packet();
 }
+*/
+
+
 
 /*
  * Interrupt service routine for Data received from UART
  * Receives one byte of data from the USART. Determines
  * command char received and execute code as required.
  */
-SIGNAL(SIG_UART0_RECV)
+//SIGNAL(SIG_UART0_RECV)
+/*
+void foo()
 {
+    return;
 	unsigned char userCommand = receive_byte();
 	if ((userCommand == 0x10) && !command_have_startbit) //check if received byte is physical layer packet start byte		
 		command_have_startbit = TRUE;
@@ -244,5 +270,5 @@ SIGNAL(SIG_UART0_RECV)
 			command_checking_DLE_stuffing = FALSE;
 	}
 }
-
+*/
 

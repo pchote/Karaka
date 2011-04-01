@@ -49,15 +49,6 @@ static void transmit_byte(unsigned char data)
 }
 
 /*
- * Receive one byte through USART1
- */
-static unsigned char receive_byte(void)
-{
-	while (!(UCSR1A & (1<<RXC1)));
-	return UDR1;
-}
-
-/*
  * Send Magellan initialisation strings
  */
 static void send_magellan_init(void)
@@ -121,24 +112,10 @@ void gps_init(void)
 	gps_record_synctime = FALSE;
 	gps_state = NO_GPS;
     
-    
     gps_input_read = gps_input_write = 0;
 	send_magellan_init();
     send_trimble_init();
 }
-
-void gps_timeout(void)
-{
-	gps_state = NO_GPS;
-	error_state |= GPS_SERIAL_LOST;
-	
-	gps_packet_type = UNKNOWN_PACKET;
-	gps_packet_length = 0;
-	
-	error_state = error_state & 0xFE;
-	gps_timeout_count = 0;
-}
-
 
 static void set_time(unsigned char hours,
 						 unsigned char minutes,
@@ -178,21 +155,12 @@ static void set_time(unsigned char hours,
 	}
 }
 
-unsigned char first = TRUE;
-// TODO: the code in receive_byte looks like overkill
+/*
+ * Received data from gps serial. Add to buffer
+ */
 SIGNAL(SIG_UART1_RECV)
 {
-    if (gps_timestamp_stale && first)
-    {
-        sync_pulse_trigger();
-        first = FALSE;
-    }
-    else if (!gps_timestamp_stale)
-        first = TRUE;
-        
-    gps_input_buffer[gps_input_write++] = receive_byte();
-    // reset gps alive timer
-    gps_timeout_count = 0;
+    gps_input_buffer[gps_input_write++] = UDR1;
 }
 
 // Process any data in the received buffer
@@ -311,6 +279,7 @@ int gps_process_buffer()
             	// End of packet
             	if (gps_packet_length == gps_magellan_length)
             	{    			
+                    unsigned char updated = FALSE;
         			// Check that the packet is valid.
         			// A valid packet will have the final byte as a linefeed (0x0A)
         			// and the second-to-last byte will be a checksum which will match
@@ -328,6 +297,7 @@ int gps_process_buffer()
         				{
         					if (gps_packet_type == MAGELLAN_TIME_PACKET)
         					{
+                                updated = TRUE;
         					    set_time(gps_packet[4], // hours
         								gps_packet[5], // minutes
     									 gps_packet[6], // seconds
@@ -339,7 +309,11 @@ int gps_process_buffer()
         					}
         					else // Status packet
         					{
-        					    gps_magellan_locked = (gps_packet[13] == 6);
+        					    if (gps_magellan_locked != (gps_packet[13] == 6))
+        					    {
+        					        gps_magellan_locked = (gps_packet[13] == 6);
+                                    updated = TRUE;
+        					    }
         					}
             			}
             		}
@@ -347,7 +321,7 @@ int gps_process_buffer()
             		// Reset buffer for the next packet
             		gps_packet_type = UNKNOWN_PACKET;
                     gps_packet_length = 0;
-                    return TRUE;
+                    return updated;
             	}
             }
         break;

@@ -31,6 +31,7 @@
 #define MAGELLAN_TIME_PACKET 2
 #define MAGELLAN_STATUS_PACKET 3
 
+#define ONE_SECOND 0x3D09
 
 typedef struct
 {
@@ -43,8 +44,6 @@ typedef struct
     unsigned char locked;
 } timestamp;
 
-
-unsigned char gps_timeout_count;     // Number of counts since the last gps packet was recieved. Incremented by display.c
 unsigned char gps_state;             // State of the gps listener (NO_GPS, SYNCING, GPS_TIME_GOOD)
 unsigned char gps_record_synctime;   // Flag to indicate whether the gps should process a packet as synctime
 unsigned char gps_timestamp_stale;   // Set to true when a second pulse has been recieved, but the time packet hasn't
@@ -53,6 +52,5 @@ timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
 
 void gps_init(void);
-void gps_timeout(void);
 int gps_process_buffer(void);
 #endif
