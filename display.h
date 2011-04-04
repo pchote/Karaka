@@ -12,16 +12,21 @@
 
 #ifndef KARAKA_DISPLAY_H
 #define KARAKA_DISPLAY_H
+/*
+ * Instruction list
+ */
+ 
+// Initialize with 8 bit data, 2 lines, 5x7 font
+#define INITIALIZE    0x38
+#define DISPLAY_CLEAR 0x01
+#define INITIALIZEB   0x0C
+#define CURSOR_HOME   0x02
+#define NEWLINE       0xC0
 
-#define NEWLINE			0xC0
-#define CLEARLCD		0x01
-#define CURSORON		0x0E
-#define CURSORHOME		0x02
-#define DISPLAYOFF		0x08
-#define DISPLAYON		0x0F
-
-// Reset to overflow after 7812 ticks
-#define DISPLAY_TIMER_TICKS 0XF0BD
+// Display modes
+#define DISPLAY_OFF       0x08
+#define DISPLAY_ON_CURSOR 0x0F
+#define DISPLAY_ON        0x0C
 
 unsigned char display_cursor;
 unsigned char display_last_gps_state;

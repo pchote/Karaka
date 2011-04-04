@@ -56,5 +56,4 @@ int command_cntr;
 
 unsigned char ascii_to_nibble(unsigned char a);
 unsigned char nibble_to_ascii(unsigned char n);
-
 #endif

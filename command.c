@@ -87,17 +87,37 @@ static void queue_send_byte(unsigned char b)
     sei();
 }
 
-void send_timestamp()
+/*
+ * Queue a data packet to the aquisition pc
+ * Max length 255 bytes
+ */
+void queue_data(unsigned char *data, unsigned char length)
 {
-	queue_send_byte('$');
-	queue_send_byte(gps_last_timestamp.hours);
-	queue_send_byte(gps_last_timestamp.minutes);
-	queue_send_byte(gps_last_timestamp.seconds);
-	queue_send_byte(gps_last_timestamp.day);
-	queue_send_byte(gps_last_timestamp.month);
-	queue_send_byte(gps_last_timestamp.year >> 8);
-	queue_send_byte(gps_last_timestamp.year & 0x00FF);
-	queue_send_byte('%');
+    queue_send_byte(DLE);
+    for (unsigned char i = 0; i < length; i++)
+    {
+        queue_send_byte(data[i]);
+        if (data[i] == DLE)
+            queue_send_byte(DLE);
+    }
+    queue_send_byte(DLE);
+	queue_send_byte(ETX);
+}
+
+void send_timestamp(timestamp *t)
+{
+    unsigned char data[] =
+    {
+    	t->hours,
+    	t->minutes,
+    	t->seconds,
+    	t->day,
+    	t->month,
+    	t->year >> 8,
+    	t->year & 0x00FF,
+    	t->locked
+    };
+    queue_data(data, 8);
 }
 
 /*

@@ -30,7 +30,7 @@ static void wait_usec(unsigned int usec)
 /*
  * Send a control byte to the LCD
  */
-static void write_control(unsigned char value, int time)
+static void write_raw(unsigned char value, int time)
 {
 	LCD_DATA = value;
 	PORTF = (0<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
@@ -48,7 +48,8 @@ static void write_byte(unsigned char value)
 	LCD_DATA = value;
 	PORTF = (1<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
 	PORTF |= (1<<LCD_ENABLE);
-	wait_usec(10);
+	// Wait for operation to complete
+    wait_usec(10);
 	PORTF &= ~(1<<LCD_ENABLE);
 }
 
@@ -94,10 +95,10 @@ static void write_number(int number, unsigned char places)
  */
 static void write_header(const char *msg)
 {
-	write_control(CURSORHOME, 50);
-	write_control(CLEARLCD, 500);
+	write_raw(CURSOR_HOME, 50);
+	write_raw(DISPLAY_CLEAR, 500);
 	write_string(msg);
-	write_control(NEWLINE,10);
+	write_raw(NEWLINE,10);
 }
 
 /*
@@ -106,11 +107,11 @@ static void write_header(const char *msg)
 void display_init(void)
 {
 	wait_usec(50000);
-	write_control(0x38, 500);
-	write_control(CLEARLCD, 500);
-	write_control(CURSORON, 500);
-	write_control(CURSORHOME, 500);
-	write_control(0x06, 500);
+	write_raw(INITIALIZE, 40);
+	write_raw(DISPLAY_CLEAR, 1640);
+	write_raw(INITIALIZEB, 500);
+	write_raw(CURSOR_HOME, 500);
+	write_raw(0x06, 500);
 	
 	display_cursor = 0;
     display_gps_was_locked = FALSE;
@@ -130,9 +131,9 @@ void update_display()
 			if (display_cursor++ == 15)
 			{
 				display_cursor = 0;
-				write_control(NEWLINE,10);
+				write_raw(NEWLINE,10);
 				write_string(PSTR("                "));
-				write_control(NEWLINE,10);
+				write_raw(NEWLINE,10);
 			}
 		break;
 		
@@ -145,9 +146,9 @@ void update_display()
 			if (display_cursor++ == 15)
 			{
 				display_cursor = 0;
-				write_control(NEWLINE,10);
+				write_raw(NEWLINE,10);
 				write_string(PSTR("                "));
-				write_control(NEWLINE,10);
+				write_raw(NEWLINE,10);
 			}
 		break;
 		
@@ -168,7 +169,7 @@ void update_display()
 			write_byte('[');
 			write_number(exposure_total - exposure_count, 4);
 			write_byte(']');
-			write_control(NEWLINE,10);	
+			write_raw(NEWLINE,10);	
 		break;
 	}
 	display_last_gps_state = gps_state;
