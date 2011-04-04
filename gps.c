@@ -163,11 +163,13 @@ SIGNAL(SIG_UART1_RECV)
     gps_input_buffer[gps_input_write++] = UDR1;
 }
 
-// Process any data in the received buffer
-// Parses at most one time packet - so must be called frequently
-// Returns true if the timestamp or status info has changed
-// Note: this relies on the gps_input_buffer being 256 chars long so that
-// the data pointers automatically overflow at 256 to give a circular buffer
+/*
+ * Process any data in the received buffer
+ * Parses at most one time packet - so must be called frequently
+ * Returns true if the timestamp or status info has changed
+ * Note: this relies on the gps_input_buffer being 256 chars long so that
+ * the data pointers automatically overflow at 256 to give a circular buffer
+ */
 int gps_process_buffer()
 {
     // Take a local copy of gps_input_write as it can be modified by interrupts

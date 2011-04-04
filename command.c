@@ -30,8 +30,6 @@ static unsigned char usart_output_write;
  */
 void command_init(void)
 {	
-	error_state = NO_ERROR;
-
 	// Set the baudrate prescaler
 	// scale = (f_cpu / (16*baud)) - 1
 	unsigned int baudrate = 16; // has a 2.5% error
@@ -57,22 +55,12 @@ void command_init(void)
     // Double the prescaler frequency
 	UCSR0A = (1<<U2X0);
 
-	command_checking_DLE_stuffing = FALSE;
-	command_have_startbit = FALSE;
-	command_cntr = 0;
-	
     usart_input_write = 0;
     usart_input_read = 0;
     usart_output_write = 0;
     usart_output_read = 0;
-}
-
-/*
- * Data received interrupt
- */
-SIGNAL(SIG_UART0_RECV)
-{
-    usart_input_buffer[usart_input_write++] = UDR1;
+    
+    usart_packet_type = UNKNOWN_PACKET;
 }
 
 static void queue_send_byte(unsigned char b)
@@ -91,9 +79,10 @@ static void queue_send_byte(unsigned char b)
  * Queue a data packet to the aquisition pc
  * Max length 255 bytes
  */
-void queue_data(unsigned char *data, unsigned char length)
+static void queue_data(unsigned char type, unsigned char *data, unsigned char length)
 {
     queue_send_byte(DLE);
+    queue_send_byte(type);
     for (unsigned char i = 0; i < length; i++)
     {
         queue_send_byte(data[i]);
@@ -104,7 +93,7 @@ void queue_data(unsigned char *data, unsigned char length)
 	queue_send_byte(ETX);
 }
 
-void send_timestamp(timestamp *t)
+void send_timestamp(unsigned char type, timestamp *t)
 {
     unsigned char data[] =
     {
@@ -117,7 +106,7 @@ void send_timestamp(timestamp *t)
     	t->year & 0x00FF,
     	t->locked
     };
-    queue_data(data, 8);
+    queue_data(type, data, 8);
 }
 
 /*
@@ -133,162 +122,63 @@ SIGNAL(SIG_UART0_DATA)
         UCSR0B &= ~(1<<UDRIE0);
 }
 
+
 /*
- * Process a command packet
+ * Data received interrupt
  */
-/*
-static void process_packet(void)
+SIGNAL(SIG_UART0_RECV)
 {
-	command_reply_cntr = 0;
-	command_reply_packet[command_reply_cntr++] = command_packet[0];  //put same packet ID in reply packet
-	command_stored_error_state = error_state;
-	error_state = NO_ERROR;
-	command_reply_packet[command_reply_cntr++] = command_stored_error_state;  //put error code into reply packet
-	switch (command_packet[0])	//get packet ID
-	{
-		case ECHO:
-		break;
-		
-		case GET_STATUS:
-			command_reply_packet[command_reply_cntr++] = nibble_to_ascii((status_register>>4)&0x0f);
-			command_reply_packet[command_reply_cntr++] = nibble_to_ascii(status_register&0x0f);
-		break;
-		
-		case SET_CONTROL:
-			control_register = command_packet[2];
-			
-		case GET_CONTROL:
-			command_reply_packet[command_reply_cntr++] = nibble_to_ascii((control_register>>4)&0x0f);
-			command_reply_packet[command_reply_cntr++] = nibble_to_ascii(control_register&0x0f);
-		break;
-		
-		case GET_UTCTIME:
-			if (gps_timestamp_stale)
-			{
-				command_stored_error_state |= UTC_ACCESS_ON_UPDATE;
-				command_stored_error_state = command_stored_error_state & 0xFE;
-			}
-			else
-			{	
-				if (!gps_last_timestamp.locked)
-        		{
-        			command_stored_error_state |= GPS_TIME_NOT_LOCKED;
-        			command_stored_error_state = command_stored_error_state & 0xFE;					
-        		}
-        		
-				write_number(gps_last_timestamp.year, 4);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_timestamp.month, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_timestamp.day, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_timestamp.hours, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_timestamp.minutes, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_timestamp.seconds, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(milliseconds, 3);
-			}
-		break;
-		
-		case SET_CCD_EXPOSURE:
-			cli();
-			exposure_total = ascii_to_nibble(command_packet[2])*1000
-							+ ascii_to_nibble(command_packet[3])*100
-							+ ascii_to_nibble(command_packet[4])*10
-							+ ascii_to_nibble(command_packet[5]);
-			
+    usart_input_buffer[usart_input_write++] = UDR1;
+}
+
+/*
+ * Process any data in the received buffer
+ * Parses at most one time packet - so must be called frequently
+ * Returns true if the timestamp or status info has changed
+ * Note: this relies on the gps_input_buffer being 256 chars long so that
+ * the data pointers automatically overflow at 256 to give a circular buffer
+ */
+int usart_process_buffer()
+{
+    // Take a local copy of usart_input_write as it can be modified by interrupts
+    unsigned char temp_write = usart_input_write;
+    
+    // No new data has arrived
+    if (usart_input_read == temp_write)
+        return FALSE;
+    
+    // Sync to the start of a packet if necessary
+    for (; usart_packet_type == UNKNOWN_PACKET && usart_input_read != temp_write; usart_input_read++)
+    {   
+        if ( // Start of timing packet
+            usart_input_buffer[usart_input_read - 1] == DLE &&
+            // End of previous packet
+            usart_input_buffer[usart_input_read - 2] == ETX &&
+            usart_input_buffer[usart_input_read - 3] == DLE)
+        {
+            usart_packet_type = usart_input_buffer[usart_input_read];
+            // Rewind to the start of the packet
+            usart_input_read -= 1;
+            break;
+        }
+    }
+    
+    switch (usart_packet_type)
+    {
+        case UNKNOWN_PACKET:
+            // Still haven't synced to a packet
+        return FALSE;
+        case EXPOSURE:
+            /*
+            cli();
+            // TODO: read high and low bytes; check for DLE padding
+            // TODO: calculate and compare checksum
+			exposure_total = ((exp_high << 8) & 0xFF00) | (exp_low & 0x00FF);
 			exposure_count = 0;
 			exposure_syncing = TRUE;
 			sei();
-		
-		case GET_CCD_EXPOSURE:
-			write_number(exposure_total, 4);
-		break;
-		
-		case GET_EOFTIME:
-			if (gps_timestamp_stale)
-			{
-				command_stored_error_state |= EOF_ACCESS_ON_UPDATE;
-				command_stored_error_state = command_stored_error_state & 0xFE;
-			}
-			else
-			{
-				if (!gps_last_synctime.locked)
-        		{
-        			command_stored_error_state |= GPS_TIME_NOT_LOCKED;
-        			command_stored_error_state = command_stored_error_state & 0xFE;					
-        		}
-        		
-				write_number(gps_last_synctime.year, 4);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_synctime.month, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_synctime.day, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_synctime.hours, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_synctime.minutes, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(gps_last_synctime.seconds, 2);
-				command_reply_packet[command_reply_cntr++] = ':';
-				write_number(0,3);
-			}
-		break;
-		
-		default:
-			command_stored_error_state |= PACKETID_INVALID;
-			command_stored_error_state = command_stored_error_state & 0xFE;
-		break;
-	}
-	command_reply_packet[1] = command_stored_error_state;
-	send_packet();
+			*/
+        break;
+    }
+    return FALSE;
 }
-*/
-
-
-
-/*
- * Interrupt service routine for Data received from UART
- * Receives one byte of data from the USART. Determines
- * command char received and execute code as required.
- */
-//SIGNAL(SIG_UART0_RECV)
-/*
-void foo()
-{
-    return;
-	unsigned char userCommand = receive_byte();
-	if ((userCommand == 0x10) && !command_have_startbit) //check if received byte is physical layer packet start byte		
-		command_have_startbit = TRUE;
-	else if (command_have_startbit) //if already processing packet continue to scan for packet end byte
-	{	
-		command_packet[command_cntr++] = userCommand;		//save received byte to packet buffer
-		if (userCommand == 0x10)  
-		{
-			if (command_checking_DLE_stuffing)
-			{
-				command_checking_DLE_stuffing = FALSE;
-				command_cntr--;		//write over 2nd DLE byte in gps_packet
-			}
-			else
-				command_checking_DLE_stuffing = TRUE;
-		}
-		else if (userCommand == 0x03)
-		{
-			if (command_checking_DLE_stuffing)  //this is true if the last =byte received was an odd numbered DLE
-			{
-				command_cntr--;		//remove the ETX byte
-				command_cntr--;		//remove the DLE byte
-				command_have_startbit = FALSE;
-				process_packet();
-				command_cntr = 0;
-			}
-		}
-		else 
-			command_checking_DLE_stuffing = FALSE;
-	}
-}
-*/
-

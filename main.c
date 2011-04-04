@@ -96,7 +96,7 @@ int main(void)
         
         if (time_updated)
         {
-            send_timestamp(&gps_last_timestamp);
+            send_timestamp(CURRENTTIME, &gps_last_timestamp);
             update_display();
         }
 	}
