@@ -167,7 +167,7 @@ void update_display()
 			write_byte(' ');
 			write_byte(' ');
 			write_byte('[');
-			write_number(exposure_total - exposure_count, 4);
+			write_number(exposure_count, 4);
 			write_byte(']');
 			write_raw(NEWLINE,10);	
 		break;

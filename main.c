@@ -58,7 +58,7 @@ int main(void)
 
 	// Initialise global variables
 	exposure_total = 5;
-	exposure_count = 0;
+	exposure_count = exposure_total;
 	status_register = 0;
 	control_register = 0;
 	exposure_syncing = TRUE;
@@ -109,13 +109,12 @@ SIGNAL(SIG_INTERRUPT0)
 		if (!exposure_syncing)
 		{
 			gps_timestamp_stale = TRUE;
-			exposure_count++;
 			
 			// End of exposure - send a syncpulse to the camera
 			// and store a flag so the gps can save the synctime.
-			if (exposure_count == exposure_total)
+			if (--exposure_count == 0)
 			{
-				exposure_count = 0;
+				exposure_count = exposure_total;
                 gps_record_synctime = TRUE;
 				sync_pulse_trigger();
 			}

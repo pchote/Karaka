@@ -192,7 +192,7 @@ int usart_process_buffer()
             // TODO: read high and low bytes; check for DLE padding
             // TODO: calculate and compare checksum
 			exposure_total = ((exp_high << 8) & 0xFF00) | (exp_low & 0x00FF);
-			exposure_count = 0;
+			exposure_count = exposure_total;
 			exposure_syncing = TRUE;
 			sei();
 			
