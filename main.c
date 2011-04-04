@@ -80,7 +80,6 @@ int main(void)
 	
 	// Enable interrupts
 	sei();
-    unsigned char was_stale = gps_timestamp_stale;
     unsigned char time_updated;
     
     // Main program loop
@@ -88,15 +87,8 @@ int main(void)
 	{
         time_updated = gps_process_buffer();
 
-        if (!gps_timestamp_stale && was_stale)
-        {
-            sync_pulse_trigger();
-        }
-        was_stale = gps_timestamp_stale;
-        
         if (time_updated)
         {
-            send_timestamp(CURRENTTIME, &gps_last_timestamp);
             update_display();
         }
 	}
@@ -125,7 +117,7 @@ SIGNAL(SIG_INTERRUPT0)
 			{
 				exposure_count = 0;
                 gps_record_synctime = TRUE;
-				//sync_pulse_trigger();
+				sync_pulse_trigger();
 			}
 		}
 	}

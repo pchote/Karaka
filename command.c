@@ -63,6 +63,20 @@ void command_init(void)
     usart_packet_type = UNKNOWN_PACKET;
 }
 
+/*
+ * Calculate a checksum by XORing bytes 
+ */
+static unsigned char checksum(unsigned char *data, unsigned char length)
+{
+    unsigned char csm = data[0];
+    for (unsigned char i = 1; i < length; i++)
+		csm ^= data[i];
+    return csm;
+}
+
+/*
+ * Add a byte to the send queue and start sending data if necessary
+ */
 static void queue_send_byte(unsigned char b)
 {
     // TODO: check to ensure we don't overwrite data we haven't sent yet
@@ -75,9 +89,9 @@ static void queue_send_byte(unsigned char b)
     sei();
 }
 
+
 /*
  * Queue a data packet to the aquisition pc
- * Max length 255 bytes
  */
 static void queue_data(unsigned char type, unsigned char *data, unsigned char length)
 {
@@ -89,10 +103,15 @@ static void queue_data(unsigned char type, unsigned char *data, unsigned char le
         if (data[i] == DLE)
             queue_send_byte(DLE);
     }
+    // send the checksum of the *unpadded* data
+    queue_send_byte(checksum(data, length));
     queue_send_byte(DLE);
 	queue_send_byte(ETX);
 }
 
+/*
+ * Queue a timestamp packet to the acquisition pc
+ */
 void send_timestamp(unsigned char type, timestamp *t)
 {
     unsigned char data[] =
@@ -133,9 +152,8 @@ SIGNAL(SIG_UART0_RECV)
 
 /*
  * Process any data in the received buffer
- * Parses at most one time packet - so must be called frequently
- * Returns true if the timestamp or status info has changed
- * Note: this relies on the gps_input_buffer being 256 chars long so that
+ * Parses at most one packet - so must be called frequently
+ * Note: this relies on the usart_input_buffer being 256 chars long so that
  * the data pointers automatically overflow at 256 to give a circular buffer
  */
 int usart_process_buffer()
@@ -177,6 +195,8 @@ int usart_process_buffer()
 			exposure_count = 0;
 			exposure_syncing = TRUE;
 			sei();
+			
+			// TODO: send a response packet with the new exposure time
 			*/
         break;
     }

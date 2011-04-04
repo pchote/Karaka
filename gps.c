@@ -144,6 +144,7 @@ static void set_time(unsigned char hours,
 
 	if (gps_record_synctime)
 	{
+        cli();
 		gps_last_synctime.seconds = gps_last_timestamp.seconds;
 		gps_last_synctime.minutes = gps_last_timestamp.minutes;
 		gps_last_synctime.hours = gps_last_timestamp.hours;
@@ -152,7 +153,11 @@ static void set_time(unsigned char hours,
 		gps_last_synctime.year = gps_last_timestamp.year;
         gps_last_synctime.locked = gps_last_timestamp.locked;
 		gps_record_synctime = FALSE;
+        sei();
+        
+		send_timestamp(DOWNLOADTIME, &gps_last_synctime);
 	}
+	send_timestamp(CURRENTTIME, &gps_last_timestamp);
 }
 
 /*
