@@ -112,21 +112,39 @@ static void queue_data(unsigned char type, unsigned char *data, unsigned char le
 /*
  * Queue a timestamp packet to the acquisition pc
  */
-void send_timestamp(unsigned char type, timestamp *t)
+void send_timestamp()
 {
     unsigned char data[] =
     {
-    	t->hours,
-    	t->minutes,
-    	t->seconds,
-    	t->day,
-    	t->month,
-    	t->year >> 8,
-    	t->year & 0x00FF,
-    	t->locked
+    	gps_last_timestamp.hours,
+    	gps_last_timestamp.minutes,
+    	gps_last_timestamp.seconds,
+    	gps_last_timestamp.day,
+    	gps_last_timestamp.month,
+    	gps_last_timestamp.year & 0x00FF,
+    	gps_last_timestamp.year >> 8,
+    	gps_last_timestamp.locked,
+    	exposure_count
     };
-    queue_data(type, data, 8);
+    queue_data(CURRENTTIME, data, 9);
 }
+
+void send_downloadtimestamp()
+{
+    unsigned char data[] =
+    {
+    	gps_last_synctime.hours,
+    	gps_last_synctime.minutes,
+    	gps_last_synctime.seconds,
+    	gps_last_synctime.day,
+    	gps_last_synctime.month,
+    	gps_last_synctime.year & 0x00FF,
+    	gps_last_synctime.year >> 8,
+    	gps_last_synctime.locked
+    };
+    queue_data(DOWNLOADTIME, data, 8);
+}
+
 
 /*
  * data register empty interrupt to send a byte down the wire

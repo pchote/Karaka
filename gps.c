@@ -155,9 +155,9 @@ static void set_time(unsigned char hours,
 		gps_record_synctime = FALSE;
         sei();
         
-		send_timestamp(DOWNLOADTIME, &gps_last_synctime);
+		send_downloadtimestamp();
 	}
-	send_timestamp(CURRENTTIME, &gps_last_timestamp);
+	send_timestamp();
 }
 
 /*

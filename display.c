@@ -166,8 +166,9 @@ void update_display()
 			write_number(gps_last_timestamp.seconds,2);
 			write_byte(' ');
 			write_byte(' ');
+			write_byte(' ');
 			write_byte('[');
-			write_number(exposure_count, 4);
+			write_number(exposure_count, 3);
 			write_byte(']');
 			write_raw(NEWLINE,10);	
 		break;

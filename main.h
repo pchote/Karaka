@@ -46,14 +46,13 @@
 
 unsigned char status_register;
 unsigned char control_register;
-unsigned int exposure_total;
-unsigned int exposure_count;
+unsigned char exposure_total;
+unsigned char exposure_count;
 unsigned char error_state;
 
 unsigned char exposure_syncing;
 
 int command_cntr;
 
-unsigned char ascii_to_nibble(unsigned char a);
 unsigned char nibble_to_ascii(unsigned char n);
 #endif

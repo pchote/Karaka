@@ -17,14 +17,15 @@
 #define KARAKA_COMMAND_H
 
 // Packet types
-#define CURRENTTIME 0x01
-#define DOWNLOADTIME 0x02
-#define DEBUG 0x03
-#define EXPOSURE 0x04
+#define CURRENTTIME 0xA1
+#define DOWNLOADTIME 0xA2
+#define DEBUG 0xA3
+#define EXPOSURE 0xA4
 
 
 unsigned char usart_packet_type;
 
 void command_init(void);
-void send_timestamp(unsigned char type, timestamp *t);
+void send_timestamp();
+void send_downloadtimestamp();
 #endif

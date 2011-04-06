@@ -123,23 +123,6 @@ SIGNAL(SIG_INTERRUPT0)
 }
 
 /*
- * Convert an ascii character '0'-'F' to a nibble
- */
-unsigned char ascii_to_nibble(unsigned char a)
-{
-	// '0' - '9'
-	if (a >= 0x30 && a <= 0x39)
-		return a - 0x30;
-	// 'A' - 'F'
-	else if (a >= 0x41 && a <= 0x46)
-		return a - 0x37;
-	// 'a' - 'f'
-	else if (a >= 0x61 && a <= 0x66)
-		return a - 0x57;
-	else return 0;
-}	
-
-/*
  * Convert a nibble in the range 0-F to ascii
  */
 unsigned char nibble_to_ascii(unsigned char n)
