@@ -26,6 +26,7 @@
 unsigned char usart_packet_type;
 
 void command_init(void);
+void send_debug(char *string);
 void send_timestamp();
 void send_downloadtimestamp();
 #endif

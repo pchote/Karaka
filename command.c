@@ -96,6 +96,7 @@ static void queue_send_byte(unsigned char b)
 static void queue_data(unsigned char type, unsigned char *data, unsigned char length)
 {
     queue_send_byte(DLE);
+    queue_send_byte(length);
     queue_send_byte(type);
     for (unsigned char i = 0; i < length; i++)
     {
@@ -145,6 +146,10 @@ void send_downloadtimestamp()
     queue_data(DOWNLOADTIME, data, 8);
 }
 
+void send_debug(char *string)
+{
+    queue_data(DEBUG, (unsigned char *)string, strlen(string));
+}
 
 /*
  * data register empty interrupt to send a byte down the wire
