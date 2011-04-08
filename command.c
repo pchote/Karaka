@@ -15,6 +15,11 @@
 #include "main.h"
 #include "gps.h"
 
+#define USART_PACKET_LENGTH 256
+static unsigned char usart_packet_type;
+static unsigned char usart_packet_length;
+static unsigned char usart_packet[USART_PACKET_LENGTH];
+
 // Note: 256 size is used to allow overflow -> circular buffer
 // If buffer size is changed you will need to add explicit overflow checks
 static unsigned char usart_input_buffer[256];
@@ -170,7 +175,7 @@ SIGNAL(SIG_UART0_DATA)
  */
 SIGNAL(SIG_UART0_RECV)
 {
-    usart_input_buffer[usart_input_write++] = UDR1;
+    usart_input_buffer[usart_input_write++] = UDR0;
 }
 
 /*
@@ -179,7 +184,7 @@ SIGNAL(SIG_UART0_RECV)
  * Note: this relies on the usart_input_buffer being 256 chars long so that
  * the data pointers automatically overflow at 256 to give a circular buffer
  */
-int usart_process_buffer()
+unsigned char usart_process_buffer()
 {
     // Take a local copy of usart_input_write as it can be modified by interrupts
     unsigned char temp_write = usart_input_write;
@@ -204,24 +209,49 @@ int usart_process_buffer()
         }
     }
     
-    switch (usart_packet_type)
+    // Write bytes into the packet buffer
+    for (; usart_input_read != temp_write; usart_input_read++)
     {
-        case UNKNOWN_PACKET:
-            // Still haven't synced to a packet
-        return FALSE;
-        case EXPOSURE:
-            /*
-            cli();
-            // TODO: read high and low bytes; check for DLE padding
-            // TODO: calculate and compare checksum
-			exposure_total = ((exp_high << 8) & 0xFF00) | (exp_low & 0x00FF);
-			exposure_count = exposure_total;
-			exposure_syncing = TRUE;
-			sei();
+        // Skip the padding byte that occurs after a legitimate DLE
+        // Don't loop this: we want to parse the 3rd DLE if you have
+        // 4 in a row
+        if (usart_input_buffer[usart_input_read] == DLE &&
+            usart_input_buffer[usart_input_read - 1] == DLE)
+            usart_input_read++;
+
+        usart_packet[usart_packet_length++] = usart_input_buffer[usart_input_read];
+    
+        // End of packet (data length is the second byte + 6 frame bytes)
+        if (usart_packet_length > 2 && usart_packet_length == usart_packet[1] + 6)
+        {
+            // Check checksum
+            if (checksum(&usart_packet[3], usart_packet[1]) == usart_packet[usart_packet_length-3])
+            {
+                // Handle packet
+                switch(usart_packet[2])
+                {
+                    case EXPOSURE:
+                        cli();
+                        exposure_total = usart_packet[3];
+            			exposure_count = exposure_total;
+            			exposure_syncing = TRUE;
 			
-			// TODO: send a response packet with the new exposure time
-			*/
-        break;
+                        // Enable gps pulse interrupt if exposure != 0
+                        EIMSK = (!(exposure_total == 0)<<INT0);
+                        sei();  
+                    break;
+                }
+            }
+            else
+            {
+                send_debug("Command packet checksum failed");
+            }
+    	    
+    	    // Reset for next packet
+    	    usart_packet_type = UNKNOWN_PACKET;
+            usart_packet_length = 0;
+            return TRUE;
+        }
     }
     return FALSE;
 }

@@ -57,10 +57,7 @@ int main(void)
 	PORTF = 0x00;
 
 	// Initialise global variables
-	exposure_total = 5;
-	exposure_count = exposure_total;
-	status_register = 0;
-	control_register = 0;
+	exposure_count = exposure_total = 0;
 	exposure_syncing = TRUE;
 	gps_timestamp_stale = FALSE;
 
@@ -75,9 +72,6 @@ int main(void)
 	EICRA = (1<<ISC31)|(1<<ISC30)|(1<<ISC21)|(1<<ISC20)|(1<<ISC11)|(1<<ISC10)|(1<<ISC01)|(0<<ISC00); 
 	EICRB = (0<<ISC71)|(1<<ISC70)|(0<<ISC61)|(1<<ISC60)|(0<<ISC51)|(1<<ISC50)|(0<<ISC41)|(1<<ISC40);
 	
-	// Enable interrupt 0 on PIND0 for incoming gps pulses	
-	EIMSK = (1<<INT0);
-	
 	// Enable interrupts
 	sei();
     unsigned char time_updated;
@@ -85,6 +79,7 @@ int main(void)
     // Main program loop
 	while(TRUE)
 	{
+        usart_process_buffer();
         time_updated = gps_process_buffer();
 
         if (time_updated)

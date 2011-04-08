@@ -44,15 +44,9 @@
 
 #define LCD_DATA		PORTC	// Output data port for LCD
 
-unsigned char status_register;
-unsigned char control_register;
 unsigned char exposure_total;
 unsigned char exposure_count;
-unsigned char error_state;
-
 unsigned char exposure_syncing;
-
-int command_cntr;
 
 unsigned char nibble_to_ascii(unsigned char n);
 #endif

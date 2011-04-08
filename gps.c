@@ -175,7 +175,7 @@ SIGNAL(SIG_UART1_RECV)
  * Note: this relies on the gps_input_buffer being 256 chars long so that
  * the data pointers automatically overflow at 256 to give a circular buffer
  */
-int gps_process_buffer()
+unsigned char gps_process_buffer()
 {
     // Take a local copy of gps_input_write as it can be modified by interrupts
     unsigned char temp_write = gps_input_write;

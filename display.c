@@ -165,11 +165,22 @@ void update_display()
 			write_byte(':');
 			write_number(gps_last_timestamp.seconds,2);
 			write_byte(' ');
-			write_byte(' ');
-			write_byte(' ');
-			write_byte('[');
-			write_number(exposure_count, 3);
-			write_byte(']');
+    		write_byte(' ');
+    		write_byte(' ');
+			if (exposure_count != 0)
+			{
+    			write_byte('[');
+    			write_number(exposure_count, 3);
+    			write_byte(']');
+			}
+			else
+			{
+			    write_byte(' ');
+    			write_byte(' ');
+    			write_byte(' ');
+    			write_byte(' ');
+    			write_byte(' ');
+			}
 			write_raw(NEWLINE,10);	
 		break;
 	}

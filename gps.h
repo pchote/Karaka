@@ -52,5 +52,5 @@ timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
 
 void gps_init(void);
-int gps_process_buffer(void);
+unsigned char gps_process_buffer(void);
 #endif
