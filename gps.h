@@ -46,7 +46,6 @@ typedef struct
 
 unsigned char gps_state;             // State of the gps listener (NO_GPS, SYNCING, GPS_TIME_GOOD)
 unsigned char gps_record_synctime;   // Flag to indicate whether the gps should process a packet as synctime
-unsigned char gps_timestamp_stale;   // Set to true when a second pulse has been recieved, but the time packet hasn't
 
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;

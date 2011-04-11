@@ -18,10 +18,6 @@
 #define FALSE (0)
 #define TRUE (!(FALSE))
 
-#define SWHIGH	1
-#define SWLOW	0
-#define SWREV	1
-
 #define RXD			    PINE0   // UART 0 RECEIVE
 #define TXD				PINE1   // UART 0 TRANSMIT
 #define TXD1			PIND3	// UART 1 TRANSMIT

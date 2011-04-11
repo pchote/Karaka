@@ -1,13 +1,13 @@
 //***************************************************************************
 //
-//  File........: main.c
-//  Description.: ATMega128 USB timer card.  Interface between GPS module, 
+//	File........: main.c
+//	Description.: ATMega128 USB timer card.	 Interface between GPS module, 
 //				  CCD camera, and Laptop
-//  Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//	Copyright...: 2009-2011 Johnny McClymont, Paul Chote
 //
-//  This file is part of Karaka, which is free software. It is made available
-//  to you under the terms of version 3 of the GNU General Public License, as
-//  published by the Free Software Foundation. For more information, see LICENSE.
+//	This file is part of Karaka, which is free software. It is made available
+//	to you under the terms of version 3 of the GNU General Public License, as
+//	published by the Free Software Foundation. For more information, see LICENSE.
 //
 //***************************************************************************
 
@@ -28,7 +28,7 @@ int main(void)
 	// Pins 1-5 used to input the (unimplemented) button controls
 	DDRA = (1<<CCD_PULSE)|(0<<UP)|(0<<LEFT)|(0<<DOWN)|(0<<RIGHT)|(0<<CENTER);
 	// Set the pin HIGH so that the output bnc is set LOW.
-	PORTA = (1<<CCD_PULSE);	
+	PORTA = (1<<CCD_PULSE); 
 	
 	// Configure port B; unused by code
 	PORTB = 0x00;
@@ -58,7 +58,6 @@ int main(void)
 	// Initialise global variables
 	exposure_count = exposure_total = 0;
 	exposure_syncing = TRUE;
-	gps_timestamp_stale = FALSE;
 
 	// Initialise the hardware units
 	command_init();
@@ -72,18 +71,18 @@ int main(void)
 	
 	// Enable interrupts
 	sei();
-    unsigned char time_updated;
-    
-    // Main program loop
+	unsigned char time_updated;
+	
+	// Main program loop
 	while(TRUE)
 	{
-        usart_process_buffer();
-        time_updated = gps_process_buffer();
+		usart_process_buffer();
+		time_updated = gps_process_buffer();
 
-        if (time_updated)
-        {
-            update_display();
-        }
+		if (time_updated)
+		{
+			update_display();
+		}
 	}
 }
 
@@ -94,21 +93,16 @@ int main(void)
 SIGNAL(SIG_INTERRUPT0)
 {
 	// Don't count down unless we have a valid exposure time, and the GPS is locked
-	if(exposure_total != 0 && gps_state == GPS_TIME_GOOD)
+	if (gps_state == GPS_TIME_GOOD && // Do we have a gps lock?
+	    !exposure_syncing) // Are we waiting for a 10s boundary?
 	{		
-		// Are we waiting for a 10s boundary before we start counting down?
-		if (!exposure_syncing)
+		// End of exposure - send a syncpulse to the camera
+		// and store a flag so the gps can save the synctime.
+		if (--exposure_count == 0)
 		{
-			gps_timestamp_stale = TRUE;
-			
-			// End of exposure - send a syncpulse to the camera
-			// and store a flag so the gps can save the synctime.
-			if (--exposure_count == 0)
-			{
-				exposure_count = exposure_total;
-                gps_record_synctime = TRUE;
-				trigger_download();
-			}
+			exposure_count = exposure_total;
+			gps_record_synctime = TRUE;
+			trigger_download();
 		}
 	}
 }

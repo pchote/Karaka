@@ -134,7 +134,6 @@ static void set_time(unsigned char hours,
     gps_last_timestamp.locked = locked;
     
 	// Mark that we have a valid timestamp
-	gps_timestamp_stale = FALSE;
 	gps_state = GPS_TIME_GOOD;
 
 	// Synchronize the exposure countdown with the 10 second mark
