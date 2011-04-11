@@ -19,7 +19,6 @@
 #include "gps.h"
 #include "command.h"
 
-#include "sync_pulse.h"
 static unsigned char gps_magellan_length;
 static unsigned char gps_magellan_locked;
 

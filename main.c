@@ -13,7 +13,7 @@
 
 #include <avr/interrupt.h>
 #include "main.h"
-#include "sync_pulse.h"
+#include "download.h"
 #include "gps.h"
 #include "display.h"
 #include "command.h"
@@ -63,7 +63,7 @@ int main(void)
 	// Initialise the hardware units
 	command_init();
 	gps_init();
-	sync_pulse_init();
+	init_download();
 	display_init();
 	
 	// initialise all external interupts to be rising edge triggered
@@ -107,7 +107,7 @@ SIGNAL(SIG_INTERRUPT0)
 			{
 				exposure_count = exposure_total;
                 gps_record_synctime = TRUE;
-				sync_pulse_trigger();
+				trigger_download();
 			}
 		}
 	}
