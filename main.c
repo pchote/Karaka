@@ -13,7 +13,6 @@
 
 #include <avr/interrupt.h>
 #include "main.h"
-#include "msec_timer.h"
 #include "sync_pulse.h"
 #include "gps.h"
 #include "display.h"
@@ -64,8 +63,7 @@ int main(void)
 	// Initialise the hardware units
 	command_init();
 	gps_init();
-	msec_timer_init();		// Millisecond counter
-	sync_pulse_init();		// Pulse timer
+	sync_pulse_init();
 	display_init();
 	
 	// initialise all external interupts to be rising edge triggered
@@ -97,9 +95,7 @@ SIGNAL(SIG_INTERRUPT0)
 {
 	// Don't count down unless we have a valid exposure time, and the GPS is locked
 	if(exposure_total != 0 && gps_state == GPS_TIME_GOOD)
-	{
-		msec_timer_reset();
-		
+	{		
 		// Are we waiting for a 10s boundary before we start counting down?
 		if (!exposure_syncing)
 		{
