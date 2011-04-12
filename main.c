@@ -47,15 +47,14 @@ int main(void)
 	exposure_count = exposure_total = 0;
 	exposure_syncing = TRUE;
 
+	// Set INT0 to be rising edge triggered
+    EICRA = (1<<ISC01)|(0<<ISC00);
+    
 	// Initialise the hardware units
 	command_init();
 	gps_init();
 	init_download();
 	display_init();
-	
-	// initialise all external interupts to be rising edge triggered
-	EICRA = (1<<ISC31)|(1<<ISC30)|(1<<ISC21)|(1<<ISC20)|(1<<ISC11)|(1<<ISC10)|(1<<ISC01)|(0<<ISC00); 
-	EICRB = (0<<ISC71)|(1<<ISC70)|(0<<ISC61)|(1<<ISC60)|(0<<ISC51)|(1<<ISC50)|(0<<ISC41)|(1<<ISC40);
 	
 	// Enable interrupts
 	sei();
