@@ -2,7 +2,7 @@
 //
 //	File........: download.c
 //	Description.: Commands the camera to download a frame by pulling the
-//				  CCD_PULSE pin LOW for 512us. Uses Timer0
+//				  PA0 pin LOW for 512us. Uses Timer0
 //	Copyright...: 2009-2011 Johnny McClymont, Paul Chote
 //
 //	This file is part of Karaka, which is free software. It is made available
@@ -20,6 +20,12 @@
  */
 void init_download(void)
 {
+	// Set Port A, pin 0 as an output
+    DDRA |= (1<<DDA0);
+    
+    // Set pin HIGH so initial output is LOW
+	PORTA |= (1<<PA0); 
+	
 	// Enable timer0 overflow interrupt
 	TIMSK |= (1<<TOIE0);
 	
@@ -29,13 +35,13 @@ void init_download(void)
 
 /*
  * Trigger a sync pulse to the camera
- * Pulls CCD_PULSE pin LOW and sets
+ * Pulls PA0 pin LOW and sets
  * timer0 to overflow after 512us
  */
 void trigger_download(void)
 {
-	// Set the CCD_PULSE pin LOW to start the download
-	PORTA &= ~(1<<CCD_PULSE);
+	// Pull PA0 LOW to start the download
+	PORTA &= ~(1<<PA0);
 	
 	// Set the prescaler to 1/1024; each tick = 64us.
 	// Also starts the timer counting
@@ -47,10 +53,11 @@ void trigger_download(void)
 
 /*
  * timer0 overflow interrupt
- * Pulls CCD_PULSE pin HIGH and disables timer0
+ * Pulls PA0 pin HIGH and disables timer0
+ * to disable the download trigger pulse
  */
 SIGNAL(SIG_OVERFLOW0)
 {
-	PORTA |= (1<<CCD_PULSE);
+	PORTA |= (1<<PA0);
 	TCCR0 = 0x00;
 }

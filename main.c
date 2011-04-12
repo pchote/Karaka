@@ -17,44 +17,32 @@
 #include "gps.h"
 #include "display.h"
 #include "command.h"
+
+/* Hardware usage:
+ * PINA:
+ *    PINA0: output to camera download BNC Connector
+ *    PINA1-5: input for unused hardware switch controls
+ * PINB: unused
+ * PINC: 8 bit output to LCD
+ * PIND: 
+ *    PIND0: PPS input from GPS
+ *    PIND2: RS232 RX from GPS
+ *    PIND3: RS232 TX to GPS
+ * PINE:
+ *    PINE0: RS232 TX to acquisition PC
+ *    PINE1: RS232 RX from acquisition PC
+ *    PINE4: input for unused hardware switch controls
+ * PINF:
+ *    PINF0: LCD register select output bit
+ *    PINF1: LCD read/write select output bit
+ *    PINF2: LCD enable output bit
+ */
 	
 /*
  * Initialise the unit and wait for interrupts.
  */
 int main(void)
 {
-	// Configure port A.
-	// Pin 0 is used to output the CCD sync pulse.
-	// Pins 1-5 used to input the (unimplemented) button controls
-	DDRA = (1<<CCD_PULSE)|(0<<UP)|(0<<LEFT)|(0<<DOWN)|(0<<RIGHT)|(0<<CENTER);
-	// Set the pin HIGH so that the output bnc is set LOW.
-	PORTA = (1<<CCD_PULSE); 
-	
-	// Configure port B; unused by code
-	PORTB = 0x00;
-	
-	// Configure port C.
-	// All ports are output to the LCD
-	DDRC = 0xFF;
-	PORTC = 0x00;
-	
-	// Configure Port D.
-	// Used for communication with the GPS
-	// Pin 0 is set to trigger SIG_INTERRUPT0 when a pulse from the gps arrives
-	DDRD &= ~(1<<GPS_PULSE)|(1<<TXD1)|(0<<RXD1);
-	PORTD = 0x00;
-	
-	// Configure Port E.
-	// Pins 0 and 1 are used for serial communication (via usb to the host machine?)
-	// Pin 6 is used as an input to indicate that the (unimplemented) button controls have changed
-	DDRE = (0<<SWITCH_CHANGE)|(1<<TXD)|(0<<RXD);
-	PORTE = 0x00;
-	
-	// Configure Port F.
-	// Used to send state to the LCD
-	DDRF = (1<<LCD_ENABLE)|(1<<LCD_READ_WRITE)|(1<<LCD_REG_SELECT);		//set port F
-	PORTF = 0x00;
-
 	// Initialise global variables
 	exposure_count = exposure_total = 0;
 	exposure_syncing = TRUE;
@@ -105,19 +93,4 @@ SIGNAL(SIG_INTERRUPT0)
 			trigger_download();
 		}
 	}
-}
-
-/*
- * Convert a nibble in the range 0-F to ascii
- */
-unsigned char nibble_to_ascii(unsigned char n)
-{
-	// Ignore the high nibble
-	n &= 0x0F;
-	
-	// '0' to '9'
-	if (n <= 9)
-		return n + 0x30;
-	// 'A' to 'F'
-	else return n + 0x37;
 }

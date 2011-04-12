@@ -12,10 +12,14 @@
 
 #ifndef KARAKA_DISPLAY_H
 #define KARAKA_DISPLAY_H
+
+#define LCD_ENABLE		PF2	// Output to enable LCD
+#define LCD_READ_WRITE	PF1	// Output to select reading or writing from LCD (Read active LOW)
+#define LCD_REG_SELECT	PF0	// Output to select register
+
 /*
  * Instruction list
  */
- 
 // Initialize with 8 bit data, 2 lines, 5x7 font
 #define INITIALIZE    0x38
 #define DISPLAY_CLEAR 0x01

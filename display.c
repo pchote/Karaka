@@ -17,6 +17,22 @@
 #include "command.h"
 #include "gps.h"
 
+
+/*
+ * Convert a nibble in the range 0-F to ascii
+ */
+static unsigned char nibble_to_ascii(unsigned char n)
+{
+	// Ignore the high nibble
+	n &= 0x0F;
+	
+	// '0' to '9'
+	if (n <= 9)
+		return n + 0x30;
+	// 'A' to 'F'
+	else return n + 0x37;
+}
+
 /*
  * Wait for a specified number of usec
  */
@@ -32,7 +48,7 @@ static void wait_usec(unsigned int usec)
  */
 static void write_raw(unsigned char value, int time)
 {
-	LCD_DATA = value;
+	PORTC = value;
 	PORTF = (0<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
 	PORTF |= (1<<LCD_ENABLE);
 	wait_usec(time);
@@ -45,7 +61,7 @@ static void write_raw(unsigned char value, int time)
  */
 static void write_byte(unsigned char value)
 {
-	LCD_DATA = value;
+	PORTC = value;
 	PORTF = (1<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
 	PORTF |= (1<<LCD_ENABLE);
 	// Wait for operation to complete
@@ -106,6 +122,11 @@ static void write_header(const char *msg)
  */
 void display_init(void)
 {
+	// Set all of PORTC as data output
+	DDRC |= 0xFF;
+	// Set status pins as output
+	DDRF |= (1<<LCD_ENABLE)|(1<<LCD_READ_WRITE)|(1<<LCD_REG_SELECT);
+	
 	wait_usec(50000);
 	write_raw(INITIALIZE, 40);
 	write_raw(DISPLAY_CLEAR, 1640);

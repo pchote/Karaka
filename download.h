@@ -2,7 +2,7 @@
 //
 //	File........: download.h
 //	Description.: Commands the camera to download a frame by pulling the
-//				  CCD_PULSE pin LOW for 512us. Uses Timer0
+//				  PA0 pin LOW for 512us. Uses Timer0
 //	Copyright...: 2009-2011 Johnny McClymont, Paul Chote
 //
 //	This file is part of Karaka, which is free software. It is made available

@@ -76,6 +76,12 @@ void send_trimble_init(void)
  */
 void gps_init(void)
 {
+	// Configure Port D.
+	// Used for communication with the GPS
+	// Pin 0 is set to trigger SIG_INTERRUPT0 when a pulse from the gps arrives
+	// Set TXD1 (port D, pin 3) as an output
+	DDRD |= (1<<DDD3);
+	
 	// Enable 2x speed
 	UCSR1A = (1<<U2X1);
 
