@@ -19,6 +19,6 @@
 #define TRUE (!(FALSE))
 
 unsigned char exposure_total;
-unsigned char exposure_count;
+volatile unsigned char exposure_count;
 unsigned char exposure_syncing;
 #endif
