@@ -204,10 +204,10 @@ unsigned char usart_process_buffer()
 	for (; usart_packet_type == UNKNOWN_PACKET && usart_input_read != temp_write; usart_input_read++)
 	{	
 		if ( // Start of timing packet
-			usart_input_buffer[usart_input_read - 1] == DLE &&
+			usart_input_buffer[(unsigned char)(usart_input_read - 1)] == DLE &&
 			// End of previous packet
-			usart_input_buffer[usart_input_read - 2] == ETX &&
-			usart_input_buffer[usart_input_read - 3] == DLE)
+			usart_input_buffer[(unsigned char)(usart_input_read - 2)] == ETX &&
+			usart_input_buffer[(unsigned char)(usart_input_read - 3)] == DLE)
 		{
 			usart_packet_type = usart_input_buffer[usart_input_read];
 			// Rewind to the start of the packet
@@ -223,7 +223,7 @@ unsigned char usart_process_buffer()
 		// Don't loop this: we want to parse the 3rd DLE if you have
 		// 4 in a row
 		if (usart_input_buffer[usart_input_read] == DLE &&
-			usart_input_buffer[usart_input_read - 1] == DLE)
+			usart_input_buffer[(unsigned char)(usart_input_read - 1)] == DLE)
 			usart_input_read++;
 
 		usart_packet[usart_packet_length++] = usart_input_buffer[usart_input_read];

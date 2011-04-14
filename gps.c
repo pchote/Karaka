@@ -14,6 +14,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <stdio.h>
 #include "main.h"
 #include "display.h"
 #include "gps.h"
@@ -184,6 +185,9 @@ unsigned char gps_process_buffer()
     // Take a local copy of gps_input_write as it can be modified by interrupts
     unsigned char temp_write = gps_input_write;
     
+    // Buffer to store an error string for send_debug()
+    char error[128];
+    
     // No new data has arrived
     if (gps_input_read == temp_write)
         return FALSE;
@@ -191,11 +195,11 @@ unsigned char gps_process_buffer()
     // Sync to the start of a packet if necessary
     for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++)
     {
-        // Magellan packet
-        if (gps_input_buffer[gps_input_read - 1] == '$' &&
-            gps_input_buffer[gps_input_read - 2] == '$' &&
+        // Magellan packet            
+        if (gps_input_buffer[(unsigned char)(gps_input_read - 1)] == '$' &&
+            gps_input_buffer[(unsigned char)(gps_input_read - 2)] == '$' &&
             // End of previous packet
-            gps_input_buffer[gps_input_read - 3] == 0x0A)
+            gps_input_buffer[(unsigned char)(gps_input_read - 3)] == 0x0A)
         {
             if (gps_input_buffer[gps_input_read] == 'A')
             {
@@ -208,8 +212,11 @@ unsigned char gps_process_buffer()
                 gps_magellan_length = 16;
             }
             else // Some other Magellan packet - ignore it
+            {
+                send_debug_string("Unknown magellan packet");
                 continue;
-            
+            }
+
             // Rewind to the start of the packet
             gps_input_read -= 2;
             break;
@@ -218,11 +225,11 @@ unsigned char gps_process_buffer()
         // Trimble
         if ( // Start of timing packet
             gps_input_buffer[gps_input_read] == 0xAB &&
-            gps_input_buffer[gps_input_read - 1] == 0x8F &&
-            gps_input_buffer[gps_input_read - 2] == DLE &&
+            gps_input_buffer[(unsigned char)(gps_input_read - 1)] == 0x8F &&
+            gps_input_buffer[(unsigned char)(gps_input_read - 2)] == DLE &&
             // End of previous packet
-            gps_input_buffer[gps_input_read - 3] == ETX &&
-            gps_input_buffer[gps_input_read - 4] == DLE)
+            gps_input_buffer[(unsigned char)(gps_input_read - 3)] == ETX &&
+            gps_input_buffer[(unsigned char)(gps_input_read - 4)] == DLE)
         {
             gps_packet_type = TRIMBLE_PACKET;
             // Rewind to the start of the packet
@@ -244,7 +251,7 @@ unsigned char gps_process_buffer()
                 // Don't loop this: we want to parse the 3rd DLE if you have
                 // 4 in a row
                 if (gps_input_buffer[gps_input_read] == DLE &&
-                    gps_input_buffer[gps_input_read - 1] == DLE)
+                    gps_input_buffer[(unsigned char)(gps_input_read - 1)] == DLE)
                     gps_input_read++;
 
                 gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
@@ -286,7 +293,7 @@ unsigned char gps_process_buffer()
             {
                 // Store the packet
             	gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
-                    
+                
             	// End of packet
             	if (gps_packet_length == gps_magellan_length)
             	{    			
@@ -318,7 +325,7 @@ unsigned char gps_process_buffer()
     									 gps_packet[10],// year (low byte)
                                          gps_magellan_locked); // lock status
         					}
-        					else // Status packet
+        					else if (gps_packet_type == MAGELLAN_STATUS_PACKET) // Status packet
         					{
         					    if (gps_magellan_locked != (gps_packet[13] == 6))
         					    {
@@ -326,8 +333,24 @@ unsigned char gps_process_buffer()
                                     updated = TRUE;
         					    }
         					}
+        					else
+        					{
+        			            send_debug_string("Bad GPS packet");
+                                send_debug_raw(gps_packet, gps_packet_length);
+                			}
+            			}
+            			else
+            			{
+                            sprintf(error,"GPS Checksum failed. Got 0x%02x, expected 0x%02x", csm, gps_packet[gps_packet_length-2]);
+            			    send_debug_string(error);
+                            send_debug_raw(gps_packet, gps_packet_length);
             			}
             		}
+            		else
+        			{
+        			    send_debug_string("Bad GPS packet");
+                        send_debug_raw(gps_packet, gps_packet_length);
+        			}
     		
             		// Reset buffer for the next packet
             		gps_packet_type = UNKNOWN_PACKET;
