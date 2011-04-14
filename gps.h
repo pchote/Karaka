@@ -31,8 +31,6 @@
 #define MAGELLAN_TIME_PACKET 2
 #define MAGELLAN_STATUS_PACKET 3
 
-#define ONE_SECOND 0x3D09
-
 typedef struct
 {
 	unsigned int year;

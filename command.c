@@ -15,10 +15,9 @@
 #include "main.h"
 #include "gps.h"
 
-#define USART_PACKET_LENGTH 256
 static unsigned char usart_packet_type;
 static unsigned char usart_packet_length;
-static unsigned char usart_packet[USART_PACKET_LENGTH];
+static unsigned char usart_packet[256];
 
 // Note: 256 size is used to allow overflow -> circular buffer
 // If buffer size is changed you will need to add explicit overflow checks
@@ -28,7 +27,7 @@ static volatile unsigned char usart_input_write;
 
 static unsigned char usart_output_buffer[256];
 static volatile unsigned char usart_output_read;
-static unsigned char usart_output_write;
+static volatile unsigned char usart_output_write;
 
 /*
  * Initialise the command parser
@@ -154,9 +153,14 @@ void send_downloadtimestamp()
 	queue_data(DOWNLOADTIME, data, 8);
 }
 
-void send_debug(char *string)
+void send_debug_string(char *string)
 {
-	queue_data(DEBUG, (unsigned char *)string, strlen(string));
+	queue_data(DEBUG_STRING, (unsigned char *)string, strlen(string));
+}
+
+void send_debug_raw(unsigned char *data, unsigned char length)
+{
+    queue_data(DEBUG_RAW, data, length);
 }
 
 /*
@@ -247,7 +251,7 @@ unsigned char usart_process_buffer()
 			}
 			else
 			{
-				send_debug("Command packet checksum failed");
+				send_debug_string("Command packet checksum failed");
 			}
 			
 			// Reset for next packet
