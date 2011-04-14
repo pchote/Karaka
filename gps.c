@@ -180,6 +180,8 @@ SIGNAL(SIG_UART1_RECV)
  * Note: this relies on the gps_input_buffer being 256 chars long so that
  * the data pointers automatically overflow at 256 to give a circular buffer
  */
+ 
+static unsigned char bytes_to_sync = 0;
 unsigned char gps_process_buffer()
 {
     // Take a local copy of gps_input_write as it can be modified by interrupts
@@ -193,7 +195,7 @@ unsigned char gps_process_buffer()
         return FALSE;
     
     // Sync to the start of a packet if necessary
-    for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++)
+    for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)
     {
         // Magellan packet            
         if (gps_input_buffer[(unsigned char)(gps_input_read - 1)] == '$' &&
@@ -217,6 +219,13 @@ unsigned char gps_process_buffer()
                 continue;
             }
 
+            if (bytes_to_sync > 3)
+            {
+                sprintf(error, "Skipped %d bytes while syncing", bytes_to_sync);
+                send_debug_string(error);
+            }
+            bytes_to_sync = 0;
+            
             // Rewind to the start of the packet
             gps_input_read -= 2;
             break;
@@ -278,7 +287,6 @@ unsigned char gps_process_buffer()
         	            // Bad packet - uh oh.
         	            // Do we want to set a flag somewhere?
             	    }
-        	    
             	    // Reset for next packet
             	    gps_packet_type = UNKNOWN_PACKET;
                     gps_packet_length = 0;
