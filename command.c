@@ -49,6 +49,7 @@ void command_init(void)
 	// RXEN0 = 1: enable recieve
 	// TXEN0 = 1: enable transmit
 	// RXCIE0 = 1: enable recieve interrupt
+	// UDRIE0 (transmit buffer ready) is toggled when data is ready to be sent
 	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
 
 	// Set the data frame format

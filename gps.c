@@ -35,41 +35,45 @@ static unsigned char gps_packet_type;
 static unsigned char gps_packet_length;
 static unsigned char gps_packet[GPS_PACKET_LENGTH];
 
+static unsigned char gps_output_buffer[256];
+static volatile unsigned char gps_output_read;
+static volatile unsigned char gps_output_write;
 
 /*
- * Send one byte through USART1
+ * Add a byte to the send queue and start sending data if necessary
  */
-static void transmit_byte(unsigned char data)
+static void queue_send_byte(unsigned char b)
 {
-	while (!(UCSR1A & (1<<UDRE1)));	
-	UDR1 = data;
+	// TODO: check to ensure we don't overwrite data we haven't sent yet
+	gps_output_buffer[gps_output_write++] = b;
 	
-	// Wait until transmission is complete.
-	while (!(UCSR1A & (1<<TXC1)));
+	// Enable Transmit data register empty interrupt if necessary to send bytes down the line
+	cli();
+	if ((UCSR1B & (1<<UDRIE1)) == 0)
+		UCSR1B |= (1<<UDRIE1);
+	sei();
 }
 
 /*
- * Send Magellan initialisation strings
+ * data register empty interrupt to send a byte down the wire
  */
-static void send_magellan_init(void)
+SIGNAL(SIG_UART1_DATA)
 {
-	// Enable binary timing and status packets
-    unsigned char msg[38] = {'$','P','M','G','L','I',',','0','0',',',
-                             'A','0','0',',','2',',','B','\r','\n','$',
-                             'P','M','G','L','I',',','0','0',',','H',
-                             '0','0',',','2',',','B','\r','\n'};
-	for (unsigned char i = 0; i < 38; i++)
-		transmit_byte(msg[i]);
+	if(gps_output_write != gps_output_read)
+		UDR1 = gps_output_buffer[gps_output_read++];
+	
+	// Ran out of data to send - disable the interrupt
+	if(gps_output_write == gps_output_read) 
+		UCSR1B &= ~(1<<UDRIE1);
 }
 
 /*
- * Send a packet mask to the Trimble unit to supress automatic packets
+ * Queue data to the GPS
  */
-void send_trimble_init(void)
+static void queue_bytes(unsigned char *data, unsigned char length)
 {
-    unsigned char thisPacket[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
-    for (unsigned char i = 0; i < 7; i++)
-        transmit_byte(thisPacket[i]);
+	for (unsigned char i = 0; i < length; i++)
+		queue_send_byte(data[i]);
 }
 
 /*
@@ -86,8 +90,12 @@ void gps_init(void)
 	// Enable 2x speed
 	UCSR1A = (1<<U2X1);
 
-	// Enable transmitter.  .
-	UCSR1B = (1<<RXEN1)|(1<<TXEN1)|(1<<RXCIE1)|(0<<UDRIE1);
+	// Set USART capabilities
+	// RXEN1 = 1: enable recieve
+	// TXEN1 = 1: enable transmit
+	// RXCIE1 = 1: enable recieve interrupt
+	// UDRIE1 (transmit buffer ready) is toggled when data is ready to be sent
+	UCSR1B = (1<<RXEN1)|(1<<TXEN1)|(1<<RXCIE1);
 
 	// Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
 	UCSR1C = (0<<UMSEL1)|(0<<UPM01)|(0<<USBS1)|(3<<UCSZ10)|(0<<UCPOL1);
@@ -118,9 +126,18 @@ void gps_init(void)
 	gps_record_synctime = FALSE;
 	gps_state = NO_GPS;
     
-    gps_input_read = gps_input_write = 0;
-	send_magellan_init();
-    send_trimble_init();
+    gps_input_read = 0;
+    gps_input_write = 0;
+    gps_output_read = 0;
+    gps_output_write = 0;
+    
+    // Init magellan
+    char *magellan_init = "$PMGLI,00,A00,2,B\r\n$PMGLI,00,H00,2,B\r\n";
+    queue_bytes((unsigned char *)magellan_init, strlen(magellan_init));
+    
+    // Init trimble
+	unsigned char trimble_init[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
+    queue_bytes(trimble_init, 7);
 }
 
 static void set_time(unsigned char hours,
