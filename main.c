@@ -31,7 +31,7 @@
  * PINE:
  *    PINE0: RS232 TX to acquisition PC
  *    PINE1: RS232 RX from acquisition PC
- *    PINE4: input for unused hardware switch controls
+ *    PINE4: NOT SCAN input from camera to monitor download status
  * PINF:
  *    PINF0: LCD register select output bit
  *    PINF1: LCD read/write select output bit
@@ -53,7 +53,7 @@ int main(void)
 	// Initialise the hardware units
 	command_init();
 	gps_init();
-	init_download();
+	download_init();
 	display_init();
 	
 	// Enable interrupts
@@ -65,6 +65,9 @@ int main(void)
 	{
 		usart_process_buffer();
 		time_updated = gps_process_buffer();
+		
+		if (exposure_total != 0)
+            monitor_download();
 
 		if (time_updated)
 		{

@@ -14,7 +14,9 @@
 #ifndef KARAKA_DOWNLOAD_H
 #define KARAKA_DOWNLOAD_H
 
-void init_download(void);
+void download_init(void);
 void trigger_download(void);
+void monitor_download(void);
 
+volatile int download_complete;
 #endif

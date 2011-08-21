@@ -11,6 +11,7 @@
 //***************************************************************************
 
 #include <avr/interrupt.h>
+#include <stdio.h>
 #include "command.h"
 #include "main.h"
 #include "gps.h"
@@ -18,6 +19,8 @@
 static unsigned char usart_packet_type;
 static unsigned char usart_packet_length;
 static unsigned char usart_packet[256];
+// Buffer for a short error message
+static char error[64];
 
 // Note: 256 size is used to allow overflow -> circular buffer
 // If buffer size is changed you will need to add explicit overflow checks
@@ -154,6 +157,18 @@ void send_downloadtimestamp()
 	queue_data(DOWNLOADTIME, data, 8);
 }
 
+void send_stopexposure()
+{
+    unsigned char unused = 0;
+    queue_data(STOP_EXPOSURE, &unused, 1);
+}
+
+void send_downloadcomplete()
+{
+    char *str = "Download complete";
+    queue_data(DEBUG_STRING, (unsigned char *)str, strlen(str));
+}
+
 void send_debug_string(char *string)
 {
 	queue_data(DEBUG_STRING, (unsigned char *)string, strlen(string));
@@ -233,7 +248,8 @@ unsigned char usart_process_buffer()
 		if (usart_packet_length > 2 && usart_packet_length == usart_packet[1] + 6)
 		{
 			// Check checksum
-			if (checksum(&usart_packet[3], usart_packet[1]) == usart_packet[usart_packet_length-3])
+            unsigned char csm = checksum(&usart_packet[3], usart_packet[1]);
+			if (csm == usart_packet[usart_packet_length-3])
 			{
 				// Handle packet
 				switch(usart_packet[2])
@@ -245,14 +261,33 @@ unsigned char usart_process_buffer()
 						exposure_syncing = TRUE;
 			
 						// Enable gps pulse interrupt if exposure != 0
-						EIMSK = (!(exposure_total == 0)<<INT0);
+						if (exposure_total != 0)
+						    EIMSK |= (1<<INT0);
+						else
+                            EIMSK &= ~(1<<INT0);
+
 						sei();	
 					break;
+					case STOP_EXPOSURE:
+                        cli();
+                            exposure_total = exposure_count = 0;
+                            EIMSK &= ~(1<<INT0);
+                        sei();
+                    break;
+                    default:
+                        sprintf(error, "Unknown packet type 0x%02x - ignoring", usart_packet[2]);
+				        send_debug_string(error);
+                    break;
 				}
 			}
 			else
 			{
-				send_debug_string("Command packet checksum failed");
+                sprintf(error, "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.", usart_packet[2],  usart_packet[usart_packet_length-3], csm);
+                for (int i = 0; i < usart_packet_length; i++)
+                {
+                    sprintf(error, "0x%02x", usart_packet[i]);
+                    send_debug_string(error);
+                }
 			}
 			
 			// Reset for next packet
