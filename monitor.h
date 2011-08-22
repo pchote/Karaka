@@ -1,9 +1,9 @@
 //***************************************************************************
 //
-//	File........: download.h
-//	Description.: Commands the camera to download a frame by pulling the
-//				  PA0 pin LOW for 512us. Uses Timer0
-//	Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//	File........: monitor.h
+//	Description.: ATMega128 USB timer card.	 Interface between GPS module, 
+//				  CCD camera, and Laptop
+//	Copyright...: 2011 Paul Chote
 //
 //	This file is part of Karaka, which is free software. It is made available
 //	to you under the terms of version 3 of the GNU General Public License, as
@@ -11,10 +11,10 @@
 //
 //***************************************************************************
 
-#ifndef KARAKA_DOWNLOAD_H
-#define KARAKA_DOWNLOAD_H
+#ifndef KARAKA_MONITOR_H
+#define KARAKA_MONITOR_H
 
-void download_init(void);
-void trigger_download(void);
+void monitor_init();
+void monitor_tick();
 
 #endif

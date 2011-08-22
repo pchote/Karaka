@@ -8,14 +8,14 @@
 
 DEVICE     = atmega128
 PROGRAMMER = -c dragon_jtag -P usb
-OBJECTS    = main.o command.o gps.o display.o download.o
+OBJECTS    = command.o gps.o display.o download.o monitor.o main.o
 FUSES      = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 
 # Tune the lines below only if you know what you are doing:
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
 COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums
 
-all:	main.hex
+all: main.hex
 
 .c.o:
 	$(COMPILE) -c $< -o $@

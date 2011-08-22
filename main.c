@@ -17,6 +17,7 @@
 #include "gps.h"
 #include "display.h"
 #include "command.h"
+#include "monitor.h"
 
 /* Hardware usage:
  * PINA:
@@ -37,7 +38,7 @@
  *    PINF1: LCD read/write select output bit
  *    PINF2: LCD enable output bit
  */
-	
+
 /*
  * Initialise the unit and wait for interrupts.
  */
@@ -54,6 +55,7 @@ int main(void)
 	command_init();
 	gps_init();
 	download_init();
+    monitor_init();
 	display_init();
 	
 	// Enable interrupts
@@ -63,11 +65,9 @@ int main(void)
 	// Main program loop
 	while(TRUE)
 	{
+		monitor_tick();
 		usart_process_buffer();
 		time_updated = gps_process_buffer();
-		
-		if (exposure_total != 0)
-            monitor_download();
 
 		if (time_updated)
 		{

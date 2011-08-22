@@ -14,7 +14,6 @@
 #include <avr/interrupt.h>
 #include "download.h"
 #include "main.h"
-#include "command.h"
 
 /*
  * Initialise the timer on timer0
@@ -32,37 +31,7 @@ void download_init(void)
 	
 	// Disable the timer until it is needed
 	TCCR0 = 0x00;
-
-
-	// Set up NOT SCAN monitoring
-    download_complete = FALSE;
-
-	// Set INT4 to be rising edge triggered
-    EICRB = (1<<ISC41)|(0<<ISC40);
-    
-    // Enable the interrupt
-    EIMSK |= (1<<INT4);
 }
-
-/*
- * Download complete interrupt handler
- * Fired when the NOT SCAN output of the camera returns high, signalling that readout is complete
- */
-
-SIGNAL(SIG_INTERRUPT4)
-{
-    download_complete = TRUE;
-}
-
-void monitor_download(void)
-{
-    if (download_complete)
-    {
-        send_downloadcomplete();
-        download_complete = FALSE;
-    }
-}
-
 
 /*
  * Trigger a sync pulse to the camera
