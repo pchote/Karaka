@@ -283,7 +283,7 @@ unsigned char usart_process_buffer()
 			else
 			{
                 sprintf(error, "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.", usart_packet[2],  usart_packet[usart_packet_length-3], csm);
-                for (int i = 0; i < usart_packet_length; i++)
+                for (unsigned char i = 0; i < usart_packet_length; i++)
                 {
                     sprintf(error, "0x%02x", usart_packet[i]);
                     send_debug_string(error);
