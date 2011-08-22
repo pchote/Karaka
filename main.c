@@ -49,7 +49,7 @@ int main(void)
 	exposure_syncing = TRUE;
 
 	// Set INT0 to be rising edge triggered
-    EICRA = (1<<ISC01)|(0<<ISC00);
+    EICRA = _BV(ISC01);
     
 	// Initialise the hardware units
 	command_init();

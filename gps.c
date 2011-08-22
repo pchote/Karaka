@@ -49,8 +49,8 @@ static void queue_send_byte(unsigned char b)
 	
 	// Enable Transmit data register empty interrupt if necessary to send bytes down the line
 	cli();
-	if ((UCSR1B & (1<<UDRIE1)) == 0)
-		UCSR1B |= (1<<UDRIE1);
+	if ((UCSR1B & _BV(UDRIE1)) == 0)
+		UCSR1B |= _BV(UDRIE1);
 	sei();
 }
 
@@ -64,7 +64,7 @@ SIGNAL(SIG_UART1_DATA)
 	
 	// Ran out of data to send - disable the interrupt
 	if(gps_output_write == gps_output_read) 
-		UCSR1B &= ~(1<<UDRIE1);
+		UCSR1B &= ~_BV(UDRIE1);
 }
 
 /*
@@ -85,20 +85,20 @@ void gps_init(void)
 	// Used for communication with the GPS
 	// Pin 0 is set to trigger SIG_INTERRUPT0 when a pulse from the gps arrives
 	// Set TXD1 (port D, pin 3) as an output
-	DDRD |= (1<<DDD3);
+	DDRD |= _BV(DDD3);
 	
 	// Enable 2x speed
-	UCSR1A = (1<<U2X1);
+	UCSR1A = _BV(U2X1);
 
 	// Set USART capabilities
 	// RXEN1 = 1: enable recieve
 	// TXEN1 = 1: enable transmit
 	// RXCIE1 = 1: enable recieve interrupt
 	// UDRIE1 (transmit buffer ready) is toggled when data is ready to be sent
-	UCSR1B = (1<<RXEN1)|(1<<TXEN1)|(1<<RXCIE1);
+	UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);
 
 	// Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
-	UCSR1C = (0<<UMSEL1)|(0<<UPM01)|(0<<USBS1)|(3<<UCSZ10)|(0<<UCPOL1);
+	UCSR1C = (3<<UCSZ10);
 	
 	// Set baud rate to 9600
 	UBRR1H = 0x00;

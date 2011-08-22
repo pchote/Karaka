@@ -38,7 +38,7 @@ static volatile unsigned char usart_output_write;
 void command_init(void)
 {	
 	// Set TXD (port E, pin 1) as an output
-	DDRE |= (1<<DDE1);
+	DDRE |= _BV(DDE1);
 	
 	// Set the baudrate prescaler
 	// scale = (f_cpu / (16*baud)) - 1
@@ -53,7 +53,7 @@ void command_init(void)
 	// TXEN0 = 1: enable transmit
 	// RXCIE0 = 1: enable recieve interrupt
 	// UDRIE0 (transmit buffer ready) is toggled when data is ready to be sent
-	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
+	UCSR0B = _BV(RXEN0)|_BV(TXEN0)|_BV(RXCIE0);
 
 	// Set the data frame format
 	// UMSEL0 = 0: set async operation
@@ -61,10 +61,10 @@ void command_init(void)
 	// USBS0 = 0: 1 stop bit
 	// UCSZ00 = 3: 8 data bits
 	// UCPOL0 = 0: ???
-	UCSR0C = (0<<UMSEL0)|(0<<UPM00)|(0<<USBS0)|(3<<UCSZ00)|(0<<UCPOL0);
+	UCSR0C = (3<<UCSZ00);
 	
 	// Double the prescaler frequency
-	UCSR0A = (1<<U2X0);
+	UCSR0A = _BV(U2X0);
 
 	usart_input_write = 0;
 	usart_input_read = 0;
@@ -95,8 +95,8 @@ static void queue_send_byte(unsigned char b)
 	
 	// Enable Transmit data register empty interrupt if necessary to send bytes down the line
 	cli();
-	if ((UCSR0B & (1<<UDRIE0)) == 0)
-		UCSR0B |= (1<<UDRIE0);
+	if ((UCSR0B & _BV(UDRIE0)) == 0)
+		UCSR0B |= _BV(UDRIE0);
 	sei();
 }
 
@@ -189,7 +189,7 @@ SIGNAL(SIG_UART0_DATA)
 	
 	// Ran out of data to send - disable the interrupt
 	if(usart_output_write == usart_output_read) 
-		UCSR0B &= ~(1<<UDRIE0);
+		UCSR0B &= ~_BV(UDRIE0);
 }
 
 
@@ -262,16 +262,16 @@ unsigned char usart_process_buffer()
 			
 						// Enable gps pulse interrupt if exposure != 0
 						if (exposure_total != 0)
-						    EIMSK |= (1<<INT0);
+						    EIMSK |= _BV(INT0);
 						else
-                            EIMSK &= ~(1<<INT0);
+                            EIMSK &= ~_BV(INT0);
 
 						sei();	
 					break;
 					case STOP_EXPOSURE:
                         cli();
                             exposure_total = exposure_count = 0;
-                            EIMSK &= ~(1<<INT0);
+                            EIMSK &= ~_BV(INT0);
                         sei();
                     break;
                     default:

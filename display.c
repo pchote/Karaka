@@ -49,10 +49,9 @@ static void wait_usec(unsigned int usec)
 static void write_raw(unsigned char value, int time)
 {
 	PORTC = value;
-	PORTF = (0<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
-	PORTF |= (1<<LCD_ENABLE);
+	PORTF = _BV(LCD_ENABLE);
 	wait_usec(time);
-	PORTF &= ~(1<<LCD_ENABLE);
+	PORTF &= ~_BV(LCD_ENABLE);
 	wait_usec(time);
 }
 
@@ -62,11 +61,10 @@ static void write_raw(unsigned char value, int time)
 static void write_byte(unsigned char value)
 {
 	PORTC = value;
-	PORTF = (1<<LCD_REG_SELECT)|(0<<LCD_READ_WRITE);
-	PORTF |= (1<<LCD_ENABLE);
+	PORTF = _BV(LCD_REG_SELECT)|_BV(LCD_ENABLE);
 	// Wait for operation to complete
     wait_usec(10);
-	PORTF &= ~(1<<LCD_ENABLE);
+	PORTF &= ~_BV(LCD_ENABLE);
 }
 
 /*
@@ -125,7 +123,7 @@ void display_init(void)
 	// Set all of PORTC as data output
 	DDRC |= 0xFF;
 	// Set status pins as output
-	DDRF |= (1<<LCD_ENABLE)|(1<<LCD_READ_WRITE)|(1<<LCD_REG_SELECT);
+	DDRF |= _BV(LCD_ENABLE)|_BV(LCD_READ_WRITE)|_BV(LCD_REG_SELECT);
 	
 	wait_usec(50000);
 	write_raw(INITIALIZE, 40);

@@ -27,7 +27,7 @@ void monitor_init(void)
     debounce_waiting = FALSE;
 
 	// Enable timer2 overflow interrupt
-	TIMSK |= (1<<TOIE2);
+	TIMSK |= _BV(TOIE2);
 
 	// Disable the timer until it is needed
 	TCCR2 = 0x00;
@@ -52,7 +52,7 @@ void monitor_tick()
 
     	// Set the prescaler to 1/1024; each tick = 64us.
     	// Also starts the timer counting
-    	TCCR2 = (1<<CS02)|(0<<CS01)|(1<<CS00);
+    	TCCR2 = _BV(CS02)|_BV(CS00);
 
     	// Set timer2 to overflow after 8 ticks (0.512 ms)
     	TCNT2 = 248;
