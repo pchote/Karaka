@@ -15,6 +15,7 @@
 #include "command.h"
 #include "main.h"
 #include "gps.h"
+#include "monitor.h"
 
 static unsigned char usart_packet_type;
 static unsigned char usart_packet_length;
@@ -254,25 +255,36 @@ unsigned char usart_process_buffer()
 				// Handle packet
 				switch(usart_packet[2])
 				{
-					case EXPOSURE:
-						cli();
-						exposure_total = usart_packet[3];
-						exposure_count = exposure_total;
-						exposure_syncing = TRUE;
-			
-						// Enable gps pulse interrupt if exposure != 0
-						if (exposure_total != 0)
-						    EIMSK |= _BV(INT0);
-						else
-                            EIMSK &= ~_BV(INT0);
+					case START_EXPOSURE:
+					    cli();
+						exposure_count = exposure_total = usart_packet[3];
+                        sei();
 
-						sei();	
-					break;
+			            // the monitor will enable the gps pulse interrupt when the camera is ready
+			            monitor_mode = MONITOR_START;
+                    break;
 					case STOP_EXPOSURE:
                         cli();
-                            exposure_total = exposure_count = 0;
-                            EIMSK &= ~_BV(INT0);
+                        exposure_total = exposure_count = 0;
+
+                        // Disable gps pulse interrupts immediately
+                        EIMSK &= ~_BV(INT0);
                         sei();
+
+                        // Can safely stop the exposure if the not-scan output is already HIGH
+                        if (monitor_level_high)
+                            send_stopexposure();
+
+                        monitor_mode = MONITOR_STOP;
+                    break;
+                    case RESET:
+                        // Reset to initial state: zero exposure, countdown disabled, monitor waiting
+                        cli();
+                        exposure_total = exposure_count = 0;
+                        EIMSK &= ~_BV(INT0);
+                        sei();
+
+                        monitor_mode = MONITOR_WAIT;
                     break;
                     default:
                         sprintf(error, "Unknown packet type 0x%02x - ignoring", usart_packet[2]);

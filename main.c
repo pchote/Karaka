@@ -46,7 +46,7 @@ int main(void)
 {
 	// Initialise global variables
 	exposure_count = exposure_total = 0;
-	exposure_syncing = TRUE;
+	exposure_syncing = FALSE;
 
 	// Set INT0 to be rising edge triggered
     EICRA = _BV(ISC01);

@@ -20,9 +20,10 @@
 #define CURRENTTIME 0xA1
 #define DOWNLOADTIME 0xA2
 #define DEBUG_STRING 0xA3
-#define EXPOSURE 0xA4
 #define DEBUG_RAW 0xA5
-#define STOP_EXPOSURE 0xA6
+#define START_EXPOSURE 0xA6
+#define STOP_EXPOSURE 0xA7
+#define RESET 0xA8
 
 void command_init(void);
 void send_debug_string(char *string);

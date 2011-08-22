@@ -16,8 +16,7 @@
 #include "main.h"
 #include "command.h"
 
-static volatile char debounce_waiting = FALSE;
-static volatile char level_high = FALSE;
+static volatile char debounce_waiting;
 
 /*
  * Initialise the timer on timer0
@@ -25,6 +24,8 @@ static volatile char level_high = FALSE;
 void monitor_init(void)
 {
     debounce_waiting = FALSE;
+    monitor_level_high = FALSE;
+    monitor_mode = MONITOR_WAIT;
 
 	// Enable timer2 overflow interrupt
 	TIMSK |= _BV(TOIE2);
@@ -46,7 +47,7 @@ void monitor_init(void)
  */
 void monitor_tick()
 {
-    if (!debounce_waiting && level_high != bit_is_clear(PINE, PE4))
+    if (!debounce_waiting && monitor_level_high != bit_is_clear(PINE, PE4))
     {
         debounce_waiting = TRUE;
 
@@ -67,12 +68,31 @@ void monitor_tick()
 SIGNAL(SIG_OVERFLOW2)
 {
     debounce_waiting = FALSE;
-    int clear = bit_is_clear(PINE, PE4);
-    if (level_high != clear)
+    unsigned char high = bit_is_clear(PINE, PE4);
+    if (monitor_level_high != high)
     {
-        level_high = clear;
+        monitor_level_high = high;
 
-        // TODO: trigger whatever needs triggering
+        if (monitor_level_high)
+        {
+            switch (monitor_mode)
+            {
+                case MONITOR_START:
+                    // Start the timer countdown
+                    EIMSK |= _BV(INT0);
+					exposure_syncing = TRUE;
+
+                    monitor_mode = MONITOR_ACQUIRE;
+                    send_debug_string("Sequence initialized");
+                break;
+                case MONITOR_ACQUIRE:
+                    send_downloadcomplete();
+                break;
+                case MONITOR_STOP:
+                    send_stopexposure();
+                break;
+            }
+        }
     }
 
 	// Disable timer
