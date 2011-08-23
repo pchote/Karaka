@@ -160,8 +160,8 @@ static void set_time(unsigned char hours,
 	// Mark that we have a valid timestamp
 	gps_state = GPS_TIME_GOOD;
 
-	// Synchronize the exposure countdown with the 10 second mark
-	if (exposure_syncing && (gps_last_timestamp.seconds % 10 == 0))
+	// Synchronise the exposure with the edge of a minute
+	if (exposure_syncing && (gps_last_timestamp.seconds % exposure_total == 0))
 		exposure_syncing = FALSE;
 
 	if (gps_record_synctime)
