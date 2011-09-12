@@ -24,6 +24,7 @@
 #define START_EXPOSURE 0xA6
 #define STOP_EXPOSURE 0xA7
 #define RESET 0xA8
+#define DOWNLOADCOMPLETE 0xA9
 
 void command_init(void);
 void send_debug_string(char *string);

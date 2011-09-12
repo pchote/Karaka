@@ -158,16 +158,16 @@ void send_downloadtimestamp()
 	queue_data(DOWNLOADTIME, data, 8);
 }
 
+static unsigned char unused = 0;
+
 void send_stopexposure()
 {
-    unsigned char unused = 0;
     queue_data(STOP_EXPOSURE, &unused, 1);
 }
 
 void send_downloadcomplete()
 {
-    char *str = "Download complete";
-    queue_data(DEBUG_STRING, (unsigned char *)str, strlen(str));
+    queue_data(DOWNLOADCOMPLETE, &unused, 1);
 }
 
 void send_debug_string(char *string)
