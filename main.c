@@ -39,14 +39,20 @@
  *    PINF2: LCD enable output bit
  */
 
+void reset_vars()
+{
+    start_countdown = stop_countdown = exposure_total = exposure_countdown = 0;
+	countdown_mode = COUNTDOWN_DISABLED;
+	monitor_mode = MONITOR_WAIT;
+}
+
 /*
  * Initialise the unit and wait for interrupts.
  */
 int main(void)
 {
 	// Initialise global variables
-    exposure_total = exposure_countdown = 0;
-	countdown_mode = COUNTDOWN_DISABLED;
+    reset_vars();
 
 	// Set INT0 to be rising edge triggered
     EICRA = _BV(ISC01);
@@ -83,23 +89,30 @@ int main(void)
  */
 SIGNAL(SIG_INTERRUPT0)
 {
-	// Don't count down unless we have a valid exposure time, and the GPS is locked
-	if (gps_state == GPS_TIME_GOOD && // Do we have a gps lock?
-	    countdown_mode == COUNTDOWN_ENABLED) // Are we waiting for a 10s boundary?
-	{		
-		// End of exposure - send a syncpulse to the camera
-		// and store a flag so the gps can save the synctime.
-		if (--exposure_countdown == 0)
-		{
-			exposure_countdown = exposure_total;
-			gps_record_synctime = TRUE;
-			trigger_download();
-		}
-        countdown_mode = COUNTDOWN_TRIGGERED;
-	}
-	else if (gps_state == GPS_TIME_GOOD &&
-	         countdown_mode == COUNTDOWN_TRIGGERED)
+	// Don't count down unless we have a valid exposure time and the GPS is locked
+	if (gps_state == GPS_TIME_GOOD) // Do we have a GPS lock?
 	{
-        send_debug_string("Ignoring duplicate PPS pulse");
-	}
+	    if (countdown_mode == COUNTDOWN_ENABLED)
+	    {
+    		// End of exposure - send a syncpulse to the camera
+    		// and store a flag so the gps can save the synctime.
+    		if (--exposure_countdown == 0)
+    		{
+    			exposure_countdown = exposure_total;
+    			gps_record_synctime = TRUE;
+    			trigger_download();
+    		}
+            countdown_mode = COUNTDOWN_TRIGGERED;
+    	}
+    	else if (countdown_mode == COUNTDOWN_TRIGGERED)
+            send_debug_string("Ignoring duplicate PPS pulse");
+    }
+
+	// Fixed time delay before starting an exposure sequence
+	if (start_countdown > 0 && --start_countdown == 0)
+	    countdown_mode = COUNTDOWN_SYNCING;
+
+    // Fixed time delay before stopping an exposure sequence
+	if (stop_countdown > 0 && --stop_countdown == 0)
+	    send_stopexposure();
 }

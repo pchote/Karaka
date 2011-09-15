@@ -260,30 +260,55 @@ unsigned char usart_process_buffer()
 						exposure_countdown = exposure_total = usart_packet[3];
                         sei();
 
-			            // the monitor will enable the gps pulse interrupt when the camera is ready
-			            monitor_mode = MONITOR_START;
+			            if (usart_packet[4])
+			            {
+			                // Monitoring enabled: Start sync/countdown when NOTSCAN goes high
+			                monitor_mode = MONITOR_START;
+			            }
+			            else
+			            {
+			                // Monitoring disabled: Wait the specified time before enabling sync/countdown
+                            cli();
+                            start_countdown = usart_packet[5];
+                            sei();
+                        }
                     break;
 					case STOP_EXPOSURE:
                         cli();
                         exposure_total = exposure_countdown = 0;
                         sei();
 
-                        // Can safely stop the exposure if the not-scan output is already HIGH
-                        if (monitor_level_high)
-                            send_stopexposure();
                         // Disable the exposure countdown immediately
                         countdown_mode = COUNTDOWN_DISABLED;
 
-                        monitor_mode = MONITOR_STOP;
+                        if (usart_packet[3])
+                        {
+                            // Monitoring enabled: tell the acquisition PC to
+                            // stop the exposure when NOTSCAN goes high
+
+                            // Can safely stop the exposure if the not-scan output is already HIGH
+                            if (monitor_level_high)
+                            {
+                                monitor_mode = MONITOR_WAIT;
+                                send_stopexposure();
+                            }
+                            else
+                                monitor_mode = MONITOR_STOP;
+                        }
+                        else
+                        {
+                            // Monitoring disabled: Wait for the specified time
+                            // before telling the acquisition PC to stop the exposure
+                            cli();
+                            stop_countdown = usart_packet[4];
+                            sei();
+                        }
                     break;
                     case RESET:
-                        // Reset to initial state: zero exposure, countdown disabled, monitor waiting
+                        // Reset to startup state
                         cli();
-                        exposure_total = exposure_countdown = 0;
-                        countdown_mode = COUNTDOWN_DISABLED;
+                        reset_vars();
                         sei();
-
-                        monitor_mode = MONITOR_WAIT;
                     break;
                     default:
                         sprintf(error, "Unknown packet type 0x%02x - ignoring", usart_packet[2]);

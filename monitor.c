@@ -89,6 +89,7 @@ SIGNAL(SIG_OVERFLOW2)
                 break;
                 case MONITOR_STOP:
                     send_stopexposure();
+                    monitor_mode = MONITOR_WAIT;
                 break;
             }
         }
