@@ -79,8 +79,7 @@ SIGNAL(SIG_OVERFLOW2)
             {
                 case MONITOR_START:
                     // Start the timer countdown
-                    EIMSK |= _BV(INT0);
-					exposure_syncing = TRUE;
+                    countdown_mode = COUNTDOWN_SYNCING;
 
                     monitor_mode = MONITOR_ACQUIRE;
                     send_debug_string("Sequence initialized");

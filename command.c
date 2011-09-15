@@ -266,14 +266,13 @@ unsigned char usart_process_buffer()
 					case STOP_EXPOSURE:
                         cli();
                         exposure_total = exposure_count = 0;
-
-                        // Disable gps pulse interrupts immediately
-                        EIMSK &= ~_BV(INT0);
                         sei();
 
                         // Can safely stop the exposure if the not-scan output is already HIGH
                         if (monitor_level_high)
                             send_stopexposure();
+                        // Disable the exposure countdown immediately
+                        countdown_mode = COUNTDOWN_DISABLED;
 
                         monitor_mode = MONITOR_STOP;
                     break;
@@ -281,7 +280,7 @@ unsigned char usart_process_buffer()
                         // Reset to initial state: zero exposure, countdown disabled, monitor waiting
                         cli();
                         exposure_total = exposure_count = 0;
-                        EIMSK &= ~_BV(INT0);
+                        countdown_mode = COUNTDOWN_DISABLED;
                         sei();
 
                         monitor_mode = MONITOR_WAIT;
@@ -294,7 +293,11 @@ unsigned char usart_process_buffer()
 			}
 			else
 			{
-                sprintf(error, "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.", usart_packet[2],  usart_packet[usart_packet_length-3], csm);
+                sprintf(error, "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.",
+                        usart_packet[2],
+                        usart_packet[usart_packet_length-3],
+                        csm);
+
                 for (unsigned char i = 0; i < usart_packet_length; i++)
                 {
                     sprintf(error, "0x%02x", usart_packet[i]);

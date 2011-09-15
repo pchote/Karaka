@@ -45,19 +45,20 @@
 int main(void)
 {
 	// Initialise global variables
-	exposure_count = exposure_total = 0;
-	exposure_syncing = FALSE;
+    exposure_total = exposure_count = 0;
+	countdown_mode = COUNTDOWN_DISABLED;
 
 	// Set INT0 to be rising edge triggered
     EICRA = _BV(ISC01);
-    
+	EIMSK |= _BV(INT0);
+
 	// Initialise the hardware units
 	command_init();
 	gps_init();
 	download_init();
     monitor_init();
 	display_init();
-	
+
 	// Enable interrupts
 	sei();
 	unsigned char time_updated;
@@ -84,7 +85,7 @@ SIGNAL(SIG_INTERRUPT0)
 {
 	// Don't count down unless we have a valid exposure time, and the GPS is locked
 	if (gps_state == GPS_TIME_GOOD && // Do we have a gps lock?
-	    !exposure_syncing) // Are we waiting for a 10s boundary?
+	    countdown_mode == COUNTDOWN_ENABLED) // Are we waiting for a 10s boundary?
 	{		
 		// End of exposure - send a syncpulse to the camera
 		// and store a flag so the gps can save the synctime.
@@ -94,5 +95,11 @@ SIGNAL(SIG_INTERRUPT0)
 			gps_record_synctime = TRUE;
 			trigger_download();
 		}
+        countdown_mode = COUNTDOWN_TRIGGERED;
+	}
+	else if (gps_state == GPS_TIME_GOOD &&
+	         countdown_mode == COUNTDOWN_TRIGGERED)
+	{
+        send_debug_string("Ignoring duplicate PPS pulse");
 	}
 }

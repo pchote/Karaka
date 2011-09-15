@@ -149,6 +149,10 @@ static void set_time(unsigned char hours,
 						 unsigned char year_low,
 						 unsigned char locked)
 {
+    // Enable the counter for the next PPS pulse
+    if (countdown_mode == COUNTDOWN_TRIGGERED)
+        countdown_mode = COUNTDOWN_ENABLED;
+
 	gps_last_timestamp.hours = hours;
 	gps_last_timestamp.minutes = minutes;
 	gps_last_timestamp.seconds = seconds;
@@ -161,8 +165,8 @@ static void set_time(unsigned char hours,
 	gps_state = GPS_TIME_GOOD;
 
 	// Synchronise the exposure with the edge of a minute
-	if (exposure_syncing && (gps_last_timestamp.seconds % exposure_total == 0))
-		exposure_syncing = FALSE;
+	if (countdown_mode == COUNTDOWN_SYNCING && (gps_last_timestamp.seconds % exposure_total == 0))
+		countdown_mode = COUNTDOWN_ENABLED;
 
 	if (gps_record_synctime)
 	{
