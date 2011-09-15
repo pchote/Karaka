@@ -186,10 +186,10 @@ void update_display()
 			write_byte(' ');
     		write_byte(' ');
     		write_byte(' ');
-			if (exposure_count != 0)
+			if (exposure_countdown != 0)
 			{
     			write_byte('[');
-    			write_number(exposure_count, 3);
+    			write_number(exposure_countdown, 3);
     			write_byte(']');
 			}
 			else

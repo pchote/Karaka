@@ -19,7 +19,7 @@
 #define TRUE (!(FALSE))
 
 unsigned char exposure_total;
-volatile unsigned char exposure_count;
+volatile unsigned char exposure_countdown;
 
 #define COUNTDOWN_DISABLED  0
 #define COUNTDOWN_SYNCING   1

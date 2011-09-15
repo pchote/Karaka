@@ -45,7 +45,7 @@
 int main(void)
 {
 	// Initialise global variables
-    exposure_total = exposure_count = 0;
+    exposure_total = exposure_countdown = 0;
 	countdown_mode = COUNTDOWN_DISABLED;
 
 	// Set INT0 to be rising edge triggered
@@ -89,9 +89,9 @@ SIGNAL(SIG_INTERRUPT0)
 	{		
 		// End of exposure - send a syncpulse to the camera
 		// and store a flag so the gps can save the synctime.
-		if (--exposure_count == 0)
+		if (--exposure_countdown == 0)
 		{
-			exposure_count = exposure_total;
+			exposure_countdown = exposure_total;
 			gps_record_synctime = TRUE;
 			trigger_download();
 		}

@@ -137,7 +137,7 @@ void send_timestamp()
 		gps_last_timestamp.year & 0x00FF,
 		gps_last_timestamp.year >> 8,
 		gps_last_timestamp.locked,
-		exposure_count
+		exposure_countdown
 	};
 	queue_data(CURRENTTIME, data, 9);
 }
@@ -257,7 +257,7 @@ unsigned char usart_process_buffer()
 				{
 					case START_EXPOSURE:
 					    cli();
-						exposure_count = exposure_total = usart_packet[3];
+						exposure_countdown = exposure_total = usart_packet[3];
                         sei();
 
 			            // the monitor will enable the gps pulse interrupt when the camera is ready
@@ -265,7 +265,7 @@ unsigned char usart_process_buffer()
                     break;
 					case STOP_EXPOSURE:
                         cli();
-                        exposure_total = exposure_count = 0;
+                        exposure_total = exposure_countdown = 0;
                         sei();
 
                         // Can safely stop the exposure if the not-scan output is already HIGH
@@ -279,7 +279,7 @@ unsigned char usart_process_buffer()
                     case RESET:
                         // Reset to initial state: zero exposure, countdown disabled, monitor waiting
                         cli();
-                        exposure_total = exposure_count = 0;
+                        exposure_total = exposure_countdown = 0;
                         countdown_mode = COUNTDOWN_DISABLED;
                         sei();
 
