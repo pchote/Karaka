@@ -12,26 +12,12 @@
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <stdio.h>
+
 #include "display.h"
 #include "main.h"
 #include "command.h"
 #include "gps.h"
-
-
-/*
- * Convert a nibble in the range 0-F to ascii
- */
-static unsigned char nibble_to_ascii(unsigned char n)
-{
-	// Ignore the high nibble
-	n &= 0x0F;
-	
-	// '0' to '9'
-	if (n <= 9)
-		return n + 0x30;
-	// 'A' to 'F'
-	else return n + 0x37;
-}
 
 /*
  * Wait for a specified number of usec
@@ -86,25 +72,6 @@ static void write_string(const char *s)
 }
 
 /*
- * Display an integer with a given number of digits
- */
-static void write_number(int number, unsigned char places)
-{
-	// Calculate the divisor for the highest place
-	unsigned int div = 1;
-	for (unsigned char i = 1; i < places; i++)
-		div *= 10;
-	
-	// Loop over each digit in the number
-	for (unsigned char p = 0; div > 0; div /= 10)
-	{
-		p = number / div;
-		number %= div;
-		write_byte(nibble_to_ascii(p));
-	}
-}
-
-/*
  * Write a string to the header line of the LCD
  */
 static void write_header(const char *msg)
@@ -113,6 +80,12 @@ static void write_header(const char *msg)
 	write_raw(DISPLAY_CLEAR, 500);
 	write_string(msg);
 	write_raw(NEWLINE,10);
+}
+
+static void write_array(const char *s, unsigned char len)
+{
+    for (unsigned char i = 0; i < len; i++)
+        write_byte(s[i]);
 }
 
 /*
@@ -177,29 +150,22 @@ void update_display()
                 write_header(gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:"));
                 display_gps_was_locked = gps_last_timestamp.locked;
 			}
-			
-			write_number(gps_last_timestamp.hours,2);
-			write_byte(':');
-			write_number(gps_last_timestamp.minutes,2);
-			write_byte(':');
-			write_number(gps_last_timestamp.seconds,2);
-			write_byte(' ');
-    		write_byte(' ');
-    		write_byte(' ');
+
+            char buf[16];
+            sprintf(buf, "%02d:%02d:%02d   ",
+                    gps_last_timestamp.hours,
+                    gps_last_timestamp.minutes,
+                    gps_last_timestamp.seconds);
+            write_array(buf, 11);
+
 			if (exposure_countdown != 0)
 			{
-    			write_byte('[');
-    			write_number(exposure_countdown, 3);
-    			write_byte(']');
+                sprintf(buf, "[%03d]", exposure_countdown);
+                write_array(buf, 5);
 			}
 			else
-			{
-			    write_byte(' ');
-    			write_byte(' ');
-    			write_byte(' ');
-    			write_byte(' ');
-    			write_byte(' ');
-			}
+                write_string(PSTR("     "));
+
 			write_raw(NEWLINE,10);	
 		break;
 	}
