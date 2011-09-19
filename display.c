@@ -10,46 +10,53 @@
 //
 //***************************************************************************
 
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
-#include <stdio.h>
-
 #include "display.h"
 #include "main.h"
 #include "command.h"
 #include "gps.h"
 
-/*
- * Wait for a specified number of usec
- */
-static void wait_usec(unsigned int usec)
-{
-	while (usec--)
-		for (unsigned char i = 0; i < 16; i++)  
-			asm volatile ("nop"::);
-}
+#include <avr/interrupt.h>
+#include <avr/pgmspace.h>
+#include <stdio.h>
+#include <util/delay.h>
 
 /*
  * Send a control byte to the LCD
  */
-static void write_raw(unsigned char value, int time)
+static void send_instruction(unsigned char value)
 {
-	PORTC = value;
+	// Load the instruction into the data output
+    PORTC = value;
+
+    // Select instruction register
+    PORTF &= ~_BV(LCD_REG_SELECT);
+
+    // Wait for >tAS = 140ns
+    _delay_us(1);
+
+    // Toggle enable bit to trigger the download
 	PORTF = _BV(LCD_ENABLE);
-	wait_usec(time);
+	_delay_us(40);
 	PORTF &= ~_BV(LCD_ENABLE);
-	wait_usec(time);
 }
 
 /*
  * Send a data byte to the LCD
  */
-static void write_byte(unsigned char value)
+static void print_char(unsigned char value)
 {
+	// Load the character into the data output
 	PORTC = value;
-	PORTF = _BV(LCD_REG_SELECT)|_BV(LCD_ENABLE);
-	// Wait for operation to complete
-    wait_usec(10);
+
+    // Select data register
+	PORTF |= _BV(LCD_REG_SELECT);
+
+    // Wait for >tAS = 140ns
+    _delay_us(1);
+
+    // Toggle enable bit to trigger the download
+    PORTF |= _BV(LCD_ENABLE);
+    _delay_us(40);
 	PORTF &= ~_BV(LCD_ENABLE);
 }
 
@@ -68,7 +75,7 @@ static void write_string(const char *s)
 	// Send the characters to the display
 	unsigned char sndcntr = 0;
 	while (sndcntr < qcntr)
-		write_byte(queue[sndcntr++]);
+		print_char(queue[sndcntr++]);
 }
 
 /*
@@ -76,16 +83,17 @@ static void write_string(const char *s)
  */
 static void write_header(const char *msg)
 {
-	write_raw(CURSOR_HOME, 50);
-	write_raw(DISPLAY_CLEAR, 500);
+	send_instruction(CURSOR_TOP);
+    _delay_ms(1.64);
 	write_string(msg);
-	write_raw(NEWLINE,10);
+	send_instruction(CURSOR_BOTTOM);
+    _delay_us(40);
 }
 
 static void write_array(const char *s, unsigned char len)
 {
     for (unsigned char i = 0; i < len; i++)
-        write_byte(s[i]);
+        print_char(s[i]);
 }
 
 /*
@@ -95,16 +103,16 @@ void display_init(void)
 {
 	// Set all of PORTC as data output
 	DDRC |= 0xFF;
+
 	// Set status pins as output
 	DDRF |= _BV(LCD_ENABLE)|_BV(LCD_READ_WRITE)|_BV(LCD_REG_SELECT);
 	
-	wait_usec(50000);
-	write_raw(INITIALIZE, 40);
-	write_raw(DISPLAY_CLEAR, 1640);
-	write_raw(INITIALIZEB, 500);
-	write_raw(CURSOR_HOME, 500);
-	write_raw(0x06, 500);
-	
+	send_instruction(INITIALIZE);
+    _delay_ms(4.1);
+	send_instruction(HIDE_CURSOR);
+	send_instruction(DISPLAY_CLEAR);
+    _delay_ms(1.64);
+
 	display_cursor = 0;
     display_gps_was_locked = FALSE;
 	display_last_gps_state = -1;
@@ -117,37 +125,41 @@ void update_display()
 	{
 		case SYNCING:
 			if (display_last_gps_state != gps_state)
-				write_header(PSTR("SYNCING TO GPS"));
+				write_header(PSTR("SYNCING TO GPS  "));
 			
-			write_byte('.');
+			print_char('.');
 			if (display_cursor++ == 15)
 			{
 				display_cursor = 0;
-				write_raw(NEWLINE,10);
+                send_instruction(CURSOR_BOTTOM);
+                _delay_us(40);
 				write_string(PSTR("                "));
-				write_raw(NEWLINE,10);
+                send_instruction(CURSOR_BOTTOM);
+                _delay_us(40);
 			}
 		break;
 		
 		case NO_GPS:
 			if (display_last_gps_state != gps_state)
-				write_header(PSTR("GPS NOT FOUND"));
+				write_header(PSTR("GPS NOT FOUND   "));
 			
-			write_byte('.');
+			print_char('.');
 			
 			if (display_cursor++ == 15)
 			{
 				display_cursor = 0;
-				write_raw(NEWLINE,10);
+                send_instruction(CURSOR_BOTTOM);
+                _delay_us(40);
 				write_string(PSTR("                "));
-				write_raw(NEWLINE,10);
+                send_instruction(CURSOR_BOTTOM);
+                _delay_us(40);
 			}
 		break;
 		
 		case GPS_TIME_GOOD:
 			if (display_last_gps_state != gps_state || gps_last_timestamp.locked != display_gps_was_locked)
 			{
-                write_header(gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:"));
+                write_header(gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:       "));
                 display_gps_was_locked = gps_last_timestamp.locked;
 			}
 
@@ -166,8 +178,9 @@ void update_display()
 			else
                 write_string(PSTR("     "));
 
-			write_raw(NEWLINE,10);	
-		break;
+            send_instruction(CURSOR_BOTTOM);
+            _delay_us(40);
+            break;
 	}
 	display_last_gps_state = gps_state;
 }

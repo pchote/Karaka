@@ -15,6 +15,8 @@
 #ifndef KARAKA_MAIN_H
 #define KARAKA_MAIN_H
 
+#define F_CPU 16000000UL  // 16 MHz
+
 #define FALSE (0)
 #define TRUE (!(FALSE))
 

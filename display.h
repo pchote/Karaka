@@ -22,10 +22,10 @@
  */
 // Initialize with 8 bit data, 2 lines, 5x7 font
 #define INITIALIZE    0x38
+#define HIDE_CURSOR   0x0C
 #define DISPLAY_CLEAR 0x01
-#define INITIALIZEB   0x0C
-#define CURSOR_HOME   0x02
-#define NEWLINE       0xC0
+#define CURSOR_TOP    0x02
+#define CURSOR_BOTTOM 0xC0
 
 // Display modes
 #define DISPLAY_OFF       0x08
