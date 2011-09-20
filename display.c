@@ -61,42 +61,6 @@ static void print_char(unsigned char value)
 }
 
 /*
- * Display a string stored in flash memory
- * The display is limited to 16 characters; longer strings will be truncated
- */
-static void write_string(const char *s)
-{
-	// Read the message from flash memory into a buffer
-	unsigned char queue[16];
-	unsigned char qcntr;
-	for (qcntr = 0; pgm_read_byte(&s[qcntr]) && qcntr < 16; qcntr++)
-		queue[qcntr] = pgm_read_byte(&s[qcntr]);
-	
-	// Send the characters to the display
-	unsigned char sndcntr = 0;
-	while (sndcntr < qcntr)
-		print_char(queue[sndcntr++]);
-}
-
-/*
- * Write a string to the header line of the LCD
- */
-static void write_header(const char *msg)
-{
-	send_instruction(CURSOR_TOP);
-    _delay_ms(1.64);
-	write_string(msg);
-	send_instruction(CURSOR_BOTTOM);
-    _delay_us(40);
-}
-
-static void write_array(const char *s, unsigned char len)
-{
-    for (unsigned char i = 0; i < len; i++)
-        print_char(s[i]);
-}
-
-/*
  * Initialise the LCD
  */
 void display_init(void)
@@ -106,7 +70,7 @@ void display_init(void)
 
 	// Set status pins as output
 	DDRF |= _BV(LCD_ENABLE)|_BV(LCD_READ_WRITE)|_BV(LCD_REG_SELECT);
-	
+
 	send_instruction(INITIALIZE);
     _delay_ms(4.1);
 	send_instruction(HIDE_CURSOR);
@@ -118,69 +82,64 @@ void display_init(void)
 	display_last_gps_state = -1;
 }
 
+char top_display[17];
+char top_cache[17];
+char bottom_display[17];
+char bottom_cache[17];
 void update_display()
 {
 	// Update the lcd display
 	switch (gps_state)
 	{
 		case SYNCING:
-			if (display_last_gps_state != gps_state)
-				write_header(PSTR("SYNCING TO GPS  "));
-			
-			print_char('.');
-			if (display_cursor++ == 15)
-			{
-				display_cursor = 0;
-                send_instruction(CURSOR_BOTTOM);
-                _delay_us(40);
-				write_string(PSTR("                "));
-                send_instruction(CURSOR_BOTTOM);
-                _delay_us(40);
-			}
-		break;
-		
 		case NO_GPS:
 			if (display_last_gps_state != gps_state)
-				write_header(PSTR("GPS NOT FOUND   "));
-			
-			print_char('.');
-			
-			if (display_cursor++ == 15)
 			{
-				display_cursor = 0;
-                send_instruction(CURSOR_BOTTOM);
-                _delay_us(40);
-				write_string(PSTR("                "));
-                send_instruction(CURSOR_BOTTOM);
-                _delay_us(40);
+                PGM_P str = gps_state == SYNCING ? PSTR("SYNCING TO GPS  ") : PSTR("GPS NOT FOUND   ");
+                strcpy_P(top_display, str);
 			}
+
+			for (int i = 0; i < 16; i++)
+                bottom_display[i] = (i < display_cursor) ? '.' : ' ';
+            if (display_cursor++ >= 16) display_cursor = 0;
 		break;
-		
 		case GPS_TIME_GOOD:
 			if (display_last_gps_state != gps_state || gps_last_timestamp.locked != display_gps_was_locked)
 			{
-                write_header(gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:       "));
+                PGM_P str = gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:       ");
+                strcpy_P(top_display, str);
                 display_gps_was_locked = gps_last_timestamp.locked;
 			}
 
-            char buf[16];
-            sprintf(buf, "%02d:%02d:%02d   ",
+            sprintf(bottom_display, "%02d:%02d:%02d        ",
                     gps_last_timestamp.hours,
                     gps_last_timestamp.minutes,
                     gps_last_timestamp.seconds);
-            write_array(buf, 11);
 
 			if (exposure_countdown != 0)
-			{
-                sprintf(buf, "[%03d]", exposure_countdown);
-                write_array(buf, 5);
-			}
-			else
-                write_string(PSTR("     "));
-
-            send_instruction(CURSOR_BOTTOM);
-            _delay_us(40);
+                sprintf((char *)(bottom_display+11), "[%03d]", exposure_countdown);
             break;
 	}
-	display_last_gps_state = gps_state;
+
+    if (strcmp(top_display, top_cache))
+    {
+        send_instruction(CURSOR_TOP);
+        _delay_ms(1.64);
+        for (unsigned char i = 0; i < 16 && i < strlen(top_display); i++)
+            print_char(top_display[i]);
+
+        strcpy(top_cache, top_display);
+    }
+
+    if (strcmp(bottom_display, bottom_cache))
+    {
+        send_instruction(CURSOR_BOTTOM);
+        _delay_us(40);
+        for (unsigned char i = 0; i < 16 && i < strlen(bottom_display); i++)
+            print_char(bottom_display[i]);
+
+        strcpy(bottom_cache, bottom_display);
+    }
+
+    display_last_gps_state = gps_state;
 }
