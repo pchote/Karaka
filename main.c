@@ -49,6 +49,7 @@ void reset_vars()
 /*
  * Initialise the unit and wait for interrupts.
  */
+unsigned int cycle = 0;
 int main(void)
 {
 	// Initialise global variables
@@ -76,7 +77,8 @@ int main(void)
 		usart_process_buffer();
 		time_updated = gps_process_buffer();
 
-		if (time_updated)
+        // Force the display to refresh if the time hasn't updated in 65535 cycles
+		if (time_updated || ++cycle == 0)
 		{
 			update_display();
 		}
