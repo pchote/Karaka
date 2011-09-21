@@ -91,11 +91,11 @@ void update_display()
 	// Update the lcd display
 	switch (gps_state)
 	{
-		case SYNCING:
-		case NO_GPS:
+		case GPS_SYNCING:
+		case GPS_UNAVAILABLE:
 			if (display_last_gps_state != gps_state)
 			{
-                PGM_P str = gps_state == SYNCING ? PSTR("SYNCING TO GPS  ") : PSTR("GPS NOT FOUND   ");
+                PGM_P str = gps_state == GPS_SYNCING ? PSTR("SYNCING TO GPS  ") : PSTR("GPS NOT FOUND   ");
                 strcpy_P(top_display, str);
 			}
 
@@ -103,7 +103,7 @@ void update_display()
                 bottom_display[i] = (i < display_cursor) ? '.' : ' ';
             if (display_cursor++ >= 16) display_cursor = 0;
 		break;
-		case GPS_TIME_GOOD:
+		case GPS_ACTIVE:
 			if (display_last_gps_state != gps_state || gps_last_timestamp.locked != display_gps_was_locked)
 			{
                 PGM_P str = gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:       ");

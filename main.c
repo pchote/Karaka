@@ -92,7 +92,7 @@ int main(void)
 SIGNAL(SIG_INTERRUPT0)
 {
 	// Don't count down unless we have a valid exposure time and the GPS is locked
-	if (gps_state == GPS_TIME_GOOD) // Do we have a GPS lock?
+	if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?
 	{
 	    if (countdown_mode == COUNTDOWN_ENABLED)
 	    {

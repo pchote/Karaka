@@ -104,6 +104,13 @@ void gps_init(void)
 	UBRR1H = 0x00;
 	UBRR1L = 0xCF;
 	
+    // Initialize timer1 to monitor GPS loss
+    TCCR1A = 0x00;
+    // Set prescaler to 1/1024: 64us per tick
+    TCCR1B = _BV(CS10)|_BV(CS12);
+    TIMSK |= _BV(TOIE1);
+    TCNT1 = 0x0BDB; // Overflow after 62500 ticks: 4.0s
+
 	// Initialise the clocks to zero
 	gps_last_timestamp.seconds = 0;
 	gps_last_timestamp.minutes = 0;
@@ -124,7 +131,7 @@ void gps_init(void)
     gps_magellan_length = 0;
     gps_magellan_locked = FALSE;
 	gps_record_synctime = FALSE;
-	gps_state = NO_GPS;
+	gps_state = GPS_UNAVAILABLE;
     
     gps_input_read = 0;
     gps_input_write = 0;
@@ -162,7 +169,7 @@ static void set_time(unsigned char hours,
     gps_last_timestamp.locked = locked;
     
 	// Mark that we have a valid timestamp
-	gps_state = GPS_TIME_GOOD;
+	gps_state = GPS_ACTIVE;
 
 	// Synchronise the exposure with the edge of a minute
 	if (countdown_mode == COUNTDOWN_SYNCING && (gps_last_timestamp.seconds % exposure_total == 0))
@@ -186,11 +193,27 @@ static void set_time(unsigned char hours,
 	send_timestamp();
 }
 
+
+/*
+ * Haven't recieved any serial data in 4.0 seconds
+ * The GPS has probably died
+ */
+SIGNAL(SIG_OVERFLOW1)
+{
+    gps_state = GPS_UNAVAILABLE;
+}
+
 /*
  * Received data from gps serial. Add to buffer
  */
 SIGNAL(SIG_UART1_RECV)
 {
+    // Reset timeout countdown
+    TCNT1 = 0x0BDB;
+
+    // Update status if necessary
+    if (gps_state == GPS_UNAVAILABLE)
+        gps_state = GPS_SYNCING;
     gps_input_buffer[gps_input_write++] = UDR1;
 }
 

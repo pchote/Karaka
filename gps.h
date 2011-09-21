@@ -21,9 +21,9 @@
 #define DLE 0x10
 
 // gps_state values
-#define NO_GPS					0
-#define SYNCING				    1
-#define GPS_TIME_GOOD			2	// Gps is locked and working.
+#define GPS_UNAVAILABLE 0
+#define GPS_SYNCING     1
+#define GPS_ACTIVE      2
 
 // gps packet types
 #define UNKNOWN_PACKET 0
@@ -42,7 +42,7 @@ typedef struct
     unsigned char locked;
 } timestamp;
 
-unsigned char gps_state;             // State of the gps listener (NO_GPS, SYNCING, GPS_TIME_GOOD)
+unsigned char gps_state;             // State of the gps listener (GPS_UNAVAILABLE, GPS_SYNCING, GPS_ACTIVE)
 volatile unsigned char gps_record_synctime;   // Flag to indicate whether the gps should process a packet as synctime
 
 timestamp gps_last_timestamp;
