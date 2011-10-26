@@ -91,7 +91,9 @@ static unsigned char checksum(unsigned char *data, unsigned char length)
  */
 static void queue_send_byte(unsigned char b)
 {
-	// TODO: check to ensure we don't overwrite data we haven't sent yet
+	// Don't overwrite data that hasn't been sent yet
+    while (usart_output_write == usart_output_read - 1);
+
 	usart_output_buffer[usart_output_write++] = b;
 	
 	// Enable Transmit data register empty interrupt if necessary to send bytes down the line
