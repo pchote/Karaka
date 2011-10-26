@@ -44,7 +44,9 @@ static volatile unsigned char gps_output_write;
  */
 static void queue_send_byte(unsigned char b)
 {
-	// TODO: check to ensure we don't overwrite data we haven't sent yet
+	// Don't overwrite data that hasn't been sent yet
+    while (gps_output_write == gps_output_read - 1);
+
 	gps_output_buffer[gps_output_write++] = b;
 	
 	// Enable Transmit data register empty interrupt if necessary to send bytes down the line
@@ -137,11 +139,26 @@ void gps_init(void)
     gps_input_write = 0;
     gps_output_read = 0;
     gps_output_write = 0;
-    
+
     // Init magellan
-    char *magellan_init = "$PMGLI,00,A00,2,B\r\n$PMGLI,00,H00,2,B\r\n";
-    queue_bytes((unsigned char *)magellan_init, strlen(magellan_init));
-    
+
+    // Disable the messages that may have been left enabled by the OEM software
+    char mgl_initbuf[22];
+    char *mgl_disable[] = {"G00", "B00", "B02", "D00", "E00", "F02", "R04", "S01"};
+    for (unsigned char i = 0; i < sizeof(mgl_disable)/sizeof(*mgl_disable); i++)
+    {
+        sprintf(mgl_initbuf, "$PMGLI,00,%s,0,A\r\n", mgl_disable[i]);
+        queue_bytes((unsigned char *)mgl_initbuf, strlen(mgl_initbuf));
+    }
+
+    // Enable the messages that we want to use
+    char *mgl_enable[] = {"A00", "H00"};
+    for (unsigned char i = 0; i < sizeof(mgl_enable)/sizeof(*mgl_enable); i++)
+    {
+        sprintf(mgl_initbuf, "$PMGLI,00,%s,2,B\r\n", mgl_enable[i]);
+        queue_bytes((unsigned char *)mgl_initbuf, strlen(mgl_initbuf));
+    }
+
     // Init trimble
 	unsigned char trimble_init[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
     queue_bytes(trimble_init, 7);
