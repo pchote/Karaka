@@ -32,4 +32,5 @@ volatile unsigned char stop_countdown;
 volatile unsigned char countdown_mode;
 
 void reset_vars();
+void trigger_countdown();
 #endif

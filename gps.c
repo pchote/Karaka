@@ -176,6 +176,14 @@ static void set_time(unsigned char hours,
     // Enable the counter for the next PPS pulse
     if (countdown_mode == COUNTDOWN_TRIGGERED)
         countdown_mode = COUNTDOWN_ENABLED;
+    else if (countdown_mode == COUNTDOWN_ENABLED)
+    {
+        // We should always recieve the PPS pulse before the time packet
+        cli();
+        trigger_countdown();
+        sei();
+        send_debug_string("Missing PPS pulse: forcing countdown");
+    }
 
 	gps_last_timestamp.hours = hours;
 	gps_last_timestamp.minutes = minutes;

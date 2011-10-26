@@ -49,7 +49,7 @@ void reset_vars()
 /*
  * Initialise the unit and wait for interrupts.
  */
-unsigned int cycle = 0;
+static unsigned int cycle = 0;
 int main(void)
 {
 	// Initialise global variables
@@ -95,17 +95,10 @@ SIGNAL(SIG_INTERRUPT0)
 	if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?
 	{
 	    if (countdown_mode == COUNTDOWN_ENABLED)
-	    {
-    		// End of exposure - send a syncpulse to the camera
-    		// and store a flag so the gps can save the synctime.
-    		if (--exposure_countdown == 0)
-    		{
-    			exposure_countdown = exposure_total;
-    			gps_record_synctime = TRUE;
-    			trigger_download();
-    		}
+        {
+            trigger_countdown();
             countdown_mode = COUNTDOWN_TRIGGERED;
-    	}
+        }
     	else if (countdown_mode == COUNTDOWN_TRIGGERED)
             send_debug_string("Ignoring duplicate PPS pulse");
     }
@@ -117,4 +110,19 @@ SIGNAL(SIG_INTERRUPT0)
     // Fixed time delay before stopping an exposure sequence
 	if (stop_countdown > 0 && --stop_countdown == 0)
 	    send_stopexposure();
+}
+
+/*
+ * Decrement the exposure counter and trigger a download if necessary
+ */
+void trigger_countdown()
+{
+    // End of exposure - send a syncpulse to the camera
+    // and store a flag so the gps can save the synctime.
+    if (--exposure_countdown == 0)
+    {
+        exposure_countdown = exposure_total;
+        gps_record_synctime = TRUE;
+        trigger_download();
+    }
 }
