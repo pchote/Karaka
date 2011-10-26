@@ -243,13 +243,23 @@ SIGNAL(SIG_UART1_RECV)
 }
 
 /*
+ * Helper routine for determining whether a given year is a leap year
+ */
+static unsigned char is_leap_year(unsigned int year)
+{
+    if (year % 4) return 0;
+    if (year % 100) return 1;
+    return (year % 400) ? 0 : 1;
+}
+
+/*
  * Process any data in the received buffer
  * Parses at most one time packet - so must be called frequently
  * Returns true if the timestamp or status info has changed
  * Note: this relies on the gps_input_buffer being 256 chars long so that
  * the data pointers automatically overflow at 256 to give a circular buffer
  */
- 
+
 static unsigned char bytes_to_sync = 0;
 unsigned char gps_process_buffer()
 {
@@ -393,13 +403,41 @@ unsigned char gps_process_buffer()
         					if (gps_packet_type == MAGELLAN_TIME_PACKET)
         					{
                                 updated = TRUE;
+
+                                // Correct for bad epoch offset
+                                // Number of days in each month (ignoring leap years)
+                                static unsigned char days[13] = {
+                                    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+                                };
+
+                                // Add 19 years and 229 days
+                                unsigned int year = (((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF)) + 19;
+                                unsigned char month = gps_packet[8];
+                                unsigned char day = gps_packet[7];
+                                unsigned char correction = 229;
+
+                                // Is this a leap year?
+                                days[1] = is_leap_year(year) ? 29 : 28;
+
+                                while (day + correction > days[month-1])
+                                {
+                                    if (++month > 12)
+                                    {
+                                        month = 1;
+                                        year++;
+                                        days[1] = is_leap_year(year) ? 29 : 28;
+                                    }
+                                    correction -= days[month-1];
+                                }
+                                day += correction;
+
         					    set_time(gps_packet[4], // hours
         								gps_packet[5], // minutes
     									 gps_packet[6], // seconds
-    									 gps_packet[7], // day
-    									 gps_packet[8], // month
-    									 gps_packet[9], // year (high byte)
-    									 gps_packet[10],// year (low byte)
+                                         day,
+    									 month,
+                                         (year >> 8),
+                                         (unsigned char)year,
                                          gps_magellan_locked); // lock status
         					}
         					else if (gps_packet_type == MAGELLAN_STATUS_PACKET) // Status packet
