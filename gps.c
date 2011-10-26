@@ -159,9 +159,9 @@ void gps_init(void)
         queue_bytes((unsigned char *)mgl_initbuf, strlen(mgl_initbuf));
     }
 
-    // Init trimble
-	unsigned char trimble_init[7] = {0x10, 0x8E, 0xA5, 0x01, 0x00, 0x10, 0x03};
-    queue_bytes(trimble_init, 7);
+    // Init Trimble: Enable only the 8F-AB primary timing packet
+	unsigned char trimble_init[9] = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
+    queue_bytes(trimble_init, 9);
 }
 
 static void set_time(unsigned char hours,
