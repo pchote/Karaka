@@ -1,8 +1,8 @@
 //***************************************************************************
 //
-//  File........: command.h
-//  Description.: Responds to user commands over usb
-//  Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//  File        : command.h
+//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Description : Handles communication with the Acquisition PC via serial
 //
 //  This file is part of Karaka, which is free software. It is made available
 //  to you under the terms of version 3 of the GNU General Public License, as

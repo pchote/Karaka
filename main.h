@@ -1,8 +1,8 @@
 //***************************************************************************
 //
-//  File........: main.h
-//  Description.: ATMega128 USB Timer interface module
-//  Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//  File        : main.h
+//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Description : Main program logic
 //
 //  This file is part of Karaka, which is free software. It is made available
 //  to you under the terms of version 3 of the GNU General Public License, as

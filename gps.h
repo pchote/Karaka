@@ -1,10 +1,8 @@
 //***************************************************************************
 //
-//  File........: gps.h
-//  Author(s)...: Johnny McClymont, Paul Chote
-//  Description.: Parses the serial stream from a Trimble or Magellan
-//                GPS unit and extracts timestamp information
-//  Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//  File        : gps.h
+//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Description : Extracts timestamps from a Trimble or Magellan serial stream
 //
 //  This file is part of Karaka, which is free software. It is made available
 //  to you under the terms of version 3 of the GNU General Public License, as

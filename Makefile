@@ -1,10 +1,10 @@
-#***************************************************************************
-#
-#  File........: Makefile
-#  Author(s)...: Paul Chote
-#  Description.: Makefile to build the project using avr-gcc and avrdude
-#
-#***************************************************************************
+##***************************************************************************
+##
+##  File        : Makefile
+##  Author      : Paul Chote
+##  Description : Makefile to build the project using avr-gcc and avrdude
+##
+##***************************************************************************
 
 DEVICE     = atmega128
 PROGRAMMER = -c dragon_jtag -P usb

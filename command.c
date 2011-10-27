@@ -1,12 +1,12 @@
 //***************************************************************************
 //
-//    File........: command.c
-//    Description.: Responds to user commands over usb
-//    Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//  File        : command.c
+//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Description : Handles communication with the Acquisition PC via serial
 //
-//    This file is part of Karaka, which is free software. It is made available
-//    to you under the terms of version 3 of the GNU General Public License, as
-//    published by the Free Software Foundation. For more information, see LICENSE.
+//  This file is part of Karaka, which is free software. It is made available
+//  to you under the terms of version 3 of the GNU General Public License, as
+//  published by the Free Software Foundation. For more information, see LICENSE.
 //
 //***************************************************************************
 
@@ -20,6 +20,7 @@
 static unsigned char usart_packet_type;
 static unsigned char usart_packet_length;
 static unsigned char usart_packet[256];
+
 // Buffer for a short error message
 static char error[64];
 

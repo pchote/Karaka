@@ -1,13 +1,12 @@
 //***************************************************************************
 //
-//    File........: main.c
-//    Description.: ATMega128 USB timer card.     Interface between GPS module, 
-//                  CCD camera, and Laptop
-//    Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//  File        : main.c
+//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Description : Main program logic
 //
-//    This file is part of Karaka, which is free software. It is made available
-//    to you under the terms of version 3 of the GNU General Public License, as
-//    published by the Free Software Foundation. For more information, see LICENSE.
+//  This file is part of Karaka, which is free software. It is made available
+//  to you under the terms of version 3 of the GNU General Public License, as
+//  published by the Free Software Foundation. For more information, see LICENSE.
 //
 //***************************************************************************
 
