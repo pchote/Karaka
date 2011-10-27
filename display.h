@@ -13,9 +13,9 @@
 #ifndef KARAKA_DISPLAY_H
 #define KARAKA_DISPLAY_H
 
-#define LCD_ENABLE		PF2	// Output to enable LCD
-#define LCD_READ_WRITE	PF1	// Output to select reading or writing from LCD (Read active LOW)
-#define LCD_REG_SELECT	PF0	// Output to select register
+#define LCD_ENABLE        PF2    // Output to enable LCD
+#define LCD_READ_WRITE    PF1    // Output to select reading or writing from LCD (Read active LOW)
+#define LCD_REG_SELECT    PF0    // Output to select register
 
 /*
  * Instruction list

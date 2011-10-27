@@ -25,7 +25,7 @@
  */
 static void send_instruction(unsigned char value)
 {
-	// Load the instruction into the data output
+    // Load the instruction into the data output
     PORTC = value;
 
     // Select instruction register
@@ -35,9 +35,9 @@ static void send_instruction(unsigned char value)
     _delay_us(1);
 
     // Toggle enable bit to trigger the download
-	PORTF = _BV(LCD_ENABLE);
-	_delay_us(40);
-	PORTF &= ~_BV(LCD_ENABLE);
+    PORTF = _BV(LCD_ENABLE);
+    _delay_us(40);
+    PORTF &= ~_BV(LCD_ENABLE);
 }
 
 /*
@@ -45,11 +45,11 @@ static void send_instruction(unsigned char value)
  */
 static void print_char(unsigned char value)
 {
-	// Load the character into the data output
-	PORTC = value;
+    // Load the character into the data output
+    PORTC = value;
 
     // Select data register
-	PORTF |= _BV(LCD_REG_SELECT);
+    PORTF |= _BV(LCD_REG_SELECT);
 
     // Wait for >tAS = 140ns
     _delay_us(1);
@@ -57,7 +57,7 @@ static void print_char(unsigned char value)
     // Toggle enable bit to trigger the download
     PORTF |= _BV(LCD_ENABLE);
     _delay_us(40);
-	PORTF &= ~_BV(LCD_ENABLE);
+    PORTF &= ~_BV(LCD_ENABLE);
 }
 
 /*
@@ -65,21 +65,21 @@ static void print_char(unsigned char value)
  */
 void display_init(void)
 {
-	// Set all of PORTC as data output
-	DDRC |= 0xFF;
+    // Set all of PORTC as data output
+    DDRC |= 0xFF;
 
-	// Set status pins as output
-	DDRF |= _BV(LCD_ENABLE)|_BV(LCD_READ_WRITE)|_BV(LCD_REG_SELECT);
+    // Set status pins as output
+    DDRF |= _BV(LCD_ENABLE)|_BV(LCD_READ_WRITE)|_BV(LCD_REG_SELECT);
 
-	send_instruction(INITIALIZE);
+    send_instruction(INITIALIZE);
     _delay_ms(4.1);
-	send_instruction(HIDE_CURSOR);
-	send_instruction(DISPLAY_CLEAR);
+    send_instruction(HIDE_CURSOR);
+    send_instruction(DISPLAY_CLEAR);
     _delay_ms(1.64);
 
-	display_cursor = 0;
+    display_cursor = 0;
     display_gps_was_locked = FALSE;
-	display_last_gps_state = -1;
+    display_last_gps_state = -1;
 }
 
 char top_display[17];
@@ -88,38 +88,38 @@ char bottom_display[17];
 char bottom_cache[17];
 void update_display()
 {
-	// Update the lcd display
-	switch (gps_state)
-	{
-		case GPS_SYNCING:
-		case GPS_UNAVAILABLE:
-			if (display_last_gps_state != gps_state)
-			{
+    // Update the lcd display
+    switch (gps_state)
+    {
+        case GPS_SYNCING:
+        case GPS_UNAVAILABLE:
+            if (display_last_gps_state != gps_state)
+            {
                 PGM_P str = gps_state == GPS_SYNCING ? PSTR("SYNCING TO GPS  ") : PSTR("GPS NOT FOUND   ");
                 strcpy_P(top_display, str);
-			}
+            }
 
-			for (int i = 0; i < 16; i++)
+            for (int i = 0; i < 16; i++)
                 bottom_display[i] = (i < display_cursor) ? '.' : ' ';
             if (display_cursor++ >= 16) display_cursor = 0;
-		break;
-		case GPS_ACTIVE:
-			if (display_last_gps_state != gps_state || gps_last_timestamp.locked != display_gps_was_locked)
-			{
+        break;
+        case GPS_ACTIVE:
+            if (display_last_gps_state != gps_state || gps_last_timestamp.locked != display_gps_was_locked)
+            {
                 PGM_P str = gps_last_timestamp.locked ? PSTR("UTC TIME: LOCKED") : PSTR("UTC TIME:       ");
                 strcpy_P(top_display, str);
                 display_gps_was_locked = gps_last_timestamp.locked;
-			}
+            }
 
             sprintf(bottom_display, "%02d:%02d:%02d        ",
                     gps_last_timestamp.hours,
                     gps_last_timestamp.minutes,
                     gps_last_timestamp.seconds);
 
-			if (exposure_countdown != 0)
+            if (exposure_countdown != 0)
                 sprintf((char *)(bottom_display+11), "[%03d]", exposure_countdown);
             break;
-	}
+    }
 
     if (strcmp(top_display, top_cache))
     {

@@ -1,13 +1,13 @@
 //***************************************************************************
 //
-//	File........: main.c
-//	Description.: ATMega128 USB timer card.	 Interface between GPS module, 
-//				  CCD camera, and Laptop
-//	Copyright...: 2009-2011 Johnny McClymont, Paul Chote
+//    File........: main.c
+//    Description.: ATMega128 USB timer card.     Interface between GPS module, 
+//                  CCD camera, and Laptop
+//    Copyright...: 2009-2011 Johnny McClymont, Paul Chote
 //
-//	This file is part of Karaka, which is free software. It is made available
-//	to you under the terms of version 3 of the GNU General Public License, as
-//	published by the Free Software Foundation. For more information, see LICENSE.
+//    This file is part of Karaka, which is free software. It is made available
+//    to you under the terms of version 3 of the GNU General Public License, as
+//    published by the Free Software Foundation. For more information, see LICENSE.
 //
 //***************************************************************************
 
@@ -42,8 +42,8 @@
 void reset_vars()
 {
     start_countdown = stop_countdown = exposure_total = exposure_countdown = 0;
-	countdown_mode = COUNTDOWN_DISABLED;
-	monitor_mode = MONITOR_WAIT;
+    countdown_mode = COUNTDOWN_DISABLED;
+    monitor_mode = MONITOR_WAIT;
 }
 
 /*
@@ -52,37 +52,37 @@ void reset_vars()
 static unsigned int cycle = 0;
 int main(void)
 {
-	// Initialise global variables
+    // Initialise global variables
     reset_vars();
 
-	// Set INT0 to be rising edge triggered
+    // Set INT0 to be rising edge triggered
     EICRA = _BV(ISC01);
-	EIMSK |= _BV(INT0);
+    EIMSK |= _BV(INT0);
 
-	// Initialise the hardware units
-	command_init();
-	gps_init();
-	download_init();
+    // Initialise the hardware units
+    command_init();
+    gps_init();
+    download_init();
     monitor_init();
-	display_init();
+    display_init();
 
-	// Enable interrupts
-	sei();
-	unsigned char time_updated;
-	
-	// Main program loop
-	while(TRUE)
-	{
-		monitor_tick();
-		usart_process_buffer();
-		time_updated = gps_process_buffer();
+    // Enable interrupts
+    sei();
+    unsigned char time_updated;
+
+    // Main program loop
+    while(TRUE)
+    {
+        monitor_tick();
+        usart_process_buffer();
+        time_updated = gps_process_buffer();
 
         // Force the display to refresh if the time hasn't updated in 65535 cycles
-		if (time_updated || ++cycle == 0)
-		{
-			update_display();
-		}
-	}
+        if (time_updated || ++cycle == 0)
+        {
+            update_display();
+        }
+    }
 }
 
 /*
@@ -91,25 +91,25 @@ int main(void)
  */
 SIGNAL(SIG_INTERRUPT0)
 {
-	// Don't count down unless we have a valid exposure time and the GPS is locked
-	if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?
-	{
-	    if (countdown_mode == COUNTDOWN_ENABLED)
+    // Don't count down unless we have a valid exposure time and the GPS is locked
+    if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?
+    {
+        if (countdown_mode == COUNTDOWN_ENABLED)
         {
             trigger_countdown();
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
-    	else if (countdown_mode == COUNTDOWN_TRIGGERED)
+        else if (countdown_mode == COUNTDOWN_TRIGGERED)
             send_debug_string("Ignoring duplicate PPS pulse");
     }
 
-	// Fixed time delay before starting an exposure sequence
-	if (start_countdown > 0 && --start_countdown == 0)
-	    countdown_mode = COUNTDOWN_SYNCING;
+    // Fixed time delay before starting an exposure sequence
+    if (start_countdown > 0 && --start_countdown == 0)
+        countdown_mode = COUNTDOWN_SYNCING;
 
     // Fixed time delay before stopping an exposure sequence
-	if (stop_countdown > 0 && --stop_countdown == 0)
-	    send_stopexposure();
+    if (stop_countdown > 0 && --stop_countdown == 0)
+        send_stopexposure();
 }
 
 /*

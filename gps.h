@@ -33,12 +33,12 @@
 
 typedef struct
 {
-	unsigned int year;
-	unsigned char month;
-	unsigned char day;
-	unsigned char hours;
-	unsigned char minutes;
-	unsigned char seconds;
+    unsigned int year;
+    unsigned char month;
+    unsigned char day;
+    unsigned char hours;
+    unsigned char minutes;
+    unsigned char seconds;
     unsigned char locked;
 } timestamp;
 
