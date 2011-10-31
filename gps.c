@@ -224,6 +224,7 @@ static void set_time(unsigned char hours,
 SIGNAL(SIG_OVERFLOW1)
 {
     gps_state = GPS_UNAVAILABLE;
+    send_debug_string("GPS serial connection lost");
 }
 
 /*
