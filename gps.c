@@ -340,15 +340,16 @@ unsigned char gps_process_buffer()
                     gps_input_buffer[(unsigned char)(gps_input_read - 1)] == DLE)
                     gps_input_read++;
 
+                if (gps_input_read == temp_write)
+                    break;
+
                 gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
             
                 // End of packet (Trimble timing packet is 21 bytes)
-                if (gps_packet_length == 22)
+                if (gps_packet_length == 21)
                 {
                     // Sanity check: Ensure the packet ends correctly
-                    if (gps_packet[21] == ETX && 
-                        gps_packet[20] == DLE &&
-                        gps_packet[19] != DLE)
+                    if (gps_packet[20] == ETX && gps_packet[19] == DLE)
                     {
                         set_time(gps_packet[14], // hours
                                  gps_packet[13], // minutes
@@ -361,9 +362,10 @@ unsigned char gps_process_buffer()
                     }
                     else
                     {
-                        // Bad packet - uh oh.
-                        // Do we want to set a flag somewhere?
+                        send_debug_string("Bad GPS packet");
+                        send_debug_raw(gps_packet, gps_packet_length);
                     }
+
                     // Reset for next packet
                     gps_packet_type = UNKNOWN_PACKET;
                     gps_packet_length = 0;
