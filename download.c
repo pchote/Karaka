@@ -17,19 +17,17 @@
 /*
  * Initialise the timer on timer0
  */
-void download_init(void)
+void download_init()
 {
-    // Set Port A, pin 0 as an output
-    DDRA |= _BV(DDA0);
-    
-    // Start with all pins high
-    PORTA = 0x00;
+    // Set PD5 as an output for INTG, initially high
+    DDRD |= _BV(DDD5);
+    PORTD &= 0xDF;
 
     // Enable timer0 overflow interrupt
-    TIMSK |= _BV(TOIE0);
+    TIMSK0 |= _BV(TOIE0);
 
     // Disable the timer until it is needed
-    TCCR0 = 0x00;
+    TCCR0B = 0x00;
 }
 
 /*
@@ -37,14 +35,14 @@ void download_init(void)
  * Pulls PA0 pin LOW and sets
  * timer0 to overflow after 512us
  */
-void trigger_download(void)
+void trigger_download()
 {
-    // Pull PA0 output low to start the download
-    PORTA |= _BV(PA0);
+    // Pull PD5 output low to start the download
+    PORTD |= _BV(PD5);
 
     // Set the prescaler to 1/1024; each tick = 64us.
     // Also starts the timer counting
-    TCCR0 = _BV(CS02)|_BV(CS01)|_BV(CS00);
+    TCCR0B = _BV(CS02)|_BV(CS00);
 
     // Set timer0 to overflow after 8 ticks (0.512 ms)
     TCNT0 = 248;
@@ -55,9 +53,9 @@ void trigger_download(void)
  * Pulls PA0 pin HIGH and disables timer0
  * to disable the download trigger pulse
  */
-SIGNAL(SIG_OVERFLOW0)
+ISR(TIMER0_OVF_vect)
 {
-    // Restore PA0 output high
-    PORTA &= ~_BV(PA0);
-    TCCR0 = 0x00;
+    // Restore PD5 output high
+    PORTD &= ~_BV(PD5);
+    TCCR0B = 0x00;
 }

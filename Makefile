@@ -6,11 +6,15 @@
 ##
 ##***************************************************************************
 
-DEVICE     = atmega128
+DEVICE     = atmega1284p
 PROGRAMMER = -c dragon_jtag -P usb
 OBJECTS    = command.o gps.o display.o download.o monitor.o main.o
-FUSES      = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+FUSES      = -U hfuse:w:0x19:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 
+# Was previously
+#  Extended Fuse byte -> 0xff
+#      High Fuse byte -> 0x19
+#       Low Fuse byte -> 0x62
 # Tune the lines below only if you know what you are doing:
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
 COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums

@@ -58,7 +58,7 @@ static void queue_send_byte(unsigned char b)
 /*
  * data register empty interrupt to send a byte down the wire
  */
-SIGNAL(SIG_UART1_DATA)
+ISR(USART1_UDRE_vect)
 {
     if(gps_output_write != gps_output_read)
         UDR1 = gps_output_buffer[gps_output_read++];
@@ -109,7 +109,7 @@ void gps_init(void)
     TCCR1A = 0x00;
     // Set prescaler to 1/1024: 64us per tick
     TCCR1B = _BV(CS10)|_BV(CS12);
-    TIMSK |= _BV(TOIE1);
+    TIMSK1 |= _BV(TOIE1);
     TCNT1 = 0x0BDB; // Overflow after 62500 ticks: 4.0s
 
     // Initialise the clocks to zero
@@ -221,7 +221,7 @@ static void set_time(unsigned char hours,
  * Haven't recieved any serial data in 4.0 seconds
  * The GPS has probably died
  */
-SIGNAL(SIG_OVERFLOW1)
+ISR(TIMER1_OVF_vect)
 {
     gps_state = GPS_UNAVAILABLE;
     send_debug_string("GPS serial connection lost");
@@ -230,7 +230,7 @@ SIGNAL(SIG_OVERFLOW1)
 /*
  * Received data from gps serial. Add to buffer
  */
-SIGNAL(SIG_UART1_RECV)
+ISR(USART1_RX_vect)
 {
     // Reset timeout countdown
     TCNT1 = 0x0BDB;

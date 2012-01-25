@@ -39,9 +39,6 @@ static volatile unsigned char usart_output_write;
  */
 void command_init(void)
 {
-    // Set TXD (port E, pin 1) as an output
-    DDRE |= _BV(DDE1);
-
     // Set the baudrate prescaler
     // scale = (f_cpu / (16*baud)) - 1
     unsigned int baudrate = 16; // has a 2.5% error
@@ -186,7 +183,7 @@ void send_debug_raw(unsigned char *data, unsigned char length)
 /*
  * data register empty interrupt to send a byte down the wire
  */
-SIGNAL(SIG_UART0_DATA)
+ISR(USART0_UDRE_vect)
 {
     if(usart_output_write != usart_output_read)
         UDR0 = usart_output_buffer[usart_output_read++];
@@ -200,7 +197,7 @@ SIGNAL(SIG_UART0_DATA)
 /*
  * Data received interrupt
  */
-SIGNAL(SIG_UART0_RECV)
+ISR(USART0_RX_vect)
 {
     usart_input_buffer[usart_input_write++] = UDR0;
 }

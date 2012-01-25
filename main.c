@@ -18,24 +18,29 @@
 #include "command.h"
 #include "monitor.h"
 
-/* Hardware usage:
- * PINA:
- *    PINA0: output to camera download BNC Connector
- *    PINA1-5: input for unused hardware switch controls
- * PINB: unused
- * PINC: 8 bit output to LCD
- * PIND: 
- *    PIND0: PPS input from GPS
- *    PIND2: RS232 RX from GPS
- *    PIND3: RS232 TX to GPS
- * PINE:
- *    PINE0: RS232 TX to acquisition PC
- *    PINE1: RS232 RX from acquisition PC
- *    PINE4: NOT SCAN input from camera to monitor download status
- * PINF:
- *    PINF0: LCD register select output bit
- *    PINF1: LCD read/write select output bit
- *    PINF2: LCD enable output bit
+/* Hardware usage (ATmega1284p-AU):
+ * PORTA:
+ *    PA0: Display brightness input (ADC0)
+ *    PA1-7: Unused
+ * PORTB:
+ *    PB0: Force-on (to GPS input buffer)
+ *    PB1-4: Display select for writing data to display modules
+ *    PB5: MOSI (data output to display modules)
+ *    PB6: RS232 off (to GPS input buffer)
+ *    PB7: SCK (SPI clock input)
+ * PORTC:
+ *    PC0-1: Unused
+ *    PC2-5: TCK/TMS/TDO/TDI (to JTAG header)
+ *    PC6-7: Unused
+ * PORTD: 
+ *    PD0: RXD0 (From PC)
+ *    PD1: TXD0 (To PC)
+ *    PD2: RXD1 (From GPS)
+ *    PD3: TXD1 (To GPS)
+ *    PD4: GPS PPS input
+ *    PD5: INTG output
+ *    PD6: Monitor input
+ *    PD7: Spare output
  */
 
 void reset_vars()
@@ -48,17 +53,20 @@ void reset_vars()
 /*
  * Initialise the unit and wait for interrupts.
  */
-static unsigned int cycle = 0;
 int main(void)
 {
     // Initialise global variables
     reset_vars();
 
-    // Set INT0 to be rising edge triggered
-    EICRA = _BV(ISC01);
-    EIMSK |= _BV(INT0);
+    // Enable pin change interrupt for PPS input
+    PCMSK3 |= _BV(PCINT28);
+    PCICR |= _BV(PCIE3);
 
-    // Initialise the hardware units
+    // Set unused pins as inputs, enable pullup
+    DDRA = 0x00;
+    PORTA = 0xFF;
+
+    // Set other init
     command_init();
     gps_init();
     download_init();
@@ -68,9 +76,9 @@ int main(void)
     // Enable interrupts
     sei();
     unsigned char time_updated;
-
+    unsigned int cycle = 0;
     // Main program loop
-    while(TRUE)
+    for (;;)
     {
         monitor_tick();
         usart_process_buffer();
@@ -78,18 +86,20 @@ int main(void)
 
         // Force the display to refresh if the time hasn't updated in 65535 cycles
         if (time_updated || ++cycle == 0)
-        {
             update_display();
-        }
     }
 }
 
 /*
  * GPS time pulse interrupt handler
- * Fired when a `second boundary' time pulse is recieved via the attached BNC cable
+ * Fired on any level change from the PPS input (PD3)
  */
-SIGNAL(SIG_INTERRUPT0)
+ISR(PCINT3_vect)
 {
+    // Ignore falling edge interrupt
+    if (!bit_is_clear(PIND, PD4))
+        return;
+
     // Don't count down unless we have a valid exposure time and the GPS is locked
     if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?
     {

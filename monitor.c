@@ -27,13 +27,13 @@ void monitor_init(void)
     monitor_mode = MONITOR_WAIT;
 
     // Enable timer2 overflow interrupt
-    TIMSK |= _BV(TOIE2);
+    TIMSK2 |= _BV(TOIE2);
 
     // Disable the timer until it is needed
-    TCCR2 = 0x00;
+    TCCR2B = 0x00;
 
     // Enable pullup resistor
-    PORTE |= _BV(PE4);
+    PORTD |= _BV(PD6);
 }
 
 /*
@@ -46,13 +46,13 @@ void monitor_init(void)
  */
 void monitor_tick()
 {
-    if (!debounce_waiting && monitor_level_high != bit_is_clear(PINE, PE4))
+    if (!debounce_waiting && monitor_level_high != bit_is_clear(PIND, PD6))
     {
         debounce_waiting = TRUE;
 
         // Set the prescaler to 1/1024; each tick = 64us.
         // Also starts the timer counting
-        TCCR2 = _BV(CS02)|_BV(CS00);
+        TCCR2B = _BV(CS02)|_BV(CS01)|_BV(CS00);
 
         // Set timer2 to overflow after 8 ticks (0.512 ms)
         TCNT2 = 248;
@@ -64,10 +64,10 @@ void monitor_tick()
  * Checks whether the level is still changed, and triggers
  * the appropriate actions for the level change.
  */
-SIGNAL(SIG_OVERFLOW2)
+ISR(TIMER2_OVF_vect)
 {
     debounce_waiting = FALSE;
-    unsigned char high = bit_is_clear(PINE, PE4);
+    unsigned char high = bit_is_clear(PIND, PD6);
     if (monitor_level_high != high)
     {
         monitor_level_high = high;
@@ -95,5 +95,5 @@ SIGNAL(SIG_OVERFLOW2)
     }
 
     // Disable timer
-    TCCR2 = 0x00;
+    TCCR2B = 0x00;
 }
