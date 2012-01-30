@@ -43,3 +43,6 @@ main.hex: main.elf
 
 disasm:	main.elf
 	avr-objdump -d main.elf
+
+size: main.elf
+	avr-size -C --mcu=$(DEVICE) main.elf
