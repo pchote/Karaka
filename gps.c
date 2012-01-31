@@ -19,24 +19,45 @@
 #include "gps.h"
 #include "command.h"
 
-static unsigned char gps_magellan_length;
-static unsigned char gps_magellan_locked;
+// Init Trimble: Enable only the 8F-AB primary timing packet
+unsigned char trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
+
+unsigned char mgl_init[] PROGMEM =  "$PMGLI,00,G00,0,A\r\n"
+                                    "$PMGLI,00,B00,0,A\r\n"
+                                    "$PMGLI,00,B02,0,A\r\n"
+                                    "$PMGLI,00,D00,0,A\r\n"
+                                    "$PMGLI,00,E00,0,A\r\n"
+                                    "$PMGLI,00,F02,0,A\r\n"
+                                    "$PMGLI,00,R04,0,A\r\n"
+                                    "$PMGLI,00,S01,0,A\r\n"
+                                    "$PMGLI,00,A00,2,B\r\n"
+                                    "$PMGLI,00,H00,2,B\r\n";
+
+char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse: forcing countdown";
+char gps_msg_lost_serial[]        PROGMEM = "GPS serial connection lost";
+char gps_msg_unknown_mgl_packet[] PROGMEM = "Unknown magellan packet";
+char gps_msg_bad_packet[]         PROGMEM = "Bad GPS packet";
+char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
+char gps_fmt_checksum_failed[]    PROGMEM = "GPS Checksum failed. Got 0x%02x, expected 0x%02x";
+
+static unsigned char gps_magellan_length = 0;
+static unsigned char gps_magellan_locked = FALSE;
 
 // NOTE: If buffer length is changed the read/write offsets
 // must be changed to int, and explicit overflow code added
 static unsigned char gps_input_buffer[256];
-static unsigned char gps_input_read;
-static volatile unsigned char gps_input_write;
+static unsigned char gps_input_read = 0;
+static volatile unsigned char gps_input_write = 0;
 
 
 #define GPS_PACKET_LENGTH 32
-static unsigned char gps_packet_type;
-static unsigned char gps_packet_length;
+static unsigned char gps_packet_type = UNKNOWN_PACKET;
+static unsigned char gps_packet_length = 0;
 static unsigned char gps_packet[GPS_PACKET_LENGTH];
 
 static unsigned char gps_output_buffer[256];
-static volatile unsigned char gps_output_read;
-static volatile unsigned char gps_output_write;
+static volatile unsigned char gps_output_read = 0;
+static volatile unsigned char gps_output_write = 0;
 
 /*
  * Add a byte to the send queue and start sending data if necessary
@@ -69,128 +90,63 @@ ISR(USART1_UDRE_vect)
 }
 
 /*
- * Queue data to the GPS
- */
-static void queue_bytes(unsigned char *data, unsigned char length)
-{
-    for (unsigned char i = 0; i < length; i++)
-        queue_send_byte(data[i]);
-}
-
-/*
  * Initialise the gps listener on USART1
  */
-void gps_init(void)
+void gps_init()
 {
-    // Configure Port D.
-    // Used for communication with the GPS
-    // Pin 0 is set to trigger SIG_INTERRUPT0 when a pulse from the gps arrives
-    // Set TXD1 (port D, pin 3) as an output
-    DDRD |= _BV(DDD3);
-
-    // Enable 2x speed
-    UCSR1A = _BV(U2X1);
-
-    // Set USART capabilities
-    // RXEN1 = 1: enable recieve
-    // TXEN1 = 1: enable transmit
-    // RXCIE1 = 1: enable recieve interrupt
-    // UDRIE1 (transmit buffer ready) is toggled when data is ready to be sent
-    UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);
-
-    // Async. mode, 8N1 (8 data bits, No parity, 1 stop bit)
-    UCSR1C = (3<<UCSZ10);
-
     // Set baud rate to 9600
     UBRR1H = 0x00;
     UBRR1L = 0xCF;
+    UCSR1A = _BV(U2X1);
+
+    // Enable receive, transmit, data received interrupt
+    UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);
+
+    // Set 8-bit data frame
+    UCSR1C = _BV(UCSZ11)|_BV(UCSZ10);
 
     // Initialize timer1 to monitor GPS loss
     TCCR1A = 0x00;
+
     // Set prescaler to 1/1024: 64us per tick
     TCCR1B = _BV(CS10)|_BV(CS12);
     TIMSK1 |= _BV(TOIE1);
     TCNT1 = 0x0BDB; // Overflow after 62500 ticks: 4.0s
 
-    // Initialise the clocks to zero
-    gps_last_timestamp.seconds = 0;
-    gps_last_timestamp.minutes = 0;
-    gps_last_timestamp.hours = 0;
-    gps_last_timestamp.day = 0;
-    gps_last_timestamp.month = 0;
-    gps_last_timestamp.year = 0;
-
-    gps_last_synctime.seconds = 0;
-    gps_last_synctime.minutes = 0;
-    gps_last_synctime.hours = 0;
-    gps_last_synctime.day = 0;
-    gps_last_synctime.month = 0;
-    gps_last_synctime.year = 0;
-
-    gps_packet_type = UNKNOWN_PACKET;
-    gps_packet_length = 0;
-    gps_magellan_length = 0;
-    gps_magellan_locked = FALSE;
     gps_record_synctime = FALSE;
     gps_state = GPS_UNAVAILABLE;
-
-    gps_input_read = 0;
-    gps_input_write = 0;
-    gps_output_read = 0;
-    gps_output_write = 0;
-
-    // Init magellan
-    // Disable the messages that may have been left enabled by the OEM software
-    char mgl_initbuf[22];
-    char *mgl_disable[] = {"G00", "B00", "B02", "D00", "E00", "F02", "R04", "S01"};
-    for (unsigned char i = 0; i < sizeof(mgl_disable)/sizeof(*mgl_disable); i++)
-    {
-        sprintf(mgl_initbuf, "$PMGLI,00,%s,0,A\r\n", mgl_disable[i]);
-        queue_bytes((unsigned char *)mgl_initbuf, strlen(mgl_initbuf));
-    }
-
-    // Enable the messages that we want to use
-    char *mgl_enable[] = {"A00", "H00"};
-    for (unsigned char i = 0; i < sizeof(mgl_enable)/sizeof(*mgl_enable); i++)
-    {
-        sprintf(mgl_initbuf, "$PMGLI,00,%s,2,B\r\n", mgl_enable[i]);
-        queue_bytes((unsigned char *)mgl_initbuf, strlen(mgl_initbuf));
-    }
-
-    // Init Trimble: Enable only the 8F-AB primary timing packet
-    unsigned char trimble_init[9] = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
-    queue_bytes(trimble_init, 9);
 }
 
-static void set_time(unsigned char hours,
-                         unsigned char minutes,
-                         unsigned char seconds,
-                         unsigned char day,
-                         unsigned char month,
-                         unsigned char year_high,
-                         unsigned char year_low,
-                         unsigned char locked)
+void send_gps_config()
+{
+    // Send receiver config
+    for (unsigned char i = 0; i < 9; i++)
+        queue_send_byte(pgm_read_byte(&trimble_init[i]));
+
+    unsigned char i = 0, b = pgm_read_byte(&mgl_init[0]);
+    do
+    {
+        queue_send_byte(b);
+        b = pgm_read_byte(&mgl_init[++i]);
+    } while (b != '\0');
+}
+
+static void set_time(timestamp *t)
 {
     // Enable the counter for the next PPS pulse
     if (countdown_mode == COUNTDOWN_TRIGGERED)
         countdown_mode = COUNTDOWN_ENABLED;
     else if (countdown_mode == COUNTDOWN_ENABLED)
     {
-        // We should always recieve the PPS pulse before the time packet
+        // We should always receive the PPS pulse before the time packet
         cli();
         trigger_countdown();
         sei();
-        send_debug_string("Missing PPS pulse: forcing countdown");
+        send_debug_string_P(gps_msg_missed_pps);
     }
 
-    gps_last_timestamp.hours = hours;
-    gps_last_timestamp.minutes = minutes;
-    gps_last_timestamp.seconds = seconds;
-    gps_last_timestamp.day = day;
-    gps_last_timestamp.month = month;
-    gps_last_timestamp.year = ((year_high << 8) & 0xFF00) | (year_low & 0x00FF);
-    gps_last_timestamp.locked = locked;
-    
+    gps_last_timestamp = *t;
+
     // Mark that we have a valid timestamp
     gps_state = GPS_ACTIVE;
 
@@ -201,13 +157,7 @@ static void set_time(unsigned char hours,
     if (gps_record_synctime)
     {
         cli();
-        gps_last_synctime.seconds = gps_last_timestamp.seconds;
-        gps_last_synctime.minutes = gps_last_timestamp.minutes;
-        gps_last_synctime.hours = gps_last_timestamp.hours;
-        gps_last_synctime.day = gps_last_timestamp.day;
-        gps_last_synctime.month = gps_last_timestamp.month;
-        gps_last_synctime.year = gps_last_timestamp.year;
-        gps_last_synctime.locked = gps_last_timestamp.locked;
+        gps_last_synctime = gps_last_timestamp;
         gps_record_synctime = FALSE;
         sei();
         
@@ -218,13 +168,13 @@ static void set_time(unsigned char hours,
 
 
 /*
- * Haven't recieved any serial data in 4.0 seconds
+ * Haven't received any serial data in 4.0 seconds
  * The GPS has probably died
  */
 ISR(TIMER1_OVF_vect)
 {
     gps_state = GPS_UNAVAILABLE;
-    send_debug_string("GPS serial connection lost");
+    send_debug_string_P(gps_msg_lost_serial);
 }
 
 /*
@@ -265,9 +215,6 @@ unsigned char gps_process_buffer()
     // Take a local copy of gps_input_write as it can be modified by interrupts
     unsigned char temp_write = gps_input_write;
     
-    // Buffer to store an error string for send_debug()
-    char error[128];
-    
     // No new data has arrived
     if (gps_input_read == temp_write)
         return FALSE;
@@ -293,15 +240,13 @@ unsigned char gps_process_buffer()
             }
             else // Some other Magellan packet - ignore it
             {
-                send_debug_string("Unknown magellan packet");
+                send_debug_string_P(gps_msg_unknown_mgl_packet);
                 continue;
             }
 
             if (bytes_to_sync > 3)
-            {
-                sprintf(error, "Skipped %d bytes while syncing", bytes_to_sync);
-                send_debug_string(error);
-            }
+                send_debug_fmt_P(gps_fmt_skipped_bytes, bytes_to_sync);
+
             bytes_to_sync = 0;
             
             // Rewind to the start of the packet
@@ -335,7 +280,7 @@ unsigned char gps_process_buffer()
             for (; gps_input_read != temp_write; gps_input_read++)
             {
                 // Skip the padding byte that occurs after a legitimate DLE
-                // Don't loop this: we want to parse the 3rd DLE if you have
+                // Don't loop this: we want to parse the 3rd DLE if there are
                 // 4 in a row
                 if (gps_input_buffer[gps_input_read] == DLE &&
                     gps_input_buffer[(unsigned char)(gps_input_read - 1)] == DLE)
@@ -352,18 +297,19 @@ unsigned char gps_process_buffer()
                     // Sanity check: Ensure the packet ends correctly
                     if (gps_packet[20] == ETX && gps_packet[19] == DLE)
                     {
-                        set_time(gps_packet[14], // hours
-                                 gps_packet[13], // minutes
-                                 gps_packet[12], // seconds
-                                 gps_packet[15], // day
-                                 gps_packet[16], // month
-                                 gps_packet[17], // year (high byte)
-                                 gps_packet[18], // year (low byte)
-                                 gps_packet[11] == 0x03 ? TRUE : FALSE); // lock status
+                        set_time(&(timestamp){
+                            .hours = gps_packet[14],
+                            .minutes = gps_packet[13],
+                            .seconds = gps_packet[12],
+                            .day = gps_packet[15],
+                            .month = gps_packet[16],
+                            .year = ((gps_packet[17] << 8) & 0xFF00) | (gps_packet[18] & 0x00FF),
+                            .locked = gps_packet[11] == 0x03 ? TRUE : FALSE
+                        });
                     }
                     else
                     {
-                        send_debug_string("Bad GPS packet");
+                        send_debug_string_P(gps_msg_bad_packet);
                         send_debug_raw(gps_packet, gps_packet_length);
                     }
 
@@ -432,14 +378,15 @@ unsigned char gps_process_buffer()
                                 }
                                 day += correction;
 
-                                set_time(gps_packet[4], // hours
-                                        gps_packet[5], // minutes
-                                         gps_packet[6], // seconds
-                                         day,
-                                         month,
-                                         (year >> 8),
-                                         (unsigned char)year,
-                                         gps_magellan_locked); // lock status
+                                set_time(&(timestamp){
+                                    .hours = gps_packet[4],
+                                    .minutes = gps_packet[5],
+                                    .seconds = gps_packet[6],
+                                    .day = day,
+                                    .month = month,
+                                    .year = year,
+                                    .locked = gps_magellan_locked
+                                });
                             }
                             else if (gps_packet_type == MAGELLAN_STATUS_PACKET) // Status packet
                             {
@@ -451,20 +398,19 @@ unsigned char gps_process_buffer()
                             }
                             else
                             {
-                                send_debug_string("Bad GPS packet");
+                                send_debug_string_P(gps_msg_bad_packet);
                                 send_debug_raw(gps_packet, gps_packet_length);
                             }
                         }
                         else
                         {
-                            sprintf(error,"GPS Checksum failed. Got 0x%02x, expected 0x%02x", csm, gps_packet[gps_packet_length-2]);
-                            send_debug_string(error);
+                            send_debug_fmt_P(gps_fmt_checksum_failed, csm, gps_packet[gps_packet_length-2]);
                             send_debug_raw(gps_packet, gps_packet_length);
                         }
                     }
                     else
                     {
-                        send_debug_string("Bad GPS packet");
+                        send_debug_string_P(gps_msg_bad_packet);
                         send_debug_raw(gps_packet, gps_packet_length);
                     }
 

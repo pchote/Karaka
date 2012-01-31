@@ -46,6 +46,7 @@ volatile unsigned char gps_record_synctime;   // Flag to indicate whether the gp
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
 
-void gps_init(void);
+void gps_init();
+void send_gps_config();
 unsigned char gps_process_buffer(void);
 #endif

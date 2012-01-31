@@ -75,6 +75,7 @@ int main(void)
 
     // Enable interrupts
     sei();
+    send_gps_config();
     unsigned char time_updated;
     unsigned int cycle = 0;
     // Main program loop
