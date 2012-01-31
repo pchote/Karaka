@@ -18,60 +18,37 @@
 #include "gps.h"
 #include "monitor.h"
 
-static unsigned char usart_packet_type;
+char command_fmt_unknown_packet[] PROGMEM = "Unknown packet type 0x%02x - ignoring";
+char command_fmt_bad_checksum[]   PROGMEM = "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.";
+char command_fmt_hex[]            PROGMEM = "0x%02x";
+
+static unsigned char usart_packet_type = UNKNOWN_PACKET;
 static unsigned char usart_packet_length;
 static unsigned char usart_packet[256];
-
-// Buffer for a short error message
-static char error[64];
 
 // Note: 256 size is used to allow overflow -> circular buffer
 // If buffer size is changed you will need to add explicit overflow checks
 static unsigned char usart_input_buffer[256];
-static unsigned char usart_input_read;
-static volatile unsigned char usart_input_write;
+static unsigned char usart_input_read = 0;
+static volatile unsigned char usart_input_write = 0;
 
 static unsigned char usart_output_buffer[256];
-static volatile unsigned char usart_output_read;
-static volatile unsigned char usart_output_write;
+static volatile unsigned char usart_output_read = 0;
+static volatile unsigned char usart_output_write = 0;
 
 /*
  * Initialise the command parser
  */
 void command_init(void)
 {
-    // Set the baudrate prescaler
-    // scale = (f_cpu / (16*baud)) - 1
-    unsigned int baudrate = 16; // has a 2.5% error
-    UBRR0H = (unsigned char)(baudrate>>8);
-    UBRR0L = (unsigned char)baudrate;
+    // Set the baudrate to 250k (0% error)
+    UBRR0 = 0x03;
 
-
-    // Enable receiver and transmitter. Enable Receive interrupt, disable transmit interrupt.
-    // Set USART capabilities
-    // RXEN0 = 1: enable recieve
-    // TXEN0 = 1: enable transmit
-    // RXCIE0 = 1: enable recieve interrupt
-    // UDRIE0 (transmit buffer ready) is toggled when data is ready to be sent
+    // Enable receive, transmit, data received interrupt
     UCSR0B = _BV(RXEN0)|_BV(TXEN0)|_BV(RXCIE0);
 
-    // Set the data frame format
-    // UMSEL0 = 0: set async operation
-    // UPM00 = 0: no parity
-    // USBS0 = 0: 1 stop bit
-    // UCSZ00 = 3: 8 data bits
-    // UCPOL0 = 0: ???
-    UCSR0C = (3<<UCSZ00);
-
-    // Double the prescaler frequency
-    UCSR0A = _BV(U2X0);
-
-    usart_input_write = 0;
-    usart_input_read = 0;
-    usart_output_write = 0;
-    usart_output_read = 0;
-
-    usart_packet_type = UNKNOWN_PACKET;
+    // Set 8-bit data frame
+    UCSR0C = _BV(UCSZ01)|_BV(UCSZ00);
 }
 
 /*
@@ -192,11 +169,6 @@ void send_downloadcomplete()
     queue_data(DOWNLOADCOMPLETE, &unused, 1);
 }
 
-void send_debug_string(char *string)
-{
-    queue_data(DEBUG_STRING, (unsigned char *)string, strlen(string));
-}
-
 void send_debug_fmt_P(char *fmt, ...)
 {
     va_list args;
@@ -214,7 +186,6 @@ void send_debug_string_P(char *string)
 {
     queue_data_P(DEBUG_STRING, (unsigned char *)string, strlen_P(string));
 }
-
 
 void send_debug_raw(unsigned char *data, unsigned char length)
 {
@@ -352,23 +323,15 @@ unsigned char usart_process_buffer()
                         sei();
                     break;
                     default:
-                        sprintf(error, "Unknown packet type 0x%02x - ignoring", usart_packet[2]);
-                        send_debug_string(error);
+                        send_debug_fmt_P(command_fmt_unknown_packet, usart_packet[2]);
                     break;
                 }
             }
             else
             {
-                sprintf(error, "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.",
-                        usart_packet[2],
-                        usart_packet[usart_packet_length-3],
-                        csm);
-
+                send_debug_fmt_P(command_fmt_bad_checksum, usart_packet[2], usart_packet[usart_packet_length-3], csm);
                 for (unsigned char i = 0; i < usart_packet_length; i++)
-                {
-                    sprintf(error, "0x%02x", usart_packet[i]);
-                    send_debug_string(error);
-                }
+                    send_debug_fmt_P(command_fmt_hex, usart_packet[i]);
             }
 
             // Reset for next packet

@@ -95,8 +95,7 @@ ISR(USART1_UDRE_vect)
 void gps_init()
 {
     // Set baud rate to 9600
-    UBRR1H = 0x00;
-    UBRR1L = 0xCF;
+    UBRR1 = 0xCF;
     UCSR1A = _BV(U2X1);
 
     // Enable receive, transmit, data received interrupt

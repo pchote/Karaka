@@ -11,12 +11,16 @@
 //***************************************************************************
 
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
+
 #include "main.h"
 #include "download.h"
 #include "gps.h"
 #include "display.h"
 #include "command.h"
 #include "monitor.h"
+
+char msg_ignored_duplicate_pulse[] PROGMEM = "Ignoring duplicate PPS pulse";
 
 /* Hardware usage (ATmega1284p-AU):
  * PORTA:
@@ -110,7 +114,7 @@ ISR(PCINT3_vect)
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
         else if (countdown_mode == COUNTDOWN_TRIGGERED)
-            send_debug_string("Ignoring duplicate PPS pulse");
+            send_debug_string_P(msg_ignored_duplicate_pulse);
     }
 
     // Fixed time delay before starting an exposure sequence

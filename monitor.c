@@ -77,11 +77,8 @@ ISR(TIMER2_OVF_vect)
             switch (monitor_mode)
             {
                 case MONITOR_START:
-                    // Start the timer countdown
                     countdown_mode = COUNTDOWN_SYNCING;
-
                     monitor_mode = MONITOR_ACQUIRE;
-                    send_debug_string("Sequence initialized");
                 break;
                 case MONITOR_ACQUIRE:
                     send_downloadcomplete();
