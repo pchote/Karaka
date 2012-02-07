@@ -11,6 +11,7 @@
 //***************************************************************************
 
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <stdio.h>
 #include "command.h"
 #include "main.h"
@@ -122,6 +123,27 @@ static void queue_data(unsigned char type, unsigned char *data, unsigned char le
     queue_send_byte(ETX);
 }
 
+static void queue_data_P(unsigned char type, unsigned char *data, unsigned char length)
+{
+    queue_send_byte(DLE);
+    queue_send_byte(length);
+    queue_send_byte(type);
+
+    // Calculate checksum manually as we read each byte from progmem
+    unsigned char csm = 0;
+    for (unsigned char i = 0; i < length; i++)
+    {
+        unsigned char c = pgm_read_byte(&data[i]);
+        queue_send_byte(c);
+        if (c == DLE)
+            queue_send_byte(DLE);
+        csm ^= c;
+    }
+    queue_send_byte(csm);
+    queue_send_byte(DLE);
+    queue_send_byte(ETX);
+}
+
 /*
  * Queue a timestamp packet to the acquisition pc
  */
@@ -174,6 +196,25 @@ void send_debug_string(char *string)
 {
     queue_data(DEBUG_STRING, (unsigned char *)string, strlen(string));
 }
+
+void send_debug_fmt_P(char *fmt, ...)
+{
+    va_list args;
+    char buf[128];
+
+    va_start(args, fmt);
+    int len = vsnprintf_P(buf, 128, fmt, args);
+    va_end(args);
+
+    if (len > 128) len = 128;
+    queue_data(DEBUG_STRING, (unsigned char *)buf, (unsigned char)len);
+}
+
+void send_debug_string_P(char *string)
+{
+    queue_data_P(DEBUG_STRING, (unsigned char *)string, strlen_P(string));
+}
+
 
 void send_debug_raw(unsigned char *data, unsigned char length)
 {

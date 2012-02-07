@@ -10,6 +10,7 @@
 //
 //***************************************************************************
 
+#include <stdarg.h>
 #include "gps.h"
 
 
@@ -27,7 +28,8 @@
 #define DOWNLOADCOMPLETE 0xA9
 
 void command_init(void);
-void send_debug_string(char *string);
+void send_debug_fmt_P(char *fmt, ...);
+void send_debug_string_P(char *string);
 void send_debug_raw(unsigned char *data, unsigned char length);
 void send_timestamp();
 void send_downloadtimestamp();
