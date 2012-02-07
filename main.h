@@ -1,7 +1,7 @@
 //***************************************************************************
 //
 //  File        : main.h
-//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Copyright   : 2009-2012 Johnny McClymont, Paul Chote
 //  Description : Main program logic
 //
 //  This file is part of Karaka, which is free software. It is made available

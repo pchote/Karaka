@@ -1,7 +1,7 @@
 //***************************************************************************
 //
 //  File        : command.h
-//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Copyright   : 2009-2012 Johnny McClymont, Paul Chote
 //  Description : Handles communication with the Acquisition PC via serial
 //
 //  This file is part of Karaka, which is free software. It is made available

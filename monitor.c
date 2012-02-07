@@ -1,7 +1,7 @@
 //***************************************************************************
 //
 //  File        : monitor.c
-//  Copyright   : 2011 Paul Chote
+//  Copyright   : 2011-2012 Paul Chote
 //  Description : Monitors the level of the cameras _SCAN_ output connected to PE4
 //
 //  This file is part of Karaka, which is free software. It is made available

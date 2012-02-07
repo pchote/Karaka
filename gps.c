@@ -1,7 +1,7 @@
 //***************************************************************************
 //
 //  File        : gps.c
-//  Copyright   : 2009-2011 Johnny McClymont, Paul Chote
+//  Copyright   : 2009-2012 Johnny McClymont, Paul Chote
 //  Description : Extracts timestamps from a Trimble or Magellan serial stream
 //
 //  This file is part of Karaka, which is free software. It is made available
