@@ -18,14 +18,14 @@
 #define KARAKA_COMMAND_H
 
 // Packet types
-#define CURRENTTIME 0xA1
-#define DOWNLOADTIME 0xA2
-#define DEBUG_STRING 0xA3
-#define DEBUG_RAW 0xA5
-#define START_EXPOSURE 0xA6
-#define STOP_EXPOSURE 0xA7
-#define RESET 0xA8
-#define DOWNLOADCOMPLETE 0xA9
+#define CURRENTTIME 'A'
+#define DOWNLOADTIME 'B'
+#define DEBUG_STRING 'C'
+#define DEBUG_RAW 'D'
+#define START_EXPOSURE 'E'
+#define STOP_EXPOSURE 'F'
+#define RESET 'G'
+#define DOWNLOADCOMPLETE 'H'
 
 void command_init_hardware();
 void send_debug_fmt_P(char *fmt, ...);
@@ -36,6 +36,6 @@ void send_downloadtimestamp();
 void send_stopexposure();
 void send_downloadcomplete();
 
-unsigned char usart_process_buffer();
+void usart_process_buffer();
 
 #endif

@@ -18,13 +18,15 @@
 #include "gps.h"
 #include "monitor.h"
 
+char command_msg_bad_packet[]     PROGMEM = "Bad packet - ignoring";
+char command_fmt_got_packet[]     PROGMEM = "Got packet 0x%02x";
 char command_fmt_unknown_packet[] PROGMEM = "Unknown packet type 0x%02x - ignoring";
 char command_fmt_bad_checksum[]   PROGMEM = "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.";
-char command_fmt_hex[]            PROGMEM = "0x%02x";
 
 static unsigned char usart_packet_type = UNKNOWN_PACKET;
-static unsigned char usart_packet_length;
+static unsigned char usart_packet_length = 0;
 static unsigned char usart_packet[256];
+static unsigned char usart_packet_expected_length = 0;
 
 // Note: 256 size is used to allow overflow -> circular buffer
 // If buffer size is changed you will need to add explicit overflow checks
@@ -52,17 +54,6 @@ void command_init_hardware()
 }
 
 /*
- * Calculate a checksum by XORing bytes 
- */
-static unsigned char checksum(unsigned char *data, unsigned char length)
-{
-    unsigned char csm = data[0];
-    for (unsigned char i = 1; i < length; i++)
-        csm ^= data[i];
-    return csm;
-}
-
-/*
  * Add a byte to the send queue and start sending data if necessary
  */
 static void queue_send_byte(unsigned char b)
@@ -85,40 +76,55 @@ static void queue_send_byte(unsigned char b)
  */
 static void queue_data(unsigned char type, unsigned char *data, unsigned char length)
 {
-    queue_send_byte(DLE);
-    queue_send_byte(length);
+    // Data packet starts with $$ and packet type (which != $)
+    queue_send_byte('$');
+    queue_send_byte('$');
     queue_send_byte(type);
+
+    // Length of data section
+    queue_send_byte(length);
+
+    // Packet data - calculate checksum as we go
+    unsigned char csm = 0;
     for (unsigned char i = 0; i < length; i++)
     {
         queue_send_byte(data[i]);
-        if (data[i] == DLE)
-            queue_send_byte(DLE);
+        csm ^= data[i];
     }
-    // send the checksum of the *unpadded* data
-    queue_send_byte(checksum(data, length));
-    queue_send_byte(DLE);
-    queue_send_byte(ETX);
+
+    // Checksum
+    queue_send_byte(csm);
+
+    // Data packet ends a linefeed and carriage return
+    queue_send_byte('\r');
+    queue_send_byte('\n');
 }
 
 static void queue_data_P(unsigned char type, unsigned char *data, unsigned char length)
 {
-    queue_send_byte(DLE);
-    queue_send_byte(length);
+    // Data packet starts with $$ and packet type (which != $)
+    queue_send_byte('$');
+    queue_send_byte('$');
     queue_send_byte(type);
 
-    // Calculate checksum manually as we read each byte from progmem
+    // Length of data section
+    queue_send_byte(length);
+
+    // Packet data - calculate checksum as we go
     unsigned char csm = 0;
     for (unsigned char i = 0; i < length; i++)
     {
         unsigned char c = pgm_read_byte(&data[i]);
         queue_send_byte(c);
-        if (c == DLE)
-            queue_send_byte(DLE);
         csm ^= c;
     }
+
+    // Checksum
     queue_send_byte(csm);
-    queue_send_byte(DLE);
-    queue_send_byte(ETX);
+
+    // Data packet ends a linefeed and carriage return
+    queue_send_byte('\r');
+    queue_send_byte('\n');
 }
 
 /*
@@ -157,16 +163,14 @@ void send_downloadtimestamp()
     queue_data(DOWNLOADTIME, data, 8);
 }
 
-static unsigned char unused = 0;
-
 void send_stopexposure()
 {
-    queue_data(STOP_EXPOSURE, &unused, 1);
+    queue_data(STOP_EXPOSURE, NULL, 0);
 }
 
 void send_downloadcomplete()
 {
-    queue_data(DOWNLOADCOMPLETE, &unused, 1);
+    queue_data(DOWNLOADCOMPLETE, NULL, 0);
 }
 
 void send_debug_fmt_P(char *fmt, ...)
@@ -220,27 +224,29 @@ ISR(USART0_RX_vect)
  * Note: this relies on the usart_input_buffer being 256 chars long so that
  * the data pointers automatically overflow at 256 to give a circular buffer
  */
-unsigned char usart_process_buffer()
+void usart_process_buffer()
 {
     // Take a local copy of usart_input_write as it can be modified by interrupts
     unsigned char temp_write = usart_input_write;
 
     // No new data has arrived
     if (usart_input_read == temp_write)
-        return FALSE;
+        return;
 
     // Sync to the start of a packet if necessary
+    // Packet format: $$<type><data length><data 0>...<data length-1><checksum>\r\n
     for (; usart_packet_type == UNKNOWN_PACKET && usart_input_read != temp_write; usart_input_read++)
     {
-        if ( // Start of timing packet
-            usart_input_buffer[(unsigned char)(usart_input_read - 1)] == DLE &&
-            // End of previous packet
-            usart_input_buffer[(unsigned char)(usart_input_read - 2)] == ETX &&
-            usart_input_buffer[(unsigned char)(usart_input_read - 3)] == DLE)
+        unsigned char temp_start = (unsigned char)(usart_input_read - 3);
+        if (usart_input_buffer[temp_start] == '$' &&
+            usart_input_buffer[temp_start + 1] == '$' &&
+            usart_input_buffer[temp_start + 2] != '$')
         {
-            usart_packet_type = usart_input_buffer[usart_input_read];
+            usart_packet_type = usart_input_buffer[temp_start + 2];
+            usart_packet_expected_length = usart_input_buffer[temp_start + 3] + 7;
+
             // Rewind to the start of the packet
-            usart_input_read -= 1;
+            usart_input_read -= 3;
             break;
         }
     }
@@ -248,71 +254,80 @@ unsigned char usart_process_buffer()
     // Write bytes into the packet buffer
     for (; usart_input_read != temp_write; usart_input_read++)
     {
-        // Skip the padding byte that occurs after a legitimate DLE
-        // Don't loop this: we want to parse the 3rd DLE if you have
-        // 4 in a row
-        if (usart_input_buffer[usart_input_read] == DLE &&
-            usart_input_buffer[(unsigned char)(usart_input_read - 1)] == DLE)
-            usart_input_read++;
-
         usart_packet[usart_packet_length++] = usart_input_buffer[usart_input_read];
 
-        // End of packet (data length is the second byte + 6 frame bytes)
-        if (usart_packet_length > 2 && usart_packet_length == usart_packet[1] + 6)
+        if (usart_packet_length < usart_packet_expected_length)
+            continue;
+
+        // End of packet
+        unsigned char data_length = usart_packet[3];
+        unsigned char *data = &usart_packet[4];
+        unsigned char data_checksum = usart_packet[usart_packet_length - 3];
+
+        // Check packet end
+        if (usart_packet[usart_packet_length - 2] != '\r' || usart_packet[usart_packet_length - 1] != '\n')
         {
-            // Check checksum
-            unsigned char csm = checksum(&usart_packet[3], usart_packet[1]);
-            if (csm == usart_packet[usart_packet_length-3])
-            {
-                // Handle packet
-                switch(usart_packet[2])
-                {
-                    case START_EXPOSURE:
-                        cli();
-                        exposure_countdown = exposure_total = usart_packet[3];
-                        sei();
-
-                        // Monitoring enabled: Start sync/countdown when NOTSCAN goes high
-                        monitor_mode = MONITOR_START;
-
-                    break;
-                    case STOP_EXPOSURE:
-                        cli();
-                        exposure_total = exposure_countdown = 0;
-                        sei();
-
-                        // Disable the exposure countdown immediately
-                        countdown_mode = COUNTDOWN_DISABLED;
-
-                        // Can safely stop the exposure if the not-scan output is already HIGH
-                        if (monitor_level_high)
-                        {
-                            monitor_mode = MONITOR_WAIT;
-                            send_stopexposure();
-                        }
-                        else
-                            monitor_mode = MONITOR_STOP;
-                        break;
-                    case RESET:
-                        set_initial_state();
-                    break;
-                    default:
-                        send_debug_fmt_P(command_fmt_unknown_packet, usart_packet[2]);
-                    break;
-                }
-            }
-            else
-            {
-                send_debug_fmt_P(command_fmt_bad_checksum, usart_packet[2], usart_packet[usart_packet_length-3], csm);
-                for (unsigned char i = 0; i < usart_packet_length; i++)
-                    send_debug_fmt_P(command_fmt_hex, usart_packet[i]);
-            }
-
-            // Reset for next packet
-            usart_packet_type = UNKNOWN_PACKET;
-            usart_packet_length = 0;
-            return TRUE;
+            send_debug_string_P(command_msg_bad_packet);
+            send_debug_raw(usart_packet, usart_packet_length);
+            goto resetpacket;
         }
+
+        // Verify checksum
+        unsigned char csm = 0;
+        for (unsigned char i = 0; i < data_length; i++)
+            csm ^= data[i];
+
+        if (csm != data_checksum)
+        {
+            send_debug_fmt_P(command_fmt_bad_checksum, usart_packet_type, data_checksum, csm);
+            send_debug_raw(usart_packet, usart_packet_length);
+            goto resetpacket;
+        }
+
+        // Handle packet
+        send_debug_fmt_P(command_fmt_got_packet, usart_packet_type);
+        switch(usart_packet_type)
+        {
+            case START_EXPOSURE:
+                cli();
+                exposure_countdown = exposure_total = *data;
+                sei();
+
+                // Monitor the camera for a level change indicating it has finished initializing
+                monitor_mode = MONITOR_START;
+                break;
+            case STOP_EXPOSURE:
+                cli();
+                exposure_total = exposure_countdown = 0;
+                sei();
+
+                // Disable the exposure countdown immediately
+                countdown_mode = COUNTDOWN_DISABLED;
+
+                // Camera is reading out - Wait for a level change indicating it has finished
+                if (!monitor_level_high)
+                    monitor_mode = MONITOR_STOP;
+                else
+                {
+                    // Camera can be shutdown immediately
+                    monitor_mode = MONITOR_WAIT;
+                    send_stopexposure();
+                }
+            break;
+            case RESET:
+                set_initial_state();
+            break;
+            default:
+                send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);
+            break;
+        }
+        goto resetpacket;
     }
-    return FALSE;
+
+    return;
+    // Reset for next packet and return
+resetpacket:
+    usart_packet_type = UNKNOWN_PACKET;
+    usart_packet_expected_length = 0;
+    usart_packet_length = 0;
 }
