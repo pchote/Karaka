@@ -272,18 +272,9 @@ unsigned char usart_process_buffer()
                         exposure_countdown = exposure_total = usart_packet[3];
                         sei();
 
-                        if (usart_packet[4])
-                        {
-                            // Monitoring enabled: Start sync/countdown when NOTSCAN goes high
-                            monitor_mode = MONITOR_START;
-                        }
-                        else
-                        {
-                            // Monitoring disabled: Wait the specified time before enabling sync/countdown
-                            cli();
-                            start_countdown = usart_packet[5];
-                            sei();
-                        }
+                        // Monitoring enabled: Start sync/countdown when NOTSCAN goes high
+                        monitor_mode = MONITOR_START;
+
                     break;
                     case STOP_EXPOSURE:
                         cli();
@@ -293,29 +284,15 @@ unsigned char usart_process_buffer()
                         // Disable the exposure countdown immediately
                         countdown_mode = COUNTDOWN_DISABLED;
 
-                        if (usart_packet[3])
+                        // Can safely stop the exposure if the not-scan output is already HIGH
+                        if (monitor_level_high)
                         {
-                            // Monitoring enabled: tell the acquisition PC to
-                            // stop the exposure when NOTSCAN goes high
-
-                            // Can safely stop the exposure if the not-scan output is already HIGH
-                            if (monitor_level_high)
-                            {
-                                monitor_mode = MONITOR_WAIT;
-                                send_stopexposure();
-                            }
-                            else
-                                monitor_mode = MONITOR_STOP;
+                            monitor_mode = MONITOR_WAIT;
+                            send_stopexposure();
                         }
                         else
-                        {
-                            // Monitoring disabled: Wait for the specified time
-                            // before telling the acquisition PC to stop the exposure
-                            cli();
-                            stop_countdown = usart_packet[4];
-                            sei();
-                        }
-                    break;
+                            monitor_mode = MONITOR_STOP;
+                        break;
                     case RESET:
                         // Reset to startup state
                         cli();

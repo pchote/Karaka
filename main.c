@@ -49,7 +49,7 @@ char msg_ignored_duplicate_pulse[] PROGMEM = "Ignoring duplicate PPS pulse";
 
 void reset_vars()
 {
-    start_countdown = stop_countdown = exposure_total = exposure_countdown = 0;
+    exposure_total = exposure_countdown = 0;
     countdown_mode = COUNTDOWN_DISABLED;
     monitor_mode = MONITOR_WAIT;
 }
@@ -116,14 +116,6 @@ ISR(PCINT3_vect)
         else if (countdown_mode == COUNTDOWN_TRIGGERED)
             send_debug_string_P(msg_ignored_duplicate_pulse);
     }
-
-    // Fixed time delay before starting an exposure sequence
-    if (start_countdown > 0 && --start_countdown == 0)
-        countdown_mode = COUNTDOWN_SYNCING;
-
-    // Fixed time delay before stopping an exposure sequence
-    if (stop_countdown > 0 && --stop_countdown == 0)
-        send_stopexposure();
 }
 
 /*

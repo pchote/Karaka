@@ -22,8 +22,6 @@
 
 unsigned char exposure_total;
 volatile unsigned char exposure_countdown;
-volatile unsigned char start_countdown;
-volatile unsigned char stop_countdown;
 
 #define COUNTDOWN_DISABLED  0
 #define COUNTDOWN_SYNCING   1
