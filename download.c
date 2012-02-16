@@ -15,13 +15,13 @@
 #include "main.h"
 
 /*
- * Initialise the timer on timer0
+ * Enable the camera output line and setup timer0 for setting the pulse length
  */
-void download_init()
+void download_init_hardware()
 {
-    // Set PD5 as an output for INTG, initially high
+    // Set PD5 as an output, initially high
     DDRD |= _BV(DDD5);
-    PORTD &= 0xDF;
+    PORTD &= ~_BV(PD5);
 
     // Enable timer0 overflow interrupt
     TIMSK0 |= _BV(TOIE0);
@@ -31,9 +31,8 @@ void download_init()
 }
 
 /*
- * Trigger a sync pulse to the camera
- * Pulls PA0 pin LOW and sets
- * timer0 to overflow after 512us
+ * Start a download pulse to the camera
+ * by pulling the camera output line low
  */
 void trigger_download()
 {
@@ -50,12 +49,10 @@ void trigger_download()
 
 /*
  * timer0 overflow interrupt
- * Pulls PA0 pin HIGH and disables timer0
- * to disable the download trigger pulse
+ * Restores camera output line high
  */
 ISR(TIMER0_OVF_vect)
 {
-    // Restore PD5 output high
     PORTD &= ~_BV(PD5);
     TCCR0B = 0x00;
 }

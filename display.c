@@ -198,9 +198,10 @@ static void set_fmt_P(unsigned char display, char *fmt, ...)
 }
 
 /*
- * Initialise the LCD
+ * Initialize the SPI bus and display select lines
+ * Clear the displays and set initial brightness to 0%
  */
-void display_init()
+void display_init_hardware()
 {
     // Set MOSI, SCK, display select pins to output
     DDRB |= _BV(DDB5)|_BV(DDB7)|_BV(DISPLAY0)|_BV(DISPLAY1)|_BV(DISPLAY2)|_BV(DISPLAY3);

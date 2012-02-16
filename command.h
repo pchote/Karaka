@@ -27,7 +27,7 @@
 #define RESET 0xA8
 #define DOWNLOADCOMPLETE 0xA9
 
-void command_init(void);
+void command_init_hardware();
 void send_debug_fmt_P(char *fmt, ...);
 void send_debug_string_P(char *string);
 void send_debug_raw(unsigned char *data, unsigned char length);

@@ -47,39 +47,47 @@ char msg_ignored_duplicate_pulse[] PROGMEM = "Ignoring duplicate PPS pulse";
  *    PD7: Spare output
  */
 
-void reset_vars()
+/*
+ * Reset internal state to startup values
+ */
+void set_initial_state()
 {
+    cli();
     exposure_total = exposure_countdown = 0;
     countdown_mode = COUNTDOWN_DISABLED;
-    monitor_mode = MONITOR_WAIT;
+    monitor_init_state();
+    sei();
+
+    // Send config to attached GPS
+    // Requires interrupts to be enabled
+    gps_send_config();
 }
 
 /*
- * Initialise the unit and wait for interrupts.
+ * Initialize the unit and wait for interrupts.
  */
 int main(void)
 {
-    // Initialise global variables
-    reset_vars();
-
     // Enable pin change interrupt for PPS input
     PCMSK3 |= _BV(PCINT28);
     PCICR |= _BV(PCIE3);
 
-    // Set unused pins as inputs, enable pullup
-    DDRA = 0x00;
+    // Enable pullup resistor on unused pins
     PORTA = 0xFF;
 
     // Set other init
-    command_init();
-    gps_init();
-    download_init();
-    monitor_init();
-    display_init();
+    command_init_hardware();
+    gps_init_hardware();
+    download_init_hardware();
+    monitor_init_hardware();
+    display_init_hardware();
 
     // Enable interrupts
     sei();
-    send_gps_config();
+
+    // Initialize global variables
+    set_initial_state();
+
     unsigned char time_updated;
     unsigned int cycle = 0;
     // Main program loop

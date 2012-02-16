@@ -21,7 +21,8 @@
 volatile char monitor_level_high;
 
 unsigned char monitor_mode;
-void monitor_init();
+void monitor_init_state();
+void monitor_init_hardware();
 void monitor_tick();
 
 #endif

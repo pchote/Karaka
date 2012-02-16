@@ -22,6 +22,7 @@
 // Init Trimble: Enable only the 8F-AB primary timing packet
 unsigned char trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
 
+// Init Magellan: Disable the packets that the OEM software enables; enable timing and status packets
 unsigned char mgl_init[] PROGMEM =  "$PMGLI,00,G00,0,A\r\n"
                                     "$PMGLI,00,B00,0,A\r\n"
                                     "$PMGLI,00,B02,0,A\r\n"
@@ -90,9 +91,10 @@ ISR(USART1_UDRE_vect)
 }
 
 /*
- * Initialise the gps listener on USART1
+ * Initialize usart1 for communicating with the GPS via RS232
+ * Enable timer1 to monitor for serial connection loss
  */
-void gps_init()
+void gps_init_hardware()
 {
     // Set baud rate to 9600
     UBRR1 = 0xCF;
@@ -116,12 +118,17 @@ void gps_init()
     gps_state = GPS_UNAVAILABLE;
 }
 
-void send_gps_config()
+/*
+ * Send configuration data for both GPS units
+ * The connected GPS will ignore the data for other unit
+ */
+void gps_send_config()
 {
-    // Send receiver config
+    // Send Trimble init data
     for (unsigned char i = 0; i < 9; i++)
         queue_send_byte(pgm_read_byte(&trimble_init[i]));
 
+    // Send Magellan init data
     unsigned char i = 0, b = pgm_read_byte(&mgl_init[0]);
     do
     {

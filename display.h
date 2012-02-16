@@ -20,7 +20,7 @@
 
 volatile unsigned char display_brightness;
 
-void display_init();
+void display_init_hardware();
 void update_display_brightness();
 void update_display();
 #endif

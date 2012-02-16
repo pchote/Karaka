@@ -37,9 +37,9 @@ static volatile unsigned char usart_output_read = 0;
 static volatile unsigned char usart_output_write = 0;
 
 /*
- * Initialise the command parser
+ * Initialize usart0 for talking to the acquisition PC via USB
  */
-void command_init(void)
+void command_init_hardware()
 {
     // Set the baudrate to 250k (0% error)
     UBRR0 = 0x03;
@@ -294,10 +294,7 @@ unsigned char usart_process_buffer()
                             monitor_mode = MONITOR_STOP;
                         break;
                     case RESET:
-                        // Reset to startup state
-                        cli();
-                        reset_vars();
-                        sei();
+                        set_initial_state();
                     break;
                     default:
                         send_debug_fmt_P(command_fmt_unknown_packet, usart_packet[2]);

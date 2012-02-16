@@ -29,6 +29,6 @@ volatile unsigned char exposure_countdown;
 #define COUNTDOWN_TRIGGERED 3
 volatile unsigned char countdown_mode;
 
-void reset_vars();
+void set_initial_state();
 void trigger_countdown();
 #endif

@@ -13,7 +13,7 @@
 #ifndef KARAKA_DOWNLOAD_H
 #define KARAKA_DOWNLOAD_H
 
-void download_init();
+void download_init_hardware();
 void trigger_download();
 
 #endif

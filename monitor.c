@@ -18,21 +18,27 @@
 static volatile char debounce_waiting;
 
 /*
- * Initialise the timer on timer0
+ * (re-)Set initial monitor state
  */
-void monitor_init(void)
+void monitor_init_state()
 {
     debounce_waiting = FALSE;
     monitor_level_high = FALSE;
     monitor_mode = MONITOR_WAIT;
+}
 
+/*
+ * Initialize camera state input and timer0 for debouncing input
+ */
+void monitor_init_hardware()
+{
     // Enable timer2 overflow interrupt
     TIMSK2 |= _BV(TOIE2);
 
     // Disable the timer until it is needed
     TCCR2B = 0x00;
 
-    // Enable pullup resistor
+    // Enable pullup resistor on monitor input
     PORTD |= _BV(PD6);
 }
 
