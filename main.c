@@ -19,6 +19,7 @@
 #include "display.h"
 #include "command.h"
 #include "monitor.h"
+#include "fakecamera.h"
 
 char msg_ignored_duplicate_pulse[] PROGMEM = "Ignoring duplicate PPS pulse";
 
@@ -56,6 +57,7 @@ void set_initial_state()
     exposure_total = exposure_countdown = 0;
     countdown_mode = COUNTDOWN_DISABLED;
     monitor_init_state();
+    fake_camera_init_state();
     sei();
 
     // Send config to attached GPS
@@ -81,6 +83,7 @@ int main(void)
     download_init_hardware();
     monitor_init_hardware();
     display_init_hardware();
+    fake_camera_init_hardware();
 
     // Enable interrupts
     sei();

@@ -40,4 +40,10 @@
    <FileRef
       location = "group:monitor.h">
    </FileRef>
+   <FileRef
+      location = "group:fakecamera.c">
+   </FileRef>
+   <FileRef
+      location = "group:fakecamera.h">
+   </FileRef>
 </Workspace>

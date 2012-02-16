@@ -13,6 +13,7 @@
 #include <avr/interrupt.h>
 #include "download.h"
 #include "main.h"
+#include "fakecamera.h"
 
 /*
  * Enable the camera output line and setup timer0 for setting the pulse length
@@ -39,12 +40,14 @@ void trigger_download()
     // Pull PD5 output low to start the download
     PORTD |= _BV(PD5);
 
-    // Set the prescaler to 1/1024; each tick = 64us.
-    // Also starts the timer counting
+    // Set the timer tick to 64us
     TCCR0B = _BV(CS02)|_BV(CS00);
 
-    // Set timer0 to overflow after 8 ticks (0.512 ms)
+    // Set timer to overflow after 8 ticks (0.512 ms)
     TCNT0 = 248;
+
+    // Trigger a fake download
+    fake_camera_download();
 }
 
 /*

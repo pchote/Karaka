@@ -17,6 +17,7 @@
 #include "main.h"
 #include "gps.h"
 #include "monitor.h"
+#include "fakecamera.h"
 
 char command_msg_bad_packet[]     PROGMEM = "Bad packet - ignoring";
 char command_fmt_got_packet[]     PROGMEM = "Got packet 0x%02x";
@@ -293,6 +294,9 @@ void usart_process_buffer()
                 exposure_countdown = exposure_total = *data;
                 sei();
 
+                // Trigger fake camera output
+                fake_camera_startup();
+
                 // Monitor the camera for a level change indicating it has finished initializing
                 monitor_mode = MONITOR_START;
                 break;
@@ -303,6 +307,7 @@ void usart_process_buffer()
 
                 // Disable the exposure countdown immediately
                 countdown_mode = COUNTDOWN_DISABLED;
+                fake_camera_shutdown();
 
                 // Camera is reading out - Wait for a level change indicating it has finished
                 if (!monitor_level_high)

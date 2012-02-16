@@ -8,7 +8,7 @@
 
 DEVICE     = atmega1284p
 PROGRAMMER = -c dragon_jtag -P usb
-OBJECTS    = command.o gps.o display.o download.o monitor.o main.o
+OBJECTS    = command.o gps.o display.o download.o monitor.o fakecamera.o main.o
 FUSES      = -U hfuse:w:0x19:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 
 # Was previously
