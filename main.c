@@ -91,18 +91,13 @@ int main(void)
     // Initialize global variables
     set_initial_state();
 
-    unsigned char time_updated;
-    unsigned int cycle = 0;
     // Main program loop
     for (;;)
     {
         monitor_tick();
         usart_process_buffer();
-        time_updated = gps_process_buffer();
-
-        // Force the display to refresh if the time hasn't updated in 65535 cycles
-        if (time_updated || ++cycle == 0)
-            update_display();
+        gps_process_buffer();
+        update_display();
     }
 }
 

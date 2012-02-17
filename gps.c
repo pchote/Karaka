@@ -216,14 +216,14 @@ static unsigned char is_leap_year(unsigned int year)
  */
 
 static unsigned char bytes_to_sync = 0;
-unsigned char gps_process_buffer()
+void gps_process_buffer()
 {
     // Take a local copy of gps_input_write as it can be modified by interrupts
     unsigned char temp_write = gps_input_write;
     
     // No new data has arrived
     if (gps_input_read == temp_write)
-        return FALSE;
+        return;
     
     // Sync to the start of a packet if necessary
     for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)
@@ -280,7 +280,8 @@ unsigned char gps_process_buffer()
     {
         case UNKNOWN_PACKET:
             // Still haven't synced to a packet
-        return FALSE;
+            return;
+
         case TRIMBLE_PACKET:
             // Write bytes into the packet buffer
             for (; gps_input_read != temp_write; gps_input_read++)
@@ -322,7 +323,7 @@ unsigned char gps_process_buffer()
                     // Reset for next packet
                     gps_packet_type = UNKNOWN_PACKET;
                     gps_packet_length = 0;
-                    return TRUE;
+                    return;
                 }
             }
         break;
@@ -337,7 +338,6 @@ unsigned char gps_process_buffer()
                 // End of packet
                 if (gps_packet_length == gps_magellan_length)
                 {
-                    unsigned char updated = FALSE;
                     // Check that the packet is valid.
                     // A valid packet will have the final byte as a linefeed (0x0A)
                     // and the second-to-last byte will be a checksum which will match
@@ -355,8 +355,6 @@ unsigned char gps_process_buffer()
                         {
                             if (gps_packet_type == MAGELLAN_TIME_PACKET)
                             {
-                                updated = TRUE;
-
                                 // Correct for bad epoch offset
                                 // Number of days in each month (ignoring leap years)
                                 static unsigned char days[13] = {
@@ -397,10 +395,7 @@ unsigned char gps_process_buffer()
                             else if (gps_packet_type == MAGELLAN_STATUS_PACKET) // Status packet
                             {
                                 if (gps_magellan_locked != (gps_packet[13] == 6))
-                                {
                                     gps_magellan_locked = (gps_packet[13] == 6);
-                                    updated = TRUE;
-                                }
                             }
                             else
                             {
@@ -423,10 +418,9 @@ unsigned char gps_process_buffer()
                     // Reset buffer for the next packet
                     gps_packet_type = UNKNOWN_PACKET;
                     gps_packet_length = 0;
-                    return updated;
+                    return;
                 }
             }
         break;
     }
-    return FALSE;
 }

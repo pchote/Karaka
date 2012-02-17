@@ -120,18 +120,28 @@ const unsigned char char_defs[96][5] PROGMEM = {
     {0x04,0x3C,0x5F,0x68,0x84}, // <-:0x7F
 };
 
-char display_msg_noserial[]   PROGMEM = " NO SERIAL";
-char display_msg_syncing[]    PROGMEM = "  SYNCING ";
-char display_msg_idle[]       PROGMEM = "   IDLE   ";
-char display_msg_exposing[]   PROGMEM = " EXPOSING ";
-char display_msg_download[]   PROGMEM = " DOWNLOAD ";
-char display_msg_waitstart[]  PROGMEM = "WAIT START";
-char display_msg_waitstop[]   PROGMEM = " WAIT STOP";
-char display_msg_empty[]      PROGMEM = "          ";
-char display_msg_utc_locked[] PROGMEM = "UTC       ";
-char display_msg_utc[]        PROGMEM = "NOT LOCKED";
-char display_fmt_countdown[]  PROGMEM = " %03d/%03ds ";
-char display_fmt_timestamp[]  PROGMEM = " %02d:%02d:%02d ";
+// Display messages
+char display_msg_noserial_left[]  PROGMEM = "NO SERIAL ";
+char display_msg_noserial_right[] PROGMEM = "CONNECTION";
+char display_msg_syncing_left[]   PROGMEM = "  SYNCING ";
+char display_msg_syncing_right[]  PROGMEM = "TO SERIAL ";
+
+char display_msg_idle_left[]  PROGMEM = "        ID";
+char display_msg_idle_right[] PROGMEM = "LE        ";
+char display_msg_align[]      PROGMEM = "  ALIGN   ";
+char display_msg_expose[]     PROGMEM = "  EXPOSE  ";
+char display_msg_readout[]    PROGMEM = "  READOUT ";
+char display_msg_wait_left[]  PROGMEM = " WAITING F";
+char display_msg_wait_right[] PROGMEM = "OR CAMERA ";
+char display_fmt_countdown[]  PROGMEM = " %03d/%03d  ";
+
+char display_fmt_time_left[]  PROGMEM = "    %02d:%02d:";
+char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
+
+char display_fmt_time_nolock_left[]  PROGMEM = "%02d:%02d:%02d N";
+char display_fmt_time_nolock_right[] PROGMEM = "O GPS LOCK";
+
+
 
 /*
  * Queue data to the display
@@ -246,92 +256,83 @@ void update_display_brightness()
     send_data(DISPLAY3, &c, 1);
 }
 
-/*
- * Update the display
- *
- * Display layout:
- *   |  STATUS  | XXX/YYYs |
- *   | XX:XX:XX |UTC LOCKED|
- */
-static char *state_msg()
-{
-    // Inactive GPS is highest priority
-    if (gps_state == GPS_UNAVAILABLE)
-        return display_msg_noserial;
-    if (gps_state == GPS_SYNCING)
-        return display_msg_syncing;
-
-    // Check monitor
-    if (monitor_mode == MONITOR_START)
-        return display_msg_waitstart;
-    if (monitor_mode == MONITOR_STOP)
-        return display_msg_waitstop;
-
-    if (countdown_mode == COUNTDOWN_TRIGGERED)
-        return display_msg_download;
-    if (countdown_mode == COUNTDOWN_ENABLED)
-        return display_msg_exposing;
-
-    return display_msg_idle;
-}
-
 void update_display()
 {
     // Change display brightness if necessary
     static unsigned char last_display_brightness = 0xF7;
-    static unsigned char first = TRUE;
-
     unsigned char temp = display_brightness;
+
     if (last_display_brightness != temp)
     {
         last_display_brightness = temp;
         update_display_brightness();
     }
 
-    static unsigned char display_countdown_mode = COUNTDOWN_DISABLED;
-    static unsigned char display_exposure, display_countdown, display_gps_locked;
-    static char *display_state;
+    // Update the display every second or when the GPS state changes
+    static unsigned char display_gps_seconds = 255; // Bogus value to force redraw on first run
+    static unsigned char display_gps_state = GPS_UNAVAILABLE;
+    if (display_gps_state == gps_state && display_gps_seconds == gps_last_timestamp.seconds)
+        return;
 
-    // Update STATUS display
-    char *current_state = state_msg();
-    if (first || current_state != display_state)
+    display_gps_state = gps_state;
+    display_gps_seconds = gps_last_timestamp.seconds;
+
+    // Take a local copy of state that can be changed by interrupts
+    unsigned char display_monitor_mode = monitor_mode;
+    unsigned char display_countdown_mode = countdown_mode;
+    unsigned char display_countdown = exposure_countdown;
+    unsigned char display_monitor_level_high = monitor_level_high;
+
+    // Update top row (status and countdown)
+    if (display_monitor_mode == MONITOR_START || display_monitor_mode == MONITOR_STOP)
     {
-        display_state = current_state;
-        set_msg_P(DISPLAY0, display_state);
+        set_msg_P(DISPLAY0, display_msg_wait_left);
+        set_msg_P(DISPLAY1, display_msg_wait_right);
+    }
+    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_monitor_mode == MONITOR_ACQUIRE)
+    {
+        PGM_P msg = (display_countdown_mode == COUNTDOWN_SYNCING) ? display_msg_align :
+                    (!display_monitor_level_high) ? display_msg_readout : display_msg_expose;
+        set_msg_P(DISPLAY0, msg);
+
+        if (display_countdown_mode == COUNTDOWN_SYNCING)
+            set_fmt_P(DISPLAY1, display_fmt_countdown, gps_last_timestamp.seconds % exposure_total, exposure_total);
+        else
+            set_fmt_P(DISPLAY1, display_fmt_countdown, exposure_total - display_countdown, exposure_total);
+    }
+    else
+    {
+        set_msg_P(DISPLAY0, display_msg_idle_left);
+        set_msg_P(DISPLAY1, display_msg_idle_right);
     }
 
-    // Update exposure / wait countdown
-    if (first || display_countdown_mode != countdown_mode || display_exposure != exposure_total || display_countdown != exposure_countdown)
+    // Update bottom row (time and locked state)
+    switch (display_gps_state)
     {
-        display_countdown_mode = countdown_mode;
-        switch (display_countdown_mode)
-        {
-            case COUNTDOWN_DISABLED:
-                set_msg_P(DISPLAY1, display_msg_empty);
-                break;
-            case COUNTDOWN_SYNCING:
-                set_msg_P(DISPLAY1, display_msg_syncing);
-                break;
-            default:
-                display_exposure = exposure_total;
-                display_countdown = exposure_countdown;
-                set_fmt_P(DISPLAY1, display_fmt_countdown, display_countdown, display_exposure);
-                break;
-        }
-    }
-
-    // Update time display
-    set_fmt_P(DISPLAY2, display_fmt_timestamp,
-        gps_last_timestamp.hours,
-        gps_last_timestamp.minutes,
-        gps_last_timestamp.seconds
-    );
-
-    // Update locked display
-    if (first || display_gps_locked != gps_last_timestamp.locked)
-    {
-        display_gps_locked = gps_last_timestamp.locked;
-        set_msg_P(DISPLAY3, display_gps_locked ? display_msg_utc_locked : display_msg_utc);
+        case GPS_ACTIVE:
+            if (gps_last_timestamp.locked)
+            {
+                set_fmt_P(DISPLAY2, display_fmt_time_left, gps_last_timestamp.hours, gps_last_timestamp.minutes);
+                set_fmt_P(DISPLAY3, display_fmt_time_right, gps_last_timestamp.seconds);
+            }
+            else
+            {
+                set_fmt_P(DISPLAY2, display_fmt_time_nolock_left,
+                    gps_last_timestamp.hours,
+                    gps_last_timestamp.minutes,
+                    gps_last_timestamp.seconds
+                );
+                set_msg_P(DISPLAY3, display_fmt_time_nolock_right);
+            }
+        break;
+        case GPS_SYNCING:
+            set_msg_P(DISPLAY2, display_msg_syncing_left);
+            set_msg_P(DISPLAY3, display_msg_syncing_right);
+        break;
+        case GPS_UNAVAILABLE:
+            set_msg_P(DISPLAY2, display_msg_noserial_left);
+            set_msg_P(DISPLAY3, display_msg_noserial_right);
+        break;
     }
 }
 
