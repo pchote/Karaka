@@ -18,9 +18,9 @@
 #define MONITOR_ACQUIRE 0x02
 #define MONITOR_STOP 0x03
 
-volatile char monitor_level_high;
+volatile unsigned char monitor_level_high;
+volatile unsigned char monitor_mode;
 
-unsigned char monitor_mode;
 void monitor_init_state();
 void monitor_init_hardware();
 void monitor_tick();

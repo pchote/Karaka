@@ -40,7 +40,7 @@ typedef struct
     unsigned char locked;
 } timestamp;
 
-unsigned char gps_state;             // State of the gps listener (GPS_UNAVAILABLE, GPS_SYNCING, GPS_ACTIVE)
+volatile unsigned char gps_state;             // State of the gps listener (GPS_UNAVAILABLE, GPS_SYNCING, GPS_ACTIVE)
 volatile unsigned char gps_record_synctime;   // Flag to indicate whether the gps should process a packet as synctime
 
 timestamp gps_last_timestamp;
