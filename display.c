@@ -141,8 +141,6 @@ char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
 char display_fmt_time_nolock_left[]  PROGMEM = "%02d:%02d:%02d N";
 char display_fmt_time_nolock_right[] PROGMEM = "O GPS LOCK";
 
-
-
 /*
  * Queue data to the display
  */
@@ -152,11 +150,11 @@ static void send_data(unsigned char display, unsigned char *data, unsigned char 
     // Transmit synchronously for now
     for (unsigned char i = 0; i < length; i++)
     {
-        // Load data into SPI out
-        SPDR = data[i];
-
         // Toggle load line for the appropriate display
         PORTB &= ~_BV(display);
+
+        // Load data into SPI out
+        SPDR = data[i];
 
         loop_until_bit_is_set(SPSR, SPIF);
 
