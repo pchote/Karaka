@@ -1,0 +1,238 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXFileReference section */
+		DA3A420A14F1F51D00A5D305 /* command.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = command.c; path = ../../phd/karaka/command.c; sourceTree = "<group>"; };
+		DA3A420B14F1F51D00A5D305 /* command.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = command.h; path = ../../phd/karaka/command.h; sourceTree = "<group>"; };
+		DA3A420D14F1F51D00A5D305 /* display.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = display.c; path = ../../phd/karaka/display.c; sourceTree = "<group>"; };
+		DA3A420E14F1F51D00A5D305 /* display.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = display.h; path = ../../phd/karaka/display.h; sourceTree = "<group>"; };
+		DA3A421114F1F51D00A5D305 /* download.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = download.c; path = ../../phd/karaka/download.c; sourceTree = "<group>"; };
+		DA3A421214F1F51D00A5D305 /* download.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = download.h; path = ../../phd/karaka/download.h; sourceTree = "<group>"; };
+		DA3A421414F1F51D00A5D305 /* fakecamera.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = fakecamera.c; path = ../../phd/karaka/fakecamera.c; sourceTree = "<group>"; };
+		DA3A421514F1F51D00A5D305 /* fakecamera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = fakecamera.h; path = ../../phd/karaka/fakecamera.h; sourceTree = "<group>"; };
+		DA3A421814F1F51D00A5D305 /* gps.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = gps.c; path = ../../phd/karaka/gps.c; sourceTree = "<group>"; };
+		DA3A421914F1F51D00A5D305 /* gps.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = gps.h; path = ../../phd/karaka/gps.h; sourceTree = "<group>"; };
+		DA3A421D14F1F51D00A5D305 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = main.c; path = ../../phd/karaka/main.c; sourceTree = "<group>"; };
+		DA3A421F14F1F51D00A5D305 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = main.h; path = ../../phd/karaka/main.h; sourceTree = "<group>"; };
+		DA3A422214F1F51D00A5D305 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; name = Makefile; path = ../../phd/karaka/Makefile; sourceTree = "<group>"; };
+		DA3A422314F1F51D00A5D305 /* monitor.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = monitor.c; path = ../../phd/karaka/monitor.c; sourceTree = "<group>"; };
+		DA3A422414F1F51D00A5D305 /* monitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = monitor.h; path = ../../phd/karaka/monitor.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		DAE07DA214F1F48E005F3015 = {
+			isa = PBXGroup;
+			children = (
+				DA3A420A14F1F51D00A5D305 /* command.c */,
+				DA3A420B14F1F51D00A5D305 /* command.h */,
+				DA3A420D14F1F51D00A5D305 /* display.c */,
+				DA3A420E14F1F51D00A5D305 /* display.h */,
+				DA3A421114F1F51D00A5D305 /* download.c */,
+				DA3A421214F1F51D00A5D305 /* download.h */,
+				DA3A421414F1F51D00A5D305 /* fakecamera.c */,
+				DA3A421514F1F51D00A5D305 /* fakecamera.h */,
+				DA3A421814F1F51D00A5D305 /* gps.c */,
+				DA3A421914F1F51D00A5D305 /* gps.h */,
+				DA3A421D14F1F51D00A5D305 /* main.c */,
+				DA3A421F14F1F51D00A5D305 /* main.h */,
+				DA3A422214F1F51D00A5D305 /* Makefile */,
+				DA3A422314F1F51D00A5D305 /* monitor.c */,
+				DA3A422414F1F51D00A5D305 /* monitor.h */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		DAE07DA914F1F48E005F3015 /* build */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "all -C $(SRCROOT)";
+			buildConfigurationList = DAE07DB114F1F48E005F3015 /* Build configuration list for PBXLegacyTarget "build" */;
+			buildPhases = (
+			);
+			buildToolPath = make;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = build;
+			passBuildSettingsInEnvironment = 1;
+			productName = build;
+		};
+		DAE07DAA14F1F48E005F3015 /* fuse */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "fuse -C $(SRCROOT)";
+			buildConfigurationList = DAE07DB414F1F48E005F3015 /* Build configuration list for PBXLegacyTarget "fuse" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = fuse;
+			passBuildSettingsInEnvironment = 1;
+			productName = fuse;
+		};
+		DAE07DAB14F1F48E005F3015 /* flash */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "flash -C $(SRCROOT)";
+			buildConfigurationList = DAE07DB714F1F48E005F3015 /* Build configuration list for PBXLegacyTarget "flash" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = flash;
+			passBuildSettingsInEnvironment = 1;
+			productName = flash;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXProject section */
+		DAE07DA414F1F48E005F3015 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0430;
+			};
+			buildConfigurationList = DAE07DA714F1F48E005F3015 /* Build configuration list for PBXProject "Karaka" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = DAE07DA214F1F48E005F3015;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DAE07DA914F1F48E005F3015 /* build */,
+				DAE07DAA14F1F48E005F3015 /* fuse */,
+				DAE07DAB14F1F48E005F3015 /* flash */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		DAE07DAF14F1F48E005F3015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PATH = "$(PATH):/usr/local/CrossPack-AVR/bin";
+			};
+			name = Debug;
+		};
+		DAE07DB014F1F48E005F3015 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PATH = "$(PATH):/usr/local/CrossPack-AVR/bin";
+			};
+			name = Release;
+		};
+		DAE07DB214F1F48E005F3015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		DAE07DB314F1F48E005F3015 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		DAE07DB514F1F48E005F3015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		DAE07DB614F1F48E005F3015 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		DAE07DB814F1F48E005F3015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		DAE07DB914F1F48E005F3015 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DAE07DA714F1F48E005F3015 /* Build configuration list for PBXProject "Karaka" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DAE07DAF14F1F48E005F3015 /* Debug */,
+				DAE07DB014F1F48E005F3015 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DAE07DB114F1F48E005F3015 /* Build configuration list for PBXLegacyTarget "build" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DAE07DB214F1F48E005F3015 /* Debug */,
+				DAE07DB314F1F48E005F3015 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DAE07DB414F1F48E005F3015 /* Build configuration list for PBXLegacyTarget "fuse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DAE07DB514F1F48E005F3015 /* Debug */,
+				DAE07DB614F1F48E005F3015 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DAE07DB714F1F48E005F3015 /* Build configuration list for PBXLegacyTarget "flash" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DAE07DB814F1F48E005F3015 /* Debug */,
+				DAE07DB914F1F48E005F3015 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DAE07DA414F1F48E005F3015 /* Project object */;
+}
