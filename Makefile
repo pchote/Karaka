@@ -50,3 +50,6 @@ disasm:	main.elf
 
 size: main.elf
 	avr-size -C --mcu=$(DEVICE) main.elf
+
+debug: main.elf
+	avarice -g --part atmega1284p --dragon --jtag usb --file main.elf :4242
