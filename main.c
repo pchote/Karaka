@@ -56,13 +56,14 @@ void set_initial_state()
     cli();
     exposure_total = exposure_countdown = 0;
     countdown_mode = COUNTDOWN_DISABLED;
+    command_init_state();
     monitor_init_state();
     fake_camera_init_state();
     sei();
 
     // Send config to attached GPS
     // Requires interrupts to be enabled
-    gps_send_config();
+    gps_init_state();
 }
 
 /*

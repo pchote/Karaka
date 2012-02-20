@@ -47,6 +47,6 @@ timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
 
 void gps_init_hardware();
-void gps_send_config();
+void gps_init_state();
 void gps_process_buffer();
 #endif

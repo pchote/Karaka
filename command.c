@@ -55,6 +55,17 @@ void command_init_hardware()
 }
 
 /*
+ * Reset data buffers on reset
+ */
+void command_init_state()
+{
+    usart_packet_type = UNKNOWN_PACKET;
+    usart_packet_length = usart_packet_expected_length = 0;
+    usart_input_read = usart_input_write = 0;
+    usart_output_read = usart_output_write = 0;
+}
+
+/*
  * Add a byte to the send queue and start sending data if necessary
  */
 static void queue_send_byte(unsigned char b)

@@ -28,6 +28,7 @@
 #define DOWNLOADCOMPLETE 'H'
 
 void command_init_hardware();
+void command_init_state();
 void send_debug_fmt_P(char *fmt, ...);
 void send_debug_string_P(char *string);
 void send_debug_raw(unsigned char *data, unsigned char length);

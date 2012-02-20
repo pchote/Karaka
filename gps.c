@@ -113,17 +113,23 @@ void gps_init_hardware()
     TCCR1B = _BV(CS10)|_BV(CS12);
     TIMSK1 |= _BV(TOIE1);
     TCNT1 = 0x0BDB; // Overflow after 62500 ticks: 4.0s
-
-    gps_record_synctime = FALSE;
-    gps_state = GPS_UNAVAILABLE;
 }
 
 /*
- * Send configuration data for both GPS units
+ * Reset data buffers and send configuration data for both GPS units
  * The connected GPS will ignore the data for other unit
  */
-void gps_send_config()
+void gps_init_state()
 {
+    gps_magellan_length = 0;
+    gps_magellan_locked = FALSE;
+    gps_input_read = gps_input_write = 0;
+    gps_packet_type = gps_packet_length = 0;
+    gps_output_read = gps_output_write = 0;
+
+    gps_record_synctime = FALSE;
+    gps_state = GPS_UNAVAILABLE;
+
     // Send Trimble init data
     for (unsigned char i = 0; i < 9; i++)
         queue_send_byte(pgm_read_byte(&trimble_init[i]));
