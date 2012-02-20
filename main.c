@@ -22,6 +22,7 @@
 #include "fakecamera.h"
 
 char msg_ignored_duplicate_pulse[] PROGMEM = "Ignoring duplicate PPS pulse";
+char msg_no_serial[]               PROGMEM = "GPS serial connection lost";
 
 /* Hardware usage (ATmega1284p-AU):
  * PORTA:
@@ -56,6 +57,7 @@ void set_initial_state()
     cli();
     exposure_total = exposure_countdown = 0;
     countdown_mode = COUNTDOWN_DISABLED;
+    interrupt_flags = 0;
     command_init_state();
     monitor_init_state();
     fake_camera_init_state();
@@ -95,6 +97,27 @@ int main(void)
     // Main program loop
     for (;;)
     {
+        // Handle message flags set via interrupt
+        if (interrupt_flags)
+        {
+            cli();
+            unsigned char temp_int_flags = interrupt_flags;
+            interrupt_flags = 0;
+            sei();
+
+            if (temp_int_flags & FLAG_DOWNLOAD_COMPLETE)
+                send_downloadcomplete();
+
+            if (temp_int_flags & FLAG_STOP_EXPOSURE)
+                send_stopexposure();
+
+            if (temp_int_flags & FLAG_NO_SERIAL)
+                send_debug_string_P(msg_no_serial);
+
+            if (temp_int_flags & FLAG_DUPLICATE_PULSE)
+                send_debug_string_P(msg_ignored_duplicate_pulse);
+        }
+
         monitor_tick();
         usart_process_buffer();
         gps_process_buffer();
@@ -121,7 +144,7 @@ ISR(PCINT3_vect)
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
         else if (countdown_mode == COUNTDOWN_TRIGGERED)
-            send_debug_string_P(msg_ignored_duplicate_pulse);
+            interrupt_flags |= FLAG_DUPLICATE_PULSE;
     }
 }
 

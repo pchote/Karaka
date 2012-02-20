@@ -29,6 +29,12 @@ volatile unsigned char exposure_countdown;
 #define COUNTDOWN_TRIGGERED 3
 volatile unsigned char countdown_mode;
 
+#define FLAG_DOWNLOAD_COMPLETE (1 << 0)
+#define FLAG_STOP_EXPOSURE (1 << 1)
+#define FLAG_NO_SERIAL (1 << 2)
+#define FLAG_DUPLICATE_PULSE (1 << 3)
+volatile unsigned char interrupt_flags;
+
 void set_initial_state();
 void trigger_countdown();
 #endif

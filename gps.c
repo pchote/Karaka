@@ -35,7 +35,6 @@ unsigned char mgl_init[] PROGMEM =  "$PMGLI,00,G00,0,A\r\n"
                                     "$PMGLI,00,H00,2,B\r\n";
 
 char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse: forcing countdown";
-char gps_msg_lost_serial[]        PROGMEM = "GPS serial connection lost";
 char gps_msg_unknown_mgl_packet[] PROGMEM = "Unknown magellan packet";
 char gps_msg_bad_packet[]         PROGMEM = "Bad GPS packet";
 char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
@@ -186,7 +185,7 @@ static void set_time(timestamp *t)
 ISR(TIMER1_OVF_vect)
 {
     gps_state = GPS_UNAVAILABLE;
-    send_debug_string_P(gps_msg_lost_serial);
+    interrupt_flags |= FLAG_NO_SERIAL;
 }
 
 /*

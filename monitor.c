@@ -87,10 +87,10 @@ ISR(TIMER2_OVF_vect)
                     monitor_mode = MONITOR_ACQUIRE;
                 break;
                 case MONITOR_ACQUIRE:
-                    send_downloadcomplete();
+                    interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
                 break;
                 case MONITOR_STOP:
-                    send_stopexposure();
+                    interrupt_flags |= FLAG_STOP_EXPOSURE;
                     monitor_mode = MONITOR_WAIT;
                 break;
             }
