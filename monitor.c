@@ -17,8 +17,8 @@
 
 static volatile char debounce_waiting;
 
-volatile unsigned char monitor_level_high = FALSE;
-volatile unsigned char monitor_mode = MONITOR_WAIT;
+volatile uint8_t monitor_level_high = FALSE;
+volatile uint8_t monitor_mode = MONITOR_WAIT;
 
 /*
  * (re-)Set initial monitor state
@@ -76,7 +76,7 @@ void monitor_tick()
 ISR(TIMER2_OVF_vect)
 {
     debounce_waiting = FALSE;
-    unsigned char high = bit_is_clear(PIND, PD6);
+    uint8_t high = bit_is_clear(PIND, PD6);
     if (monitor_level_high != high)
     {
         monitor_level_high = high;

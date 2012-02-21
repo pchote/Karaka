@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 // Character data, stored in program memory
-const unsigned char char_defs[96][5] PROGMEM = {
+const uint8_t char_defs[96][5] PROGMEM = {
     {0x00,0x20,0x40,0x60,0x80}, //   :0x20
     {0x04,0x24,0x44,0x60,0x84}, // ! :0x21
     {0x0A,0x2A,0x40,0x60,0x80}, // " :0x22
@@ -141,16 +141,16 @@ char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
 char display_fmt_time_nolock_left[]  PROGMEM = "%02d:%02d:%02d N";
 char display_fmt_time_nolock_right[] PROGMEM = "O GPS LOCK";
 
-volatile unsigned char display_brightness = 0xF7;
+volatile uint8_t display_brightness = 0xF7;
 
 /*
  * Queue data to the display
  */
-static void send_data(unsigned char display, unsigned char *data, unsigned char length)
+static void send_data(uint8_t display, uint8_t *data, uint8_t length)
 {
     // Push the data to the display via SPI
     // Transmit synchronously for now
-    for (unsigned char i = 0; i < length; i++)
+    for (uint8_t i = 0; i < length; i++)
     {
         // Toggle load line for the appropriate display
         PORTB &= ~_BV(display);
@@ -169,26 +169,26 @@ static void send_data(unsigned char display, unsigned char *data, unsigned char 
  * Set a 10 character message on the requested display module
  * Assumes that msg is at least 10 bytes, all in the range 0x20 - 0x7F
  */
-static void set_msg_P(unsigned char display, const char *msg)
+static void set_msg_P(uint8_t display, const char *msg)
 {
     // Iterate over the characters in the message
-    for (unsigned char i = 0; i < 10; i++)
+    for (uint8_t i = 0; i < 10; i++)
     {
         // Characters are defined by 6 bytes
-        unsigned char c[6];
+        uint8_t c[6];
 
         // First byte gives 'character' opcode plus index
         c[0] = 0xB0 | i;
 
         // Remaining 5 bytes define character bitmap
-        for (unsigned char j = 0; j < 5; j++)
+        for (uint8_t j = 0; j < 5; j++)
             c[j+1] = pgm_read_byte(&(char_defs[pgm_read_byte(&msg[i]) - 0x20][j]));
 
         send_data(display, c, 6);
     }
 }
 
-static void set_fmt_P(unsigned char display, char *fmt, ...)
+static void set_fmt_P(uint8_t display, char *fmt, ...)
 {
     va_list args;
     char buf[11];
@@ -197,11 +197,11 @@ static void set_fmt_P(unsigned char display, char *fmt, ...)
     vsprintf_P(buf, fmt, args);
     va_end(args);
 
-    unsigned char c[6];
-    for (unsigned char i = 0; i < 10; i++)
+    uint8_t c[6];
+    for (uint8_t i = 0; i < 10; i++)
     {
         c[0] = 0xB0 | i;
-        for (unsigned char j = 0; j < 5; j++)
+        for (uint8_t j = 0; j < 5; j++)
             c[j+1] = pgm_read_byte(&(char_defs[buf[i] - 0x20][j]));
         send_data(display, c, 6);
     }
@@ -230,7 +230,7 @@ void display_init_hardware()
     ADCSRA |= _BV(ADEN)|_BV(ADATE)|_BV(ADIE)|_BV(ADSC);
 
     // Clear display
-    unsigned char c = 0xC0;
+    uint8_t c = 0xC0;
     send_data(DISPLAY0, &c, 1);
     send_data(DISPLAY1, &c, 1);
     send_data(DISPLAY2, &c, 1);
@@ -246,7 +246,7 @@ void display_init_hardware()
  */
 void update_display_brightness()
 {
-    unsigned char c = 0xF0 | (0x07 & display_brightness);
+    uint8_t c = 0xF0 | (0x07 & display_brightness);
     if (c == 0xF7) c = 0xFF; // 0% brightness
 
     send_data(DISPLAY0, &c, 1);
@@ -258,8 +258,8 @@ void update_display_brightness()
 void update_display()
 {
     // Change display brightness if necessary
-    static unsigned char last_display_brightness = 0xF7;
-    unsigned char temp = display_brightness;
+    static uint8_t last_display_brightness = 0xF7;
+    uint8_t temp = display_brightness;
 
     if (last_display_brightness != temp)
     {
@@ -268,8 +268,8 @@ void update_display()
     }
 
     // Update the display every second or when the GPS state changes
-    static unsigned char display_gps_seconds = 255; // Bogus value to force redraw on first run
-    static unsigned char display_gps_state = GPS_UNAVAILABLE;
+    static uint8_t display_gps_seconds = 255; // Bogus value to force redraw on first run
+    static uint8_t display_gps_state = GPS_UNAVAILABLE;
     if (display_gps_state == gps_state && display_gps_seconds == gps_last_timestamp.seconds)
         return;
 
@@ -277,10 +277,10 @@ void update_display()
     display_gps_seconds = gps_last_timestamp.seconds;
 
     // Take a local copy of state that can be changed by interrupts
-    unsigned char display_monitor_mode = monitor_mode;
-    unsigned char display_countdown_mode = countdown_mode;
-    unsigned char display_countdown = exposure_countdown;
-    unsigned char display_monitor_level_high = monitor_level_high;
+    uint8_t display_monitor_mode = monitor_mode;
+    uint8_t display_countdown_mode = countdown_mode;
+    uint8_t display_countdown = exposure_countdown;
+    uint8_t display_monitor_level_high = monitor_level_high;
 
     // Update top row (status and countdown)
     if (display_monitor_mode == MONITOR_START || display_monitor_mode == MONITOR_STOP)
@@ -341,6 +341,6 @@ void update_display()
 ISR(ADC_vect)
 {
     // Only care about top 3 bits, inverted
-    unsigned char temp = ADCH;
+    uint8_t temp = ADCH;
     display_brightness = (~temp) >> 5;
 }

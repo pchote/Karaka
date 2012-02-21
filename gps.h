@@ -10,10 +10,11 @@
 //
 //***************************************************************************
 
-#include "main.h"
-
 #ifndef KARAKA_GPS_H
 #define KARAKA_GPS_H
+
+#include <stdint.h>
+#include "main.h"
 
 #define ETX 0x03
 #define DLE 0x10
@@ -31,17 +32,17 @@
 
 typedef struct
 {
-    unsigned int year;
-    unsigned char month;
-    unsigned char day;
-    unsigned char hours;
-    unsigned char minutes;
-    unsigned char seconds;
-    unsigned char locked;
+    uint16_t year;
+    uint8_t month;
+    uint8_t day;
+    uint8_t hours;
+    uint8_t minutes;
+    uint8_t seconds;
+    uint8_t locked;
 } timestamp;
 
-extern volatile unsigned char gps_state;
-extern volatile unsigned char gps_record_synctime;
+extern volatile uint8_t gps_state;
+extern volatile uint8_t gps_record_synctime;
 
 extern timestamp gps_last_timestamp;
 extern timestamp gps_last_synctime;

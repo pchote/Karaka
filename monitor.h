@@ -13,13 +13,15 @@
 #ifndef KARAKA_MONITOR_H
 #define KARAKA_MONITOR_H
 
+#include <stdint.h>
+
 #define MONITOR_WAIT 0x00
 #define MONITOR_START 0x01
 #define MONITOR_ACQUIRE 0x02
 #define MONITOR_STOP 0x03
 
-extern volatile unsigned char monitor_level_high;
-extern volatile unsigned char monitor_mode;
+extern volatile uint8_t monitor_level_high;
+extern volatile uint8_t monitor_mode;
 
 void monitor_init_state();
 void monitor_init_hardware();

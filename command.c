@@ -24,20 +24,20 @@ char command_fmt_got_packet[]     PROGMEM = "Got packet 0x%02x";
 char command_fmt_unknown_packet[] PROGMEM = "Unknown packet type 0x%02x - ignoring";
 char command_fmt_bad_checksum[]   PROGMEM = "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.";
 
-static unsigned char usart_packet_type = UNKNOWN_PACKET;
-static unsigned char usart_packet_length = 0;
-static unsigned char usart_packet[256];
-static unsigned char usart_packet_expected_length = 0;
+static uint8_t usart_packet_type = UNKNOWN_PACKET;
+static uint8_t usart_packet_length = 0;
+static uint8_t usart_packet[256];
+static uint8_t usart_packet_expected_length = 0;
 
 // Note: 256 size is used to allow overflow -> circular buffer
 // If buffer size is changed you will need to add explicit overflow checks
-static unsigned char usart_input_buffer[256];
-static unsigned char usart_input_read = 0;
-static volatile unsigned char usart_input_write = 0;
+static uint8_t usart_input_buffer[256];
+static uint8_t usart_input_read = 0;
+static volatile uint8_t usart_input_write = 0;
 
-static unsigned char usart_output_buffer[256];
-static volatile unsigned char usart_output_read = 0;
-static volatile unsigned char usart_output_write = 0;
+static uint8_t usart_output_buffer[256];
+static volatile uint8_t usart_output_read = 0;
+static volatile uint8_t usart_output_write = 0;
 
 /*
  * Initialize usart0 for talking to the acquisition PC via USB
@@ -68,7 +68,7 @@ void command_init_state()
 /*
  * Add a byte to the send queue and start sending data if necessary
  */
-static void queue_send_byte(unsigned char b)
+static void queue_send_byte(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
     while (usart_output_write == usart_output_read - 1);
@@ -86,7 +86,7 @@ static void queue_send_byte(unsigned char b)
 /*
  * Queue a data packet to the aquisition pc
  */
-static void queue_data(unsigned char type, unsigned char *data, unsigned char length)
+static void queue_data(uint8_t type, uint8_t *data, uint8_t length)
 {
     // Data packet starts with $$ and packet type (which != $)
     queue_send_byte('$');
@@ -97,8 +97,8 @@ static void queue_data(unsigned char type, unsigned char *data, unsigned char le
     queue_send_byte(length);
 
     // Packet data - calculate checksum as we go
-    unsigned char csm = 0;
-    for (unsigned char i = 0; i < length; i++)
+    uint8_t csm = 0;
+    for (uint8_t i = 0; i < length; i++)
     {
         queue_send_byte(data[i]);
         csm ^= data[i];
@@ -112,7 +112,7 @@ static void queue_data(unsigned char type, unsigned char *data, unsigned char le
     queue_send_byte('\n');
 }
 
-static void queue_data_P(unsigned char type, unsigned char *data, unsigned char length)
+static void queue_data_P(uint8_t type, uint8_t *data, uint8_t length)
 {
     // Data packet starts with $$ and packet type (which != $)
     queue_send_byte('$');
@@ -123,10 +123,10 @@ static void queue_data_P(unsigned char type, unsigned char *data, unsigned char 
     queue_send_byte(length);
 
     // Packet data - calculate checksum as we go
-    unsigned char csm = 0;
-    for (unsigned char i = 0; i < length; i++)
+    uint8_t csm = 0;
+    for (uint8_t i = 0; i < length; i++)
     {
-        unsigned char c = pgm_read_byte(&data[i]);
+        uint8_t c = pgm_read_byte(&data[i]);
         queue_send_byte(c);
         csm ^= c;
     }
@@ -144,7 +144,7 @@ static void queue_data_P(unsigned char type, unsigned char *data, unsigned char 
  */
 void send_timestamp()
 {
-    unsigned char data[] =
+    uint8_t data[] =
     {
         gps_last_timestamp.hours,
         gps_last_timestamp.minutes,
@@ -161,7 +161,7 @@ void send_timestamp()
 
 void send_downloadtimestamp()
 {
-    unsigned char data[] =
+    uint8_t data[] =
     {
         gps_last_synctime.hours,
         gps_last_synctime.minutes,
@@ -195,15 +195,15 @@ void send_debug_fmt_P(char *fmt, ...)
     va_end(args);
 
     if (len > 128) len = 128;
-    queue_data(DEBUG_STRING, (unsigned char *)buf, (unsigned char)len);
+    queue_data(DEBUG_STRING, (uint8_t *)buf, (uint8_t)len);
 }
 
 void send_debug_string_P(char *string)
 {
-    queue_data_P(DEBUG_STRING, (unsigned char *)string, strlen_P(string));
+    queue_data_P(DEBUG_STRING, (uint8_t *)string, strlen_P(string));
 }
 
-void send_debug_raw(unsigned char *data, unsigned char length)
+void send_debug_raw(uint8_t *data, uint8_t length)
 {
     queue_data(DEBUG_RAW, data, length);
 }
@@ -239,7 +239,7 @@ ISR(USART0_RX_vect)
 void usart_process_buffer()
 {
     // Take a local copy of usart_input_write as it can be modified by interrupts
-    unsigned char temp_write = usart_input_write;
+    uint8_t temp_write = usart_input_write;
 
     // No new data has arrived
     if (usart_input_read == temp_write)
@@ -249,7 +249,7 @@ void usart_process_buffer()
     // Packet format: $$<type><data length><data 0>...<data length-1><checksum>\r\n
     for (; usart_packet_type == UNKNOWN_PACKET && usart_input_read != temp_write; usart_input_read++)
     {
-        unsigned char temp_start = (unsigned char)(usart_input_read - 3);
+        uint8_t temp_start = (uint8_t)(usart_input_read - 3);
         if (usart_input_buffer[temp_start] == '$' &&
             usart_input_buffer[temp_start + 1] == '$' &&
             usart_input_buffer[temp_start + 2] != '$')
@@ -272,9 +272,9 @@ void usart_process_buffer()
             continue;
 
         // End of packet
-        unsigned char data_length = usart_packet[3];
-        unsigned char *data = &usart_packet[4];
-        unsigned char data_checksum = usart_packet[usart_packet_length - 3];
+        uint8_t data_length = usart_packet[3];
+        uint8_t *data = &usart_packet[4];
+        uint8_t data_checksum = usart_packet[usart_packet_length - 3];
 
         // Check packet end
         if (usart_packet[usart_packet_length - 2] != '\r' || usart_packet[usart_packet_length - 1] != '\n')
@@ -285,8 +285,8 @@ void usart_process_buffer()
         }
 
         // Verify checksum
-        unsigned char csm = 0;
-        for (unsigned char i = 0; i < data_length; i++)
+        uint8_t csm = 0;
+        for (uint8_t i = 0; i < data_length; i++)
             csm ^= data[i];
 
         if (csm != data_checksum)

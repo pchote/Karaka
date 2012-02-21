@@ -20,10 +20,10 @@
 #include "command.h"
 
 // Init Trimble: Enable only the 8F-AB primary timing packet
-unsigned char trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
+uint8_t trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
 
 // Init Magellan: Disable the packets that the OEM software enables; enable timing and status packets
-unsigned char mgl_init[] PROGMEM =  "$PMGLI,00,G00,0,A\r\n"
+uint8_t mgl_init[] PROGMEM =  "$PMGLI,00,G00,0,A\r\n"
                                     "$PMGLI,00,B00,0,A\r\n"
                                     "$PMGLI,00,B02,0,A\r\n"
                                     "$PMGLI,00,D00,0,A\r\n"
@@ -40,27 +40,27 @@ char gps_msg_bad_packet[]         PROGMEM = "Bad GPS packet";
 char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
 char gps_fmt_checksum_failed[]    PROGMEM = "GPS Checksum failed. Got 0x%02x, expected 0x%02x";
 
-static unsigned char gps_magellan_length = 0;
-static unsigned char gps_magellan_locked = FALSE;
+static uint8_t gps_magellan_length = 0;
+static uint8_t gps_magellan_locked = FALSE;
 
 // NOTE: If buffer length is changed the read/write offsets
 // must be changed to int, and explicit overflow code added
-static unsigned char gps_input_buffer[256];
-static unsigned char gps_input_read = 0;
-static volatile unsigned char gps_input_write = 0;
+static uint8_t gps_input_buffer[256];
+static uint8_t gps_input_read = 0;
+static volatile uint8_t gps_input_write = 0;
 
 
 #define GPS_PACKET_LENGTH 32
-static unsigned char gps_packet_type = UNKNOWN_PACKET;
-static unsigned char gps_packet_length = 0;
-static unsigned char gps_packet[GPS_PACKET_LENGTH];
+static uint8_t gps_packet_type = UNKNOWN_PACKET;
+static uint8_t gps_packet_length = 0;
+static uint8_t gps_packet[GPS_PACKET_LENGTH];
 
-static unsigned char gps_output_buffer[256];
-static volatile unsigned char gps_output_read = 0;
-static volatile unsigned char gps_output_write = 0;
+static uint8_t gps_output_buffer[256];
+static volatile uint8_t gps_output_read = 0;
+static volatile uint8_t gps_output_write = 0;
 
-volatile unsigned char gps_state = GPS_UNAVAILABLE;
-volatile unsigned char gps_record_synctime = FALSE;
+volatile uint8_t gps_state = GPS_UNAVAILABLE;
+volatile uint8_t gps_record_synctime = FALSE;
 
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
@@ -68,7 +68,7 @@ timestamp gps_last_synctime;
 /*
  * Add a byte to the send queue and start sending data if necessary
  */
-static void queue_send_byte(unsigned char b)
+static void queue_send_byte(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
     while (gps_output_write == gps_output_read - 1);
@@ -136,11 +136,11 @@ void gps_init_state()
     gps_state = GPS_UNAVAILABLE;
 
     // Send Trimble init data
-    for (unsigned char i = 0; i < 9; i++)
+    for (uint8_t i = 0; i < 9; i++)
         queue_send_byte(pgm_read_byte(&trimble_init[i]));
 
     // Send Magellan init data
-    unsigned char i = 0, b = pgm_read_byte(&mgl_init[0]);
+    uint8_t i = 0, b = pgm_read_byte(&mgl_init[0]);
     do
     {
         queue_send_byte(b);
@@ -211,7 +211,7 @@ ISR(USART1_RX_vect)
 /*
  * Helper routine for determining whether a given year is a leap year
  */
-static unsigned char is_leap_year(unsigned int year)
+static uint8_t is_leap_year(uint16_t year)
 {
     if (year % 4) return 0;
     if (year % 100) return 1;
@@ -226,11 +226,11 @@ static unsigned char is_leap_year(unsigned int year)
  * the data pointers automatically overflow at 256 to give a circular buffer
  */
 
-static unsigned char bytes_to_sync = 0;
+static uint8_t bytes_to_sync = 0;
 void gps_process_buffer()
 {
     // Take a local copy of gps_input_write as it can be modified by interrupts
-    unsigned char temp_write = gps_input_write;
+    uint8_t temp_write = gps_input_write;
     
     // No new data has arrived
     if (gps_input_read == temp_write)
@@ -240,10 +240,10 @@ void gps_process_buffer()
     for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)
     {
         // Magellan packet            
-        if (gps_input_buffer[(unsigned char)(gps_input_read - 1)] == '$' &&
-            gps_input_buffer[(unsigned char)(gps_input_read - 2)] == '$' &&
+        if (gps_input_buffer[(uint8_t)(gps_input_read - 1)] == '$' &&
+            gps_input_buffer[(uint8_t)(gps_input_read - 2)] == '$' &&
             // End of previous packet
-            gps_input_buffer[(unsigned char)(gps_input_read - 3)] == 0x0A)
+            gps_input_buffer[(uint8_t)(gps_input_read - 3)] == 0x0A)
         {
             if (gps_input_buffer[gps_input_read] == 'A')
             {
@@ -274,11 +274,11 @@ void gps_process_buffer()
         // Trimble
         if ( // Start of timing packet
             gps_input_buffer[gps_input_read] == 0xAB &&
-            gps_input_buffer[(unsigned char)(gps_input_read - 1)] == 0x8F &&
-            gps_input_buffer[(unsigned char)(gps_input_read - 2)] == DLE &&
+            gps_input_buffer[(uint8_t)(gps_input_read - 1)] == 0x8F &&
+            gps_input_buffer[(uint8_t)(gps_input_read - 2)] == DLE &&
             // End of previous packet
-            gps_input_buffer[(unsigned char)(gps_input_read - 3)] == ETX &&
-            gps_input_buffer[(unsigned char)(gps_input_read - 4)] == DLE)
+            gps_input_buffer[(uint8_t)(gps_input_read - 3)] == ETX &&
+            gps_input_buffer[(uint8_t)(gps_input_read - 4)] == DLE)
         {
             gps_packet_type = TRIMBLE_PACKET;
             // Rewind to the start of the packet
@@ -301,7 +301,7 @@ void gps_process_buffer()
                 // Don't loop this: we want to parse the 3rd DLE if there are
                 // 4 in a row
                 if (gps_input_buffer[gps_input_read] == DLE &&
-                    gps_input_buffer[(unsigned char)(gps_input_read - 1)] == DLE)
+                    gps_input_buffer[(uint8_t)(gps_input_read - 1)] == DLE)
                     gps_input_read++;
 
                 if (gps_input_read == temp_write)
@@ -357,7 +357,7 @@ void gps_process_buffer()
                     //   gps_packet_length - 2 is the checksum byte
                     if (gps_packet[gps_packet_length-1] == 0x0A)
                     {
-                        unsigned char csm = gps_packet[2];
+                        uint8_t csm = gps_packet[2];
                         for (int i = 3; i < gps_packet_length-2; i++)
                             csm ^= gps_packet[i];
 
@@ -368,15 +368,15 @@ void gps_process_buffer()
                             {
                                 // Correct for bad epoch offset
                                 // Number of days in each month (ignoring leap years)
-                                static unsigned char days[13] = {
+                                static uint8_t days[13] = {
                                     31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
                                 };
 
                                 // Add 19 years and 229 days
-                                unsigned int year = (((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF)) + 19;
-                                unsigned char month = gps_packet[8];
-                                unsigned char day = gps_packet[7];
-                                unsigned char correction = 229;
+                                uint16_t year = (((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF)) + 19;
+                                uint8_t month = gps_packet[8];
+                                uint8_t day = gps_packet[7];
+                                uint8_t correction = 229;
 
                                 // Is this a leap year?
                                 days[1] = is_leap_year(year) ? 29 : 28;

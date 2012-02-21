@@ -11,6 +11,7 @@
 //***************************************************************************
 
 #include <stdarg.h>
+#include <stdint.h>
 #include "gps.h"
 
 
@@ -31,7 +32,7 @@ void command_init_hardware();
 void command_init_state();
 void send_debug_fmt_P(char *fmt, ...);
 void send_debug_string_P(char *string);
-void send_debug_raw(unsigned char *data, unsigned char length);
+void send_debug_raw(uint8_t *data, uint8_t length);
 void send_timestamp();
 void send_downloadtimestamp();
 void send_stopexposure();
