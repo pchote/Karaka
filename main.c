@@ -24,6 +24,11 @@
 char msg_ignored_duplicate_pulse[] PROGMEM = "Ignoring duplicate PPS pulse";
 char msg_no_serial[]               PROGMEM = "GPS serial connection lost";
 
+unsigned char exposure_total = 0;
+volatile unsigned char exposure_countdown = 0;
+volatile unsigned char countdown_mode = COUNTDOWN_DISABLED;
+volatile unsigned char interrupt_flags = 0;
+
 /* Hardware usage (ATmega1284p-AU):
  * PORTA:
  *    PA0: Display brightness input (ADC0)

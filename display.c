@@ -141,6 +141,8 @@ char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
 char display_fmt_time_nolock_left[]  PROGMEM = "%02d:%02d:%02d N";
 char display_fmt_time_nolock_right[] PROGMEM = "O GPS LOCK";
 
+volatile unsigned char display_brightness = 0xF7;
+
 /*
  * Queue data to the display
  */
@@ -234,7 +236,6 @@ void display_init_hardware()
     send_data(DISPLAY2, &c, 1);
     send_data(DISPLAY3, &c, 1);
 
-    display_brightness = 0xF7;
     update_display_brightness();
 }
 

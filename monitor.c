@@ -17,6 +17,9 @@
 
 static volatile char debounce_waiting;
 
+volatile unsigned char monitor_level_high = FALSE;
+volatile unsigned char monitor_mode = MONITOR_WAIT;
+
 /*
  * (re-)Set initial monitor state
  */

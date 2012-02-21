@@ -59,6 +59,12 @@ static unsigned char gps_output_buffer[256];
 static volatile unsigned char gps_output_read = 0;
 static volatile unsigned char gps_output_write = 0;
 
+volatile unsigned char gps_state = GPS_UNAVAILABLE;
+volatile unsigned char gps_record_synctime = FALSE;
+
+timestamp gps_last_timestamp;
+timestamp gps_last_synctime;
+
 /*
  * Add a byte to the send queue and start sending data if necessary
  */

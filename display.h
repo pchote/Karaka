@@ -18,7 +18,7 @@
 #define DISPLAY2 PB3
 #define DISPLAY3 PB4
 
-volatile unsigned char display_brightness;
+extern volatile unsigned char display_brightness;
 
 void display_init_hardware();
 void update_display_brightness();
