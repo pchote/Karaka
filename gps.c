@@ -34,7 +34,7 @@ uint8_t mgl_init[] PROGMEM =  "$PMGLI,00,G00,0,A\r\n"
                                     "$PMGLI,00,A00,2,B\r\n"
                                     "$PMGLI,00,H00,2,B\r\n";
 
-char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse: forcing countdown";
+char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse detected";
 char gps_msg_unknown_mgl_packet[] PROGMEM = "Unknown magellan packet";
 char gps_msg_bad_packet[]         PROGMEM = "Bad GPS packet";
 char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
@@ -156,9 +156,6 @@ static void set_time(timestamp *t)
     else if (countdown_mode == COUNTDOWN_ENABLED)
     {
         // We should always receive the PPS pulse before the time packet
-        cli();
-        trigger_countdown();
-        sei();
         send_debug_string_P(gps_msg_missed_pps);
     }
 

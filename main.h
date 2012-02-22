@@ -38,5 +38,4 @@ extern volatile uint8_t countdown_mode;
 extern volatile uint8_t interrupt_flags;
 
 void set_initial_state();
-void trigger_countdown();
 #endif

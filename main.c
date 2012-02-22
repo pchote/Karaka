@@ -21,7 +21,7 @@
 #include "monitor.h"
 #include "fakecamera.h"
 
-char msg_ignored_duplicate_pulse[] PROGMEM = "Ignoring duplicate PPS pulse";
+char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
 char msg_no_serial[]               PROGMEM = "GPS serial connection lost";
 
 uint8_t exposure_total = 0;
@@ -120,7 +120,7 @@ int main(void)
                 send_debug_string_P(msg_no_serial);
 
             if (temp_int_flags & FLAG_DUPLICATE_PULSE)
-                send_debug_string_P(msg_ignored_duplicate_pulse);
+                send_debug_string_P(msg_duplicate_pulse);
         }
 
         monitor_tick();
@@ -143,27 +143,22 @@ ISR(PCINT3_vect)
     // Don't count down unless we have a valid exposure time and the GPS is locked
     if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?
     {
-        if (countdown_mode == COUNTDOWN_ENABLED)
+        // Send a warning about the duplicate pulse
+        if (countdown_mode == COUNTDOWN_TRIGGERED)
+            interrupt_flags |= FLAG_DUPLICATE_PULSE;
+
+        if (countdown_mode == COUNTDOWN_ENABLED || countdown_mode == COUNTDOWN_TRIGGERED)
         {
-            trigger_countdown();
+            // End of exposure - send a syncpulse to the camera
+            // and store a flag so the gps can save the synctime.
+            if (--exposure_countdown == 0)
+            {
+                exposure_countdown = exposure_total;
+                gps_record_synctime = TRUE;
+                trigger_download();
+            }
+
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
-        else if (countdown_mode == COUNTDOWN_TRIGGERED)
-            interrupt_flags |= FLAG_DUPLICATE_PULSE;
-    }
-}
-
-/*
- * Decrement the exposure counter and trigger a download if necessary
- */
-void trigger_countdown()
-{
-    // End of exposure - send a syncpulse to the camera
-    // and store a flag so the gps can save the synctime.
-    if (--exposure_countdown == 0)
-    {
-        exposure_countdown = exposure_total;
-        gps_record_synctime = TRUE;
-        trigger_download();
     }
 }
