@@ -6,18 +6,29 @@
 ##
 ##***************************************************************************
 
-DEVICE     = atmega1284p
-PROGRAMMER = -c dragon_jtag -P usb
-OBJECTS    = command.o gps.o display.o download.o monitor.o fakecamera.o main.o
-FUSES      = -U hfuse:w:0x19:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+# Hardware versions
+# 1 - Original board design, no monitor
+# 2 - Original board design plus monitor circuit
+# 3 - New board design
 
-# Was previously
-#  Extended Fuse byte -> 0xff
-#      High Fuse byte -> 0x19
-#       Low Fuse byte -> 0x62
+HARDWARE_VERSION = 3
+
+PROGRAMMER = -c dragon_jtag -P usb
+OBJECTS    = command.o gps.o download.o monitor.o fakecamera.o main.o
+
+ifeq ($(HARDWARE_VERSION),3)
+	DEVICE = atmega1284p
+    FUSES  = -U hfuse:w:0x19:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+    OBJECTS += display_led.o
+else
+	DEVICE = atmega128
+    FUSES  = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+    OBJECTS += display_lcd.o
+endif
+
 # Tune the lines below only if you know what you are doing:
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums
+COMPILE = avr-gcc -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums -DHARDWARE_VERSION=${HARDWARE_VERSION}
 
 all: main.hex
 
@@ -52,4 +63,4 @@ size: main.elf
 	avr-size -C --mcu=$(DEVICE) main.elf
 
 debug: main.elf
-	avarice -g --part atmega1284p --dragon --jtag usb --file main.elf :4242
+	avarice -g --part $(DEVICE) --dragon --jtag usb --file main.elf :4242

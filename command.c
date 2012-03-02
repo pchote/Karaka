@@ -45,7 +45,8 @@ static volatile uint8_t usart_output_write = 0;
 void command_init_hardware()
 {
     // Set the baudrate to 250k (0% error)
-    UBRR0 = 0x03;
+    UBRR0H = 0;
+    UBRR0L = 0x03;
 
     // Enable receive, transmit, data received interrupt
     UCSR0B = _BV(RXEN0)|_BV(TXEN0)|_BV(RXCIE0);
@@ -306,7 +307,9 @@ void usart_process_buffer()
                 sei();
 
                 // Trigger fake camera output
-                fake_camera_startup();
+                #if HARDWARE_VERSION >= 3
+                    fake_camera_startup();
+                #endif
 
                 // Monitor the camera for a level change indicating it has finished initializing
                 monitor_mode = MONITOR_START;
@@ -318,7 +321,9 @@ void usart_process_buffer()
 
                 // Disable the exposure countdown immediately
                 countdown_mode = COUNTDOWN_DISABLED;
-                fake_camera_shutdown();
+                #if HARDWARE_VERSION >= 3
+                    fake_camera_shutdown();
+                #endif
 
                 // Camera is reading out - Wait for a level change indicating it has finished
                 if (!monitor_level_high)

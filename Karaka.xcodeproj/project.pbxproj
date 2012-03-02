@@ -9,7 +9,6 @@
 /* Begin PBXFileReference section */
 		DA3A420A14F1F51D00A5D305 /* command.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = command.c; path = ../../phd/karaka/command.c; sourceTree = "<group>"; };
 		DA3A420B14F1F51D00A5D305 /* command.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = command.h; path = ../../phd/karaka/command.h; sourceTree = "<group>"; };
-		DA3A420D14F1F51D00A5D305 /* display.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = display.c; path = ../../phd/karaka/display.c; sourceTree = "<group>"; };
 		DA3A420E14F1F51D00A5D305 /* display.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = display.h; path = ../../phd/karaka/display.h; sourceTree = "<group>"; };
 		DA3A421114F1F51D00A5D305 /* download.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = download.c; path = ../../phd/karaka/download.c; sourceTree = "<group>"; };
 		DA3A421214F1F51D00A5D305 /* download.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = download.h; path = ../../phd/karaka/download.h; sourceTree = "<group>"; };
@@ -22,6 +21,8 @@
 		DA3A422214F1F51D00A5D305 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; name = Makefile; path = ../../phd/karaka/Makefile; sourceTree = "<group>"; };
 		DA3A422314F1F51D00A5D305 /* monitor.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = monitor.c; path = ../../phd/karaka/monitor.c; sourceTree = "<group>"; };
 		DA3A422414F1F51D00A5D305 /* monitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = monitor.h; path = ../../phd/karaka/monitor.h; sourceTree = "<group>"; };
+		DAA94884150076630091F027 /* display_lcd.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = display_lcd.c; sourceTree = "<group>"; };
+		DAA94885150076630091F027 /* display_led.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = display_led.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -30,9 +31,10 @@
 			children = (
 				DA3A420A14F1F51D00A5D305 /* command.c */,
 				DA3A420B14F1F51D00A5D305 /* command.h */,
-				DA3A420D14F1F51D00A5D305 /* display.c */,
 				DA3A420E14F1F51D00A5D305 /* display.h */,
 				DA3A421114F1F51D00A5D305 /* download.c */,
+				DAA94884150076630091F027 /* display_lcd.c */,
+				DAA94885150076630091F027 /* display_led.c */,
 				DA3A421214F1F51D00A5D305 /* download.h */,
 				DA3A421414F1F51D00A5D305 /* fakecamera.c */,
 				DA3A421514F1F51D00A5D305 /* fakecamera.h */,

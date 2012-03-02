@@ -15,6 +15,8 @@
 #include <avr/pgmspace.h>
 #include "command.h"
 
+#if HARDWARE_VERSION >= 3
+
 void fake_camera_init_state()
 {
     // Disable counter until we need it
@@ -77,3 +79,5 @@ ISR(TIMER3_OVF_vect)
     PORTD &= ~_BV(PD7);
     TCCR3B = 0;
 }
+
+#endif

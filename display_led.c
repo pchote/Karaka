@@ -10,6 +10,8 @@
 //
 //***************************************************************************
 
+#if HARDWARE_VERSION >= 3
+
 #include "display.h"
 #include "main.h"
 #include "command.h"
@@ -19,6 +21,11 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <stdio.h>
+
+#define DISPLAY0 PB1
+#define DISPLAY1 PB2
+#define DISPLAY2 PB3
+#define DISPLAY3 PB4
 
 // Character data, stored in program memory
 const uint8_t char_defs[96][5] PROGMEM = {
@@ -208,6 +215,22 @@ static void set_fmt_P(uint8_t display, char *fmt, ...)
 }
 
 /*
+ * Set the brightness of the display
+ * Uses bottom 3 bits of display_brightness to set
+ * values: 1, 0.53, 0.4, 0.27, 0.2, 0.13, 0.066, 0
+ */
+static void update_display_brightness()
+{
+    uint8_t c = 0xF0 | (0x07 & display_brightness);
+    if (c == 0xF7) c = 0xFF; // 0% brightness
+    
+    send_data(DISPLAY0, &c, 1);
+    send_data(DISPLAY1, &c, 1);
+    send_data(DISPLAY2, &c, 1);
+    send_data(DISPLAY3, &c, 1);
+}
+
+/*
  * Initialize the SPI bus and display select lines
  * Clear the displays and set initial brightness to 0%
  */
@@ -237,22 +260,6 @@ void display_init_hardware()
     send_data(DISPLAY3, &c, 1);
 
     update_display_brightness();
-}
-
-/*
- * Set the brightness of the display
- * Uses bottom 3 bits of display_brightness to set
- * values: 1, 0.53, 0.4, 0.27, 0.2, 0.13, 0.066, 0
- */
-void update_display_brightness()
-{
-    uint8_t c = 0xF0 | (0x07 & display_brightness);
-    if (c == 0xF7) c = 0xFF; // 0% brightness
-
-    send_data(DISPLAY0, &c, 1);
-    send_data(DISPLAY1, &c, 1);
-    send_data(DISPLAY2, &c, 1);
-    send_data(DISPLAY3, &c, 1);
 }
 
 void update_display()
@@ -344,3 +351,5 @@ ISR(ADC_vect)
     uint8_t temp = ADCH;
     display_brightness = (~temp) >> 5;
 }
+
+#endif

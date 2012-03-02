@@ -29,7 +29,47 @@ volatile uint8_t exposure_countdown = 0;
 volatile uint8_t countdown_mode = COUNTDOWN_DISABLED;
 volatile uint8_t interrupt_flags = 0;
 
-/* Hardware usage (ATmega1284p-AU):
+/* Hardware usage (ATmega12-15AI) - Hardware versions 1-2:
+ * PORTA:
+ *    PA0: INTG output
+ *    PA1-7: Unused
+ * PORTB:
+ *    PB0: Force-on (to GPS input buffer)
+ *    PB1: SCK (to FT232 chip)
+ *    PB2-7: Unused
+ * PORTC:
+ *    PC0-7: 8-bit data to display
+ * PORTD:
+ *    PD0: GPS PPS input
+ *    PD1: Force-off (to RS232 chip)
+ *    PD2: RXD1 (From GPS)
+ *    PD3: TXD1 (To GPS)
+ *    PD4-7: Unused
+ * PORTE:
+ *    PE0: RXD0 (From PC)
+ *    PE1: TXD0 (To PC)
+ *    PE2-3: Unused
+ *    PE4: Monitor input (Version 2 only)
+ *    PE5-7: Unused
+ * PORTF:
+ *    PF0: Display register select
+ *    PF1: Display read/write select
+ *    PF2: Display read/write start
+ *    PF3: Unused
+ *    PF4-7: TCK/TMS/TDO/TDI (to JTAG header)
+ * PORTG:
+ *    PG0-2: Unused
+ *
+ * Timer0: Download pulse length
+ * Timer1: GPS serial timeout
+ * Timer2: Camera status debounce delay
+ * Timer3: Unused
+ *
+ * Usart0: USB <-> Acquisition PC
+ * Usart1: RS232 <-> GPS
+ */
+
+/* Hardware usage (ATmega1284p-AU) - Hardware version 3:
  * PORTA:
  *    PA0: Display brightness input (ADC0)
  *    PA1-7: Unused
@@ -52,6 +92,14 @@ volatile uint8_t interrupt_flags = 0;
  *    PD5: INTG output
  *    PD6: Monitor input
  *    PD7: Spare output
+ *
+ * Timer0: Download pulse length
+ * Timer1: GPS serial timeout
+ * Timer2: Camera status debounce delay
+ * Timer3: Fake camera monitor level delays
+ *
+ * Usart0: USB <-> Acquisition PC
+ * Usart1: RS232 <-> GPS
  */
 
 /*
@@ -65,7 +113,9 @@ void set_initial_state()
     interrupt_flags = 0;
     command_init_state();
     monitor_init_state();
-    fake_camera_init_state();
+    #if HARDWARE_VERSION >= 3
+        fake_camera_init_state();
+    #endif
     sei();
 
     // Send config to attached GPS
@@ -78,12 +128,18 @@ void set_initial_state()
  */
 int main(void)
 {
-    // Enable pin change interrupt for PPS input
-    PCMSK3 |= _BV(PCINT28);
-    PCICR |= _BV(PCIE3);
+    #if HARDWARE_VERSION < 3
+        // Set INT0 to be rising edge triggered
+        EICRA = _BV(ISC01);
+        EIMSK |= _BV(INT0);
+    #else
+        // Enable pin change interrupt for PPS input
+        PCMSK3 |= _BV(PCINT28);
+        PCICR |= _BV(PCIE3);
 
-    // Enable pullup resistor on unused pins
-    PORTA = 0xFF;
+        // Enable pullup resistor on unused pins
+        PORTA = 0xFF;
+    #endif
 
     // Set other init
     command_init_hardware();
@@ -91,7 +147,9 @@ int main(void)
     download_init_hardware();
     monitor_init_hardware();
     display_init_hardware();
-    fake_camera_init_hardware();
+    #if HARDWARE_VERSION >= 3
+        fake_camera_init_hardware();
+    #endif
 
     // Enable interrupts
     sei();
@@ -134,11 +192,16 @@ int main(void)
  * GPS time pulse interrupt handler
  * Fired on any level change from the PPS input (PD3)
  */
+#if HARDWARE_VERSION < 3
+ISR(INT0_vect)
+{
+#else
 ISR(PCINT3_vect)
 {
     // Ignore falling edge interrupt
     if (!bit_is_clear(PIND, PD4))
         return;
+#endif
 
     // Don't count down unless we have a valid exposure time and the GPS is locked
     if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?

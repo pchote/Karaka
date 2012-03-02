@@ -12,17 +12,6 @@
 
 #ifndef KARAKA_DISPLAY_H
 #define KARAKA_DISPLAY_H
-
-#include <stdint.h>
-
-#define DISPLAY0 PB1
-#define DISPLAY1 PB2
-#define DISPLAY2 PB3
-#define DISPLAY3 PB4
-
-extern volatile uint8_t display_brightness;
-
 void display_init_hardware();
-void update_display_brightness();
 void update_display();
 #endif

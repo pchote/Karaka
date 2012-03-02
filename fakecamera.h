@@ -16,11 +16,13 @@
 #ifndef KARAKA_FAKECAMERA_H
 #define KARAKA_FAKECAMERA_H
 
+#if HARDWARE_VERSION >= 3
 void fake_camera_init_state();
 void fake_camera_init_hardware();
 
 void fake_camera_startup();
 void fake_camera_shutdown();
 void fake_camera_download();
+#endif
 
 #endif

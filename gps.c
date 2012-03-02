@@ -15,7 +15,6 @@
 #include <avr/pgmspace.h>
 #include <stdio.h>
 #include "main.h"
-#include "display.h"
 #include "gps.h"
 #include "command.h"
 
@@ -102,7 +101,8 @@ ISR(USART1_UDRE_vect)
 void gps_init_hardware()
 {
     // Set baud rate to 9600
-    UBRR1 = 0xCF;
+    UBRR1H = 0;
+    UBRR1L = 0xCF;
     UCSR1A = _BV(U2X1);
 
     // Enable receive, transmit, data received interrupt
@@ -116,7 +116,11 @@ void gps_init_hardware()
 
     // Set prescaler to 1/1024: 64us per tick
     TCCR1B = _BV(CS10)|_BV(CS12);
+#if HARDWARE_VERSION < 3
+    TIMSK |= _BV(TOIE1);
+#else
     TIMSK1 |= _BV(TOIE1);
+#endif
     TCNT1 = 0x0BDB; // Overflow after 62500 ticks: 4.0s
 }
 

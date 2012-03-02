@@ -15,6 +15,24 @@
 #include "main.h"
 #include "command.h"
 
+#if HARDWARE_VERSION < 3
+    #define MONITOR_TIMSK TIMSK
+    #define MONITOR_TCCR TCCR2
+    #define MONITOR_PORT PORTE
+    #define MONITOR_PINREG PINE
+    #define MONITOR_PIN PE4
+
+    #define MONITOR_TIMER_SCALE _BV(CS02)|_BV(CS00)
+#else
+    #define MONITOR_TIMSK TIMSK2
+    #define MONITOR_TCCR TCCR2B
+    #define MONITOR_PORT PORTD
+    #define MONITOR_PINREG PIND
+    #define MONITOR_PIN PD6
+
+    #define MONITOR_TIMER_SCALE _BV(CS02)|_BV(CS01)|_BV(CS00);
+#endif
+
 static volatile char debounce_waiting;
 
 volatile uint8_t monitor_level_high = FALSE;
@@ -36,13 +54,13 @@ void monitor_init_state()
 void monitor_init_hardware()
 {
     // Enable timer2 overflow interrupt
-    TIMSK2 |= _BV(TOIE2);
+    MONITOR_TIMSK |= _BV(TOIE2);
 
     // Disable the timer until it is needed
-    TCCR2B = 0x00;
+    MONITOR_TCCR = 0x00;
 
     // Enable pullup resistor on monitor input
-    PORTD |= _BV(PD6);
+    MONITOR_PORT |= _BV(MONITOR_PIN);
 }
 
 /*
@@ -55,13 +73,13 @@ void monitor_init_hardware()
  */
 void monitor_tick()
 {
-    if (!debounce_waiting && monitor_level_high != bit_is_clear(PIND, PD6))
+    if (!debounce_waiting && monitor_level_high != bit_is_clear(MONITOR_PINREG, MONITOR_PIN))
     {
         debounce_waiting = TRUE;
 
         // Set the prescaler to 1/1024; each tick = 64us.
         // Also starts the timer counting
-        TCCR2B = _BV(CS02)|_BV(CS01)|_BV(CS00);
+        MONITOR_TCCR = MONITOR_TIMER_SCALE;
 
         // Set timer2 to overflow after 8 ticks (0.512 ms)
         TCNT2 = 248;
@@ -76,7 +94,7 @@ void monitor_tick()
 ISR(TIMER2_OVF_vect)
 {
     debounce_waiting = FALSE;
-    uint8_t high = bit_is_clear(PIND, PD6);
+    uint8_t high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
     if (monitor_level_high != high)
     {
         monitor_level_high = high;
@@ -101,5 +119,5 @@ ISR(TIMER2_OVF_vect)
     }
 
     // Disable timer
-    TCCR2B = 0x00;
+    MONITOR_TCCR = 0;
 }
