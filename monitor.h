@@ -14,6 +14,7 @@
 #define KARAKA_MONITOR_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MONITOR_WAIT 0x00
 #define MONITOR_START 0x01
@@ -22,9 +23,14 @@
 
 extern volatile uint8_t monitor_level_high;
 extern volatile uint8_t monitor_mode;
+extern bool monitor_simulate_camera;
 
 void monitor_init_state();
 void monitor_init_hardware();
 void monitor_tick();
 
+void simulate_camera_enable(bool enabled);
+void simulate_camera_startup();
+void simulate_camera_shutdown();
+void simulate_camera_download();
 #endif

@@ -14,7 +14,7 @@
 HARDWARE_VERSION = 3
 
 PROGRAMMER = -c dragon_jtag -P usb
-OBJECTS    = command.o gps.o download.o monitor.o fakecamera.o main.o
+OBJECTS    = command.o gps.o download.o monitor.o main.o
 
 ifeq ($(HARDWARE_VERSION),3)
 	DEVICE = atmega1284p

@@ -27,6 +27,7 @@
 #define STOP_EXPOSURE 'F'
 #define RESET 'G'
 #define DOWNLOADCOMPLETE 'H'
+#define SIMULATE_CAMERA 'I'
 
 void command_init_hardware();
 void command_init_state();

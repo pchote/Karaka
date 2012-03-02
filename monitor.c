@@ -10,29 +10,48 @@
 //
 //***************************************************************************
 
+/*
+ * Monitor the status output on the camera (configured to output high when reading out)
+ * in order to work around a corruption bug in the camera firmware/libraries
+ *
+ * If simulation is enabled, the behavior of the status line will be controlled internally
+ * using software interrupts. This allows for testing without a camera present and supporting
+ * the original timer hardware which lacks the monitor input.
+ */
+
 #include <avr/interrupt.h>
 #include "monitor.h"
 #include "main.h"
 #include "command.h"
 
 #if HARDWARE_VERSION < 3
-    #define MONITOR_TIMSK TIMSK
-    #define MONITOR_TCCR TCCR2
     #define MONITOR_PORT PORTE
     #define MONITOR_PINREG PINE
     #define MONITOR_PIN PE4
+    #define MONITOR_DDR DDRE
+    #define MONITOR_DD DDE4
 
+    #define MONITOR_TIMSK TIMSK
+    #define MONITOR_TCCR TCCR2
     #define MONITOR_TIMER_SCALE _BV(CS02)|_BV(CS00)
+
+    #define SIMULATE_TIMSK ETIMSK
 #else
-    #define MONITOR_TIMSK TIMSK2
-    #define MONITOR_TCCR TCCR2B
     #define MONITOR_PORT PORTD
     #define MONITOR_PINREG PIND
     #define MONITOR_PIN PD6
+    #define MONITOR_DDR DDRD
+    #define MONITOR_DD DDD6
 
+    #define MONITOR_TIMSK TIMSK2
+    #define MONITOR_TCCR TCCR2B
     #define MONITOR_TIMER_SCALE _BV(CS02)|_BV(CS01)|_BV(CS00);
+
+    #define SIMULATE_TIMSK TIMSK3
+
 #endif
 
+bool monitor_simulate_camera = false;
 static volatile char debounce_waiting;
 
 volatile uint8_t monitor_level_high = FALSE;
@@ -46,6 +65,10 @@ void monitor_init_state()
     debounce_waiting = FALSE;
     monitor_level_high = FALSE;
     monitor_mode = MONITOR_WAIT;
+
+    // Disable simulation timer
+    TCCR3B = 0;
+    simulate_camera_enable(false);
 }
 
 /*
@@ -55,12 +78,14 @@ void monitor_init_hardware()
 {
     // Enable timer2 overflow interrupt
     MONITOR_TIMSK |= _BV(TOIE2);
-
-    // Disable the timer until it is needed
-    MONITOR_TCCR = 0x00;
+    SIMULATE_TIMSK |= _BV(TOIE3);
 
     // Enable pullup resistor on monitor input
     MONITOR_PORT |= _BV(MONITOR_PIN);
+
+    // Disable timers until they are needed
+    MONITOR_TCCR = 0;
+    TCCR3B = 0;
 }
 
 /*
@@ -120,4 +145,76 @@ ISR(TIMER2_OVF_vect)
 
     // Disable timer
     MONITOR_TCCR = 0;
+}
+
+void simulate_camera_enable(bool enabled)
+{
+    monitor_simulate_camera = enabled;
+
+    // Set monitor pin as I/O
+    if (enabled)
+    {
+        // Set output
+        MONITOR_DDR |= _BV(MONITOR_DD);
+
+        // Set output high
+        MONITOR_PORT &= ~_BV(MONITOR_PIN);
+    }
+    else
+    {
+        // Set input
+        MONITOR_DDR &= ~_BV(MONITOR_DD);
+
+        // Enable Pullup resistor
+        MONITOR_PORT |= _BV(MONITOR_PIN);
+    }
+}
+
+/*
+ * Set the simulated camera status pin low
+ * The I/O buffers invert the logic level, so set output high to simulate input low
+ */
+static void set_output_low(uint16_t timer_cnt)
+{
+    MONITOR_PORT |= _BV(MONITOR_PIN);
+
+    cli();
+    // Define timer tick as 64us
+    TCCR3B = _BV(CS30)|_BV(CS32);
+    TCNT3 = timer_cnt;
+    sei();
+}
+
+/*
+ * Set output high, delay for 4.19 seconds, then low
+ */
+void simulate_camera_startup()
+{
+    set_output_low(0x0000);
+}
+
+/*
+ * Set output low, delay for 1 second, then high
+ */
+void simulate_camera_shutdown()
+{
+    set_output_low(0xC2F6);
+}
+
+/*
+ * Set output high, delay for 3.2 seconds, then low
+ */
+void simulate_camera_download()
+{
+    set_output_low(0x3CAF);
+}
+
+/*
+ * Timer3 overflow interrupt
+ * Return monitor level to high and disable timer
+ */
+ISR(TIMER3_OVF_vect)
+{
+    MONITOR_PORT &= ~_BV(MONITOR_PIN);
+    TCCR3B = 0;
 }

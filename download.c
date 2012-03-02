@@ -13,7 +13,7 @@
 #include <avr/interrupt.h>
 #include "download.h"
 #include "main.h"
-#include "fakecamera.h"
+#include "monitor.h"
 
 #if HARDWARE_VERSION < 3
     #define DOWNLOAD_PORT PORTA
@@ -63,9 +63,8 @@ void trigger_download()
     TCNT0 = 248;
 
     // Trigger a fake download
-    #if HARDWARE_VERSION >= 3
-        fake_camera_download();
-    #endif
+    if (monitor_simulate_camera)
+        simulate_camera_download();
 }
 
 /*

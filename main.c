@@ -19,7 +19,6 @@
 #include "display.h"
 #include "command.h"
 #include "monitor.h"
-#include "fakecamera.h"
 
 char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
 char msg_no_serial[]               PROGMEM = "GPS serial connection lost";
@@ -63,7 +62,7 @@ volatile uint8_t interrupt_flags = 0;
  * Timer0: Download pulse length
  * Timer1: GPS serial timeout
  * Timer2: Camera status debounce delay
- * Timer3: Unused
+ * Timer3: Fake camera monitor level delays
  *
  * Usart0: USB <-> Acquisition PC
  * Usart1: RS232 <-> GPS
@@ -113,9 +112,6 @@ void set_initial_state()
     interrupt_flags = 0;
     command_init_state();
     monitor_init_state();
-    #if HARDWARE_VERSION >= 3
-        fake_camera_init_state();
-    #endif
     sei();
 
     // Send config to attached GPS
@@ -147,9 +143,6 @@ int main(void)
     download_init_hardware();
     monitor_init_hardware();
     display_init_hardware();
-    #if HARDWARE_VERSION >= 3
-        fake_camera_init_hardware();
-    #endif
 
     // Enable interrupts
     sei();

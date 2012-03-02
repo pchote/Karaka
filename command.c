@@ -17,7 +17,6 @@
 #include "main.h"
 #include "gps.h"
 #include "monitor.h"
-#include "fakecamera.h"
 
 char command_msg_bad_packet[]     PROGMEM = "Bad packet - ignoring";
 char command_fmt_got_packet[]     PROGMEM = "Got packet 0x%02x";
@@ -307,13 +306,12 @@ void usart_process_buffer()
                 sei();
 
                 // Trigger fake camera output
-                #if HARDWARE_VERSION >= 3
-                    fake_camera_startup();
-                #endif
+                if (monitor_simulate_camera)
+                    simulate_camera_startup();
 
                 // Monitor the camera for a level change indicating it has finished initializing
                 monitor_mode = MONITOR_START;
-                break;
+            break;
             case STOP_EXPOSURE:
                 cli();
                 exposure_total = exposure_countdown = 0;
@@ -321,9 +319,8 @@ void usart_process_buffer()
 
                 // Disable the exposure countdown immediately
                 countdown_mode = COUNTDOWN_DISABLED;
-                #if HARDWARE_VERSION >= 3
-                    fake_camera_shutdown();
-                #endif
+                if (monitor_simulate_camera)
+                    simulate_camera_shutdown();
 
                 // Camera is reading out - Wait for a level change indicating it has finished
                 if (!monitor_level_high)
@@ -337,6 +334,10 @@ void usart_process_buffer()
             break;
             case RESET:
                 set_initial_state();
+            break;
+            case SIMULATE_CAMERA:
+                // Enable or disable simulating the camera status output
+                simulate_camera_enable(*data);
             break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);
