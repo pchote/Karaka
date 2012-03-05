@@ -21,7 +21,7 @@
 #define MONITOR_ACQUIRE 0x02
 #define MONITOR_STOP 0x03
 
-extern volatile uint8_t monitor_level_high;
+extern volatile bool monitor_level_high;
 extern volatile uint8_t monitor_mode;
 extern bool monitor_simulate_camera;
 

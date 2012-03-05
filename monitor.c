@@ -52,9 +52,9 @@
 #endif
 
 bool monitor_simulate_camera = false;
-static volatile char debounce_waiting;
+static volatile bool debounce_waiting = false;
 
-volatile uint8_t monitor_level_high = FALSE;
+volatile bool monitor_level_high = false;
 volatile uint8_t monitor_mode = MONITOR_WAIT;
 
 /*
@@ -62,8 +62,8 @@ volatile uint8_t monitor_mode = MONITOR_WAIT;
  */
 void monitor_init_state()
 {
-    debounce_waiting = FALSE;
-    monitor_level_high = FALSE;
+    debounce_waiting = false;
+    monitor_level_high = false;
     monitor_mode = MONITOR_WAIT;
 
     // Disable timers
@@ -98,7 +98,7 @@ void monitor_tick()
 {
     if (!debounce_waiting && monitor_level_high != bit_is_clear(MONITOR_PINREG, MONITOR_PIN))
     {
-        debounce_waiting = TRUE;
+        debounce_waiting = true;
 
         // Set the prescaler to 1/1024; each tick = 64us.
         // Also starts the timer counting
@@ -116,8 +116,8 @@ void monitor_tick()
  */
 ISR(TIMER2_OVF_vect)
 {
-    debounce_waiting = FALSE;
-    uint8_t high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
+    debounce_waiting = false;
+    bool high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
     if (monitor_level_high != high)
     {
         monitor_level_high = high;

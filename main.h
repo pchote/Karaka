@@ -19,9 +19,6 @@
 
 #define F_CPU 16000000UL  // 16 MHz
 
-#define FALSE (0)
-#define TRUE (!(FALSE))
-
 extern uint8_t exposure_total;
 extern volatile uint8_t exposure_countdown;
 

@@ -210,7 +210,7 @@ ISR(PCINT3_vect)
             if (--exposure_countdown == 0)
             {
                 exposure_countdown = exposure_total;
-                gps_record_synctime = TRUE;
+                gps_record_synctime = true;
                 trigger_download();
             }
 

@@ -40,7 +40,7 @@ char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
 char gps_fmt_checksum_failed[]    PROGMEM = "GPS Checksum failed. Got 0x%02x, expected 0x%02x";
 
 static uint8_t gps_magellan_length = 0;
-static uint8_t gps_magellan_locked = FALSE;
+static bool gps_magellan_locked = false;
 
 // NOTE: If buffer length is changed the read/write offsets
 // must be changed to int, and explicit overflow code added
@@ -59,7 +59,7 @@ static volatile uint8_t gps_output_read = 0;
 static volatile uint8_t gps_output_write = 0;
 
 volatile uint8_t gps_state = GPS_UNAVAILABLE;
-volatile uint8_t gps_record_synctime = FALSE;
+volatile bool gps_record_synctime = false;
 
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
@@ -131,12 +131,12 @@ void gps_init_hardware()
 void gps_init_state()
 {
     gps_magellan_length = 0;
-    gps_magellan_locked = FALSE;
+    gps_magellan_locked = false;
     gps_input_read = gps_input_write = 0;
     gps_packet_type = gps_packet_length = 0;
     gps_output_read = gps_output_write = 0;
 
-    gps_record_synctime = FALSE;
+    gps_record_synctime = false;
     gps_state = GPS_UNAVAILABLE;
 
     // Send Trimble init data
@@ -176,7 +176,7 @@ static void set_time(timestamp *t)
     {
         cli();
         gps_last_synctime = gps_last_timestamp;
-        gps_record_synctime = FALSE;
+        gps_record_synctime = false;
         sei();
         
         send_downloadtimestamp();
@@ -323,7 +323,7 @@ void gps_process_buffer()
                             .day = gps_packet[15],
                             .month = gps_packet[16],
                             .year = ((gps_packet[17] << 8) & 0xFF00) | (gps_packet[18] & 0x00FF),
-                            .locked = gps_packet[11] == 0x03 ? TRUE : FALSE
+                            .locked = gps_packet[11] == 0x03 ? true : false
                         });
                     }
                     else

@@ -14,6 +14,7 @@
 #define KARAKA_GPS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "main.h"
 
 #define ETX 0x03
@@ -38,11 +39,11 @@ typedef struct
     uint8_t hours;
     uint8_t minutes;
     uint8_t seconds;
-    uint8_t locked;
+    bool locked;
 } timestamp;
 
 extern volatile uint8_t gps_state;
-extern volatile uint8_t gps_record_synctime;
+extern volatile bool gps_record_synctime;
 
 extern timestamp gps_last_timestamp;
 extern timestamp gps_last_synctime;
