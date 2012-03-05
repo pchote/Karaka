@@ -66,8 +66,10 @@ void monitor_init_state()
     monitor_level_high = FALSE;
     monitor_mode = MONITOR_WAIT;
 
-    // Disable simulation timer
+    // Disable timers
     TCCR3B = 0;
+    MONITOR_TCCR = 0;
+
     simulate_camera_enable(false);
 }
 
@@ -82,10 +84,6 @@ void monitor_init_hardware()
 
     // Enable pullup resistor on monitor input
     MONITOR_PORT |= _BV(MONITOR_PIN);
-
-    // Disable timers until they are needed
-    MONITOR_TCCR = 0;
-    TCCR3B = 0;
 }
 
 /*
