@@ -25,8 +25,8 @@ char msg_no_serial[]               PROGMEM = "GPS serial connection lost";
 
 uint8_t exposure_total = 0;
 volatile uint8_t exposure_countdown = 0;
-volatile uint8_t countdown_mode = COUNTDOWN_DISABLED;
-volatile uint8_t interrupt_flags = 0;
+volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
+volatile interruptflags interrupt_flags = 0;
 
 /* Hardware usage (ATmega12-15AI) - Hardware versions 1-2:
  * PORTA:

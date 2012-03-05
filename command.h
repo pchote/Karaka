@@ -19,15 +19,18 @@
 #define KARAKA_COMMAND_H
 
 // Packet types
-#define CURRENTTIME 'A'
-#define DOWNLOADTIME 'B'
-#define DEBUG_STRING 'C'
-#define DEBUG_RAW 'D'
-#define START_EXPOSURE 'E'
-#define STOP_EXPOSURE 'F'
-#define RESET 'G'
-#define DOWNLOADCOMPLETE 'H'
-#define SIMULATE_CAMERA 'I'
+typedef enum
+{
+    CURRENTTIME = 'A',
+    DOWNLOADTIME = 'B',
+    DEBUG_STRING = 'C',
+    DEBUG_RAW = 'D',
+    START_EXPOSURE = 'E',
+    STOP_EXPOSURE = 'F',
+    RESET = 'G',
+    DOWNLOADCOMPLETE = 'H',
+    SIMULATE_CAMERA = 'I'
+} commandtype;
 
 void command_init_hardware();
 void command_init_state();

@@ -55,7 +55,7 @@ bool monitor_simulate_camera = false;
 static volatile bool debounce_waiting = false;
 
 volatile bool monitor_level_high = false;
-volatile uint8_t monitor_mode = MONITOR_WAIT;
+volatile monitorstate monitor_mode = MONITOR_WAIT;
 
 /*
  * (re-)Set initial monitor state
@@ -136,6 +136,8 @@ ISR(TIMER2_OVF_vect)
                 case MONITOR_STOP:
                     interrupt_flags |= FLAG_STOP_EXPOSURE;
                     monitor_mode = MONITOR_WAIT;
+                break;
+                default:
                 break;
             }
         }

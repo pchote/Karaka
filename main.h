@@ -22,17 +22,24 @@
 extern uint8_t exposure_total;
 extern volatile uint8_t exposure_countdown;
 
-#define COUNTDOWN_DISABLED  0
-#define COUNTDOWN_SYNCING   1
-#define COUNTDOWN_ENABLED   2
-#define COUNTDOWN_TRIGGERED 3
-extern volatile uint8_t countdown_mode;
+typedef enum
+{
+    COUNTDOWN_DISABLED  = 0,
+    COUNTDOWN_SYNCING   = 1,
+    COUNTDOWN_ENABLED   = 2,
+    COUNTDOWN_TRIGGERED = 3
+} countdownstate;
+extern volatile countdownstate countdown_mode;
 
-#define FLAG_DOWNLOAD_COMPLETE (1 << 0)
-#define FLAG_STOP_EXPOSURE (1 << 1)
-#define FLAG_NO_SERIAL (1 << 2)
-#define FLAG_DUPLICATE_PULSE (1 << 3)
-extern volatile uint8_t interrupt_flags;
+typedef enum
+{
+    FLAG_DOWNLOAD_COMPLETE = (1 << 0),
+    FLAG_STOP_EXPOSURE     = (1 << 1),
+    FLAG_NO_SERIAL         = (1 << 2),
+    FLAG_DUPLICATE_PULSE   = (1 << 3)
+} interruptflags;
+
+extern volatile interruptflags interrupt_flags;
 
 void set_initial_state();
 #endif

@@ -50,15 +50,15 @@ static volatile uint8_t gps_input_write = 0;
 
 
 #define GPS_PACKET_LENGTH 32
-static uint8_t gps_packet_type = UNKNOWN_PACKET;
+static gpspackettype gps_packet_type = UNKNOWN_PACKET;
 static uint8_t gps_packet_length = 0;
-static uint8_t gps_packet[GPS_PACKET_LENGTH];
+static uint8_t gps_packet[32];
 
 static uint8_t gps_output_buffer[256];
 static volatile uint8_t gps_output_read = 0;
 static volatile uint8_t gps_output_write = 0;
 
-volatile uint8_t gps_state = GPS_UNAVAILABLE;
+volatile gpsstate gps_state = GPS_UNAVAILABLE;
 volatile bool gps_record_synctime = false;
 
 timestamp gps_last_timestamp;

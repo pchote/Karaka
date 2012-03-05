@@ -16,13 +16,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MONITOR_WAIT 0x00
-#define MONITOR_START 0x01
-#define MONITOR_ACQUIRE 0x02
-#define MONITOR_STOP 0x03
+typedef enum
+{
+    MONITOR_WAIT    = 0,
+    MONITOR_START   = 1,
+    MONITOR_ACQUIRE = 2,
+    MONITOR_STOP    = 3
+} monitorstate;
 
 extern volatile bool monitor_level_high;
-extern volatile uint8_t monitor_mode;
+extern volatile monitorstate monitor_mode;
 extern bool monitor_simulate_camera;
 
 void monitor_init_state();

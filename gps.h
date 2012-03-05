@@ -21,15 +21,21 @@
 #define DLE 0x10
 
 // gps_state values
-#define GPS_UNAVAILABLE 0
-#define GPS_SYNCING     1
-#define GPS_ACTIVE      2
+typedef enum
+{
+    GPS_UNAVAILABLE = 0,
+    GPS_SYNCING     = 1,
+    GPS_ACTIVE      = 2
+} gpsstate;
 
 // gps packet types
-#define UNKNOWN_PACKET 0
-#define TRIMBLE_PACKET 1
-#define MAGELLAN_TIME_PACKET 2
-#define MAGELLAN_STATUS_PACKET 3
+typedef enum
+{
+    UNKNOWN_PACKET         = 0,
+    TRIMBLE_PACKET         = 1,
+    MAGELLAN_TIME_PACKET   = 2,
+    MAGELLAN_STATUS_PACKET = 3
+} gpspackettype;
 
 typedef struct
 {
@@ -42,7 +48,7 @@ typedef struct
     bool locked;
 } timestamp;
 
-extern volatile uint8_t gps_state;
+extern volatile gpsstate gps_state;
 extern volatile bool gps_record_synctime;
 
 extern timestamp gps_last_timestamp;
