@@ -55,14 +55,15 @@ void command_init_hardware()
 }
 
 /*
- * Reset data buffers on reset
+ * Reset input data buffer on reset
  */
 void command_init_state()
 {
     usart_packet_type = UNKNOWN_PACKET;
     usart_packet_length = usart_packet_expected_length = 0;
     usart_input_read = usart_input_write = 0;
-    usart_output_read = usart_output_write = 0;
+    // Don't clear the output buffer, as we may be in the middle of sending a packet
+    //usart_output_read = usart_output_write = 0;
 }
 
 /*
