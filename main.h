@@ -33,9 +33,23 @@
 #define BOOTFLAG_UPGRADE       0xFF
 #define BOOTFLAG_BOOT          0x42
 
+typedef enum
+{
+    MODE_PPSCOUNTER = 0,
+    MODE_HIGHRES = 1,
+} timingmode;
+extern uint8_t timing_mode;
+
+// Run millisecond timer without a prescaler:
+//   each tick is 0.1000us at 10MHz
+//   each tick is 0.0625us at 16MHz
+#define STOP_MILLISECOND_TIMER (TCCR1B = _BV(WGM12))
+#define START_MILLISECOND_TIMER (TCCR1B = _BV(WGM12)|_BV(CS10))
+
 extern uint16_t exposure_total;
 extern volatile uint16_t exposure_countdown;
 extern uint8_t align_boundary;
+extern volatile uint16_t millisecond_count;
 
 typedef enum
 {
@@ -54,9 +68,10 @@ typedef enum
     FLAG_STOP_EXPOSURE     = (1 << 1),
     FLAG_NO_SERIAL         = (1 << 2),
     FLAG_TIME_DRIFT        = (1 << 3),
-    FLAG_BEGIN_ALIGN       = (1 << 4),
-    FLAG_SEND_TIMESTAMP    = (1 << 5),
-    FLAG_SEND_TRIGGER      = (1 << 6),
+    FLAG_DUPLICATE_PPS     = (1 << 4),
+    FLAG_BEGIN_ALIGN       = (1 << 5),
+    FLAG_SEND_TIMESTAMP    = (1 << 6),
+    FLAG_SEND_TRIGGER      = (1 << 7),
 } interruptflags;
 
 extern volatile interruptflags interrupt_flags;

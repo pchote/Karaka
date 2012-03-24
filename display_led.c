@@ -384,7 +384,12 @@ void update_display()
             {
                 const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
                 set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
-                set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, exposure_total - display_countdown, exposure_total);
+                if (timing_mode == MODE_HIGHRES)
+                    set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
+                              (exposure_total - display_countdown) / 1000, exposure_total / 1000);
+                else
+                    set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
+                              exposure_total - display_countdown, exposure_total);
                 break;
             }
             case DISPLAY_EXPOSURE_PERCENT:

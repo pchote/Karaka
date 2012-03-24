@@ -336,8 +336,8 @@ void usart_process_buffer()
                 // First byte specifies whether the logic monitor is enabled
                 monitor_simulate_camera = !data[0];
 
-                // Second byte indicates mode (ms or normal)
-                // TODO
+                // Second byte specifies timing mode
+                timing_mode = (data[1] == MODE_HIGHRES) ? MODE_HIGHRES : MODE_PPSCOUNTER;
 
                 // Remaining bytes specify 16-bit exposure
                 //
@@ -346,15 +346,35 @@ void usart_process_buffer()
                 // these is safe to modify with interrupts enabled
                 exposure_countdown = data[2] | data[3] << 8;
                 exposure_total = exposure_countdown;
-                align_boundary = (exposure_total < 60) ? exposure_total : 60;
+
+                // align_boundary is 8-bit, so use a temporary variable
+                uint16_t temp_boundary = exposure_total;
+                if (timing_mode == MODE_HIGHRES)
+                    temp_boundary /= 1000;
+
+                if (temp_boundary < 1)
+                    temp_boundary = 1;
+                else if (align_boundary > 60)
+                    temp_boundary = 60;
+
+                align_boundary = temp_boundary;
 
                 // Set exposure display mode
-                if (exposure_total < 2)
-                    display_exposure_type = DISPLAY_EXPOSURE_HIDE;
-                else if (exposure_total > 999)
-                    display_exposure_type = DISPLAY_EXPOSURE_PERCENT;
+                display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
+                if (timing_mode == MODE_HIGHRES)
+                {
+                    if (exposure_total < 2000)
+                        display_exposure_type = DISPLAY_EXPOSURE_HIDE;
+                    else if (exposure_total % 1000)
+                        display_exposure_type = DISPLAY_EXPOSURE_PERCENT;
+                }
                 else
-                    display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
+                {
+                    if (exposure_total < 2)
+                        display_exposure_type = DISPLAY_EXPOSURE_HIDE;
+                    else if (exposure_total > 999)
+                        display_exposure_type = DISPLAY_EXPOSURE_PERCENT;
+                }
 
                 // Trigger fake camera output
                 if (monitor_simulate_camera)
@@ -366,6 +386,8 @@ void usart_process_buffer()
             break;
             case STOP_EXPOSURE:
                 // Disable the exposure countdown immediately
+                STOP_MILLISECOND_TIMER;
+                millisecond_count = 0;
                 countdown_mode = COUNTDOWN_DISABLED;
 
                 // These are only accessed from interrupt context

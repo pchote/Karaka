@@ -171,15 +171,6 @@ void gps_configure_gps()
 
 static void set_time(timestamp *t)
 {
-    // Enable the counter for the next PPS pulse
-    if (countdown_mode == COUNTDOWN_TRIGGERED)
-        countdown_mode = COUNTDOWN_ENABLED;
-    else if (countdown_mode == COUNTDOWN_ENABLED)
-    {
-        // We should always receive the PPS pulse before the time packet
-        send_debug_string_P(gps_msg_missed_pps);
-    }
-
     gps_last_timestamp = *t;
 
     // Mark that we have a valid timestamp
@@ -190,11 +181,32 @@ static void set_time(timestamp *t)
     if (countdown_mode == COUNTDOWN_SYNCING && (gps_last_timestamp.seconds % align_boundary == align_boundary - 1))
         countdown_mode = COUNTDOWN_ALIGNED;
 
-    if (gps_record_trigger)
+    if (timing_mode == MODE_PPSCOUNTER)
     {
-        download_timestamp = gps_last_timestamp;
-        gps_record_trigger = false;
-        interrupt_flags |= FLAG_SEND_TRIGGER;
+        // Enable the counter for the next PPS pulse
+        if (countdown_mode == COUNTDOWN_TRIGGERED)
+            countdown_mode = COUNTDOWN_ENABLED;
+        else if (countdown_mode == COUNTDOWN_ENABLED)
+        {
+            // We should always receive the PPS pulse before the time packet
+            send_debug_string_P(gps_msg_missed_pps);
+        }
+
+        if (gps_record_trigger)
+        {
+            download_timestamp = gps_last_timestamp;
+            gps_record_trigger = false;
+            interrupt_flags |= FLAG_SEND_TRIGGER;
+        }
+    }
+    else
+    {
+        // Reset rollover count
+        ATOMIC_BLOCK(ATOMIC_FORCEON)
+        {
+            while (millisecond_count > 1000)
+                millisecond_count -= 1000;
+        }
     }
 }
 

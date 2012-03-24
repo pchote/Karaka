@@ -174,7 +174,11 @@ void update_display()
                 case DISPLAY_EXPOSURE_REGULAR:
                 {
                     PGM_P msg = (!display_monitor_level_high) ? display_fmt_readout : display_fmt_expose;
-                    set_fmt_P(DISPLAY0, msg, exposure_total - display_countdown, exposure_total);
+                    if (timing_mode == MODE_HIGHRES)
+                        set_fmt_P(DISPLAY0, msg, (exposure_total - display_countdown) / 1000, display_total / 1000);
+                    else
+                        set_fmt_P(DISPLAY0, msg, exposure_total - display_countdown, exposure_total);
+
                     break;
                 }
             }
