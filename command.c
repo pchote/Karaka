@@ -28,8 +28,8 @@ static uint8_t usart_packet_length = 0;
 static uint8_t usart_packet[256];
 static uint8_t usart_packet_expected_length = 0;
 
-// Note: 256 size is used to allow overflow -> circular buffer
-// If buffer size is changed you will need to add explicit overflow checks
+// NOTE: This is set up as a circular buffer and makes use of uint8 overflow > 256
+// If you change the buffer length, add explicit behavior to handle looping
 static uint8_t usart_input_buffer[256];
 static uint8_t usart_input_read = 0;
 static volatile uint8_t usart_input_write = 0;
@@ -62,6 +62,7 @@ void command_init_state()
     usart_packet_type = UNKNOWN_PACKET;
     usart_packet_length = usart_packet_expected_length = 0;
     usart_input_read = usart_input_write = 0;
+
     // Don't clear the output buffer, as we may be in the middle of sending a packet
     //usart_output_read = usart_output_write = 0;
 }
@@ -234,8 +235,6 @@ ISR(USART0_RX_vect)
 /*
  * Process any data in the received buffer
  * Parses at most one packet - so must be called frequently
- * Note: this relies on the usart_input_buffer being 256 chars long so that
- * the data pointers automatically overflow at 256 to give a circular buffer
  */
 void usart_process_buffer()
 {

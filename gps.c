@@ -22,16 +22,16 @@
 uint8_t trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
 
 // Init Magellan: Disable the packets that the OEM software enables; enable timing and status packets
-uint8_t mgl_init[] PROGMEM =  "$PMGLI,00,G00,0,A\r\n"
-                                    "$PMGLI,00,B00,0,A\r\n"
-                                    "$PMGLI,00,B02,0,A\r\n"
-                                    "$PMGLI,00,D00,0,A\r\n"
-                                    "$PMGLI,00,E00,0,A\r\n"
-                                    "$PMGLI,00,F02,0,A\r\n"
-                                    "$PMGLI,00,R04,0,A\r\n"
-                                    "$PMGLI,00,S01,0,A\r\n"
-                                    "$PMGLI,00,A00,2,B\r\n"
-                                    "$PMGLI,00,H00,2,B\r\n";
+uint8_t mgl_init[] PROGMEM = "$PMGLI,00,G00,0,A\r\n"
+                             "$PMGLI,00,B00,0,A\r\n"
+                             "$PMGLI,00,B02,0,A\r\n"
+                             "$PMGLI,00,D00,0,A\r\n"
+                             "$PMGLI,00,E00,0,A\r\n"
+                             "$PMGLI,00,F02,0,A\r\n"
+                             "$PMGLI,00,R04,0,A\r\n"
+                             "$PMGLI,00,S01,0,A\r\n"
+                             "$PMGLI,00,A00,2,B\r\n"
+                             "$PMGLI,00,H00,2,B\r\n";
 
 char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse detected";
 char gps_msg_unknown_mgl_packet[] PROGMEM = "Unknown magellan packet";
@@ -42,14 +42,12 @@ char gps_fmt_checksum_failed[]    PROGMEM = "GPS Checksum failed. Got 0x%02x, ex
 static uint8_t gps_magellan_length = 0;
 static bool gps_magellan_locked = false;
 
-// NOTE: If buffer length is changed the read/write offsets
-// must be changed to int, and explicit overflow code added
+// NOTE: This is set up as a circular buffer and makes use of uint8 overflow > 256
+// If you change the buffer length, add explicit behavior to handle looping
 static uint8_t gps_input_buffer[256];
 static uint8_t gps_input_read = 0;
 static volatile uint8_t gps_input_write = 0;
 
-
-#define GPS_PACKET_LENGTH 32
 static gpspackettype gps_packet_type = UNKNOWN_PACKET;
 static uint8_t gps_packet_length = 0;
 static uint8_t gps_packet[32];
@@ -60,6 +58,7 @@ static volatile uint8_t gps_output_write = 0;
 
 volatile gpsstate gps_state = GPS_UNAVAILABLE;
 volatile bool gps_record_synctime = false;
+static uint8_t bytes_to_sync = 0;
 
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
@@ -178,7 +177,7 @@ static void set_time(timestamp *t)
         gps_last_synctime = gps_last_timestamp;
         gps_record_synctime = false;
         sei();
-        
+
         send_downloadtimestamp();
     }
     send_timestamp();
@@ -223,24 +222,20 @@ static uint8_t is_leap_year(uint16_t year)
  * Process any data in the received buffer
  * Parses at most one time packet - so must be called frequently
  * Returns true if the timestamp or status info has changed
- * Note: this relies on the gps_input_buffer being 256 chars long so that
- * the data pointers automatically overflow at 256 to give a circular buffer
  */
-
-static uint8_t bytes_to_sync = 0;
 void gps_process_buffer()
 {
     // Take a local copy of gps_input_write as it can be modified by interrupts
     uint8_t temp_write = gps_input_write;
-    
+
     // No new data has arrived
     if (gps_input_read == temp_write)
         return;
-    
+
     // Sync to the start of a packet if necessary
     for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)
     {
-        // Magellan packet            
+        // Magellan packet
         if (gps_input_buffer[(uint8_t)(gps_input_read - 1)] == '$' &&
             gps_input_buffer[(uint8_t)(gps_input_read - 2)] == '$' &&
             // End of previous packet
@@ -266,12 +261,12 @@ void gps_process_buffer()
                 send_debug_fmt_P(gps_fmt_skipped_bytes, bytes_to_sync);
 
             bytes_to_sync = 0;
-            
+
             // Rewind to the start of the packet
             gps_input_read -= 2;
             break;
         }
-        
+
         // Trimble
         if ( // Start of timing packet
             gps_input_buffer[gps_input_read] == 0xAB &&
@@ -287,7 +282,7 @@ void gps_process_buffer()
             break;
         }
     }
-    
+
     switch (gps_packet_type)
     {
         case UNKNOWN_PACKET:
@@ -309,7 +304,7 @@ void gps_process_buffer()
                     break;
 
                 gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
-            
+
                 // End of packet (Trimble timing packet is 21 bytes)
                 if (gps_packet_length == 21)
                 {
@@ -339,14 +334,14 @@ void gps_process_buffer()
                 }
             }
         break;
-        
+
         case MAGELLAN_TIME_PACKET:
         case MAGELLAN_STATUS_PACKET:
             for (; gps_input_read != temp_write; gps_input_read++)
             {
                 // Store the packet
                 gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
-                
+
                 // End of packet
                 if (gps_packet_length == gps_magellan_length)
                 {
@@ -356,14 +351,14 @@ void gps_process_buffer()
                     // the XORed bytes between the $$ and checksum.
                     //   gps_packet_length - 1 is the linefeed
                     //   gps_packet_length - 2 is the checksum byte
-                    if (gps_packet[gps_packet_length-1] == 0x0A)
+                    if (gps_packet[gps_packet_length - 1] == 0x0A)
                     {
                         uint8_t csm = gps_packet[2];
-                        for (int i = 3; i < gps_packet_length-2; i++)
+                        for (int i = 3; i < gps_packet_length - 2; i++)
                             csm ^= gps_packet[i];
 
                         // Verify the checksum
-                        if (csm == gps_packet[gps_packet_length-2])
+                        if (csm == gps_packet[gps_packet_length - 2])
                         {
                             if (gps_packet_type == MAGELLAN_TIME_PACKET)
                             {
@@ -382,7 +377,7 @@ void gps_process_buffer()
                                 // Is this a leap year?
                                 days[1] = is_leap_year(year) ? 29 : 28;
 
-                                while (day + correction > days[month-1])
+                                while (day + correction > days[month - 1])
                                 {
                                     if (++month > 12)
                                     {
@@ -390,7 +385,7 @@ void gps_process_buffer()
                                         year++;
                                         days[1] = is_leap_year(year) ? 29 : 28;
                                     }
-                                    correction -= days[month-1];
+                                    correction -= days[month - 1];
                                 }
                                 day += correction;
 
@@ -417,7 +412,7 @@ void gps_process_buffer()
                         }
                         else
                         {
-                            send_debug_fmt_P(gps_fmt_checksum_failed, csm, gps_packet[gps_packet_length-2]);
+                            send_debug_fmt_P(gps_fmt_checksum_failed, csm, gps_packet[gps_packet_length - 2]);
                             send_debug_raw(gps_packet, gps_packet_length);
                         }
                     }
