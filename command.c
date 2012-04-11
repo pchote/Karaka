@@ -72,7 +72,7 @@ void command_init_state()
 static void queue_send_byte(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
-    while (usart_output_write == usart_output_read - 1);
+    while (usart_output_write == (uint8_t)(usart_output_read - 1));
 
     usart_output_buffer[usart_output_write++] = b;
 

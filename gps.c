@@ -70,7 +70,7 @@ timestamp gps_last_synctime;
 static void queue_send_byte(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
-    while (gps_output_write == gps_output_read - 1);
+    while (gps_output_write == (uint8_t)(gps_output_read - 1));
 
     gps_output_buffer[gps_output_write++] = b;
 
