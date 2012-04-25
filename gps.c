@@ -293,12 +293,18 @@ void gps_process_buffer()
             // Write bytes into the packet buffer
             for (; gps_input_read != temp_write; gps_input_read++)
             {
-                // Skip the padding byte that occurs after a legitimate DLE
-                // Don't loop this: we want to parse the 3rd DLE if there are
-                // 4 in a row
-                if (gps_input_buffer[gps_input_read] == DLE &&
-                    gps_input_buffer[(uint8_t)(gps_input_read - 1)] == DLE)
-                    gps_input_read++;
+                // DLE bytes are padded with a second DLE to distinguish from the packet start/end bytes
+                if (gps_input_buffer[gps_input_read] == DLE)
+                {
+                    // Count previous number of DLEs - only want to skip if this is an odd count
+                    uint8_t count = 1;
+
+                    while (gps_input_buffer[(uint8_t)(gps_input_read - count)] == DLE)
+                        count++;
+
+                    if (!(count % 2))
+                        gps_input_read++;
+                }
 
                 if (gps_input_read == temp_write)
                     break;
