@@ -374,16 +374,20 @@ void gps_process_buffer()
                                     31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
                                 };
 
-                                // Add 19 years and 229 days
-                                uint16_t year = (((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF)) + 19;
+                                // Add 16 years (which always contains 4 leap days)
+                                uint16_t year = (((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF)) + 16;
                                 uint8_t month = gps_packet[8];
-                                uint8_t day = gps_packet[7];
-                                uint8_t correction = 229;
+
+                                // Add the rest as days to be resolved
+                                uint16_t day = gps_packet[7] + 1324;
+
+                                // Unknown 1 day offset
+                                day += 1;
 
                                 // Is this a leap year?
                                 days[1] = is_leap_year(year) ? 29 : 28;
 
-                                while (day + correction > days[month - 1])
+                                while (day > days[month - 1])
                                 {
                                     if (++month > 12)
                                     {
@@ -391,9 +395,8 @@ void gps_process_buffer()
                                         year++;
                                         days[1] = is_leap_year(year) ? 29 : 28;
                                     }
-                                    correction -= days[month - 1];
+                                    day -= days[month - 1];
                                 }
-                                day += correction;
 
                                 set_time(&(timestamp){
                                     .hours = gps_packet[4],
