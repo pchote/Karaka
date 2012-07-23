@@ -70,6 +70,7 @@ static void set_msg_P(uint8_t display, const char *msg)
 {
     // Select display
     send_byte(display, false);
+    _delay_us(700);
 
     // Iterate over the characters in the message
     for (uint8_t i = 0; i < 16; i++)
