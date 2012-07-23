@@ -11,7 +11,7 @@
 # 2 - Original board design plus monitor circuit
 # 3 - New board design
 
-HARDWARE_VERSION = 3
+HARDWARE_VERSION := 3
 
 PROGRAMMER = -c dragon_jtag -P usb
 OBJECTS    = command.o gps.o download.o monitor.o main.o
