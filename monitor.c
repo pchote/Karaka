@@ -87,24 +87,32 @@ void monitor_init_hardware()
 }
 
 /*
- * Check the status of the not-scan output on the camera
- * LOW indicates that the camera is currently downloading a frame, or is not undertaking an exposure sequence
- * HIGH indicates that the camera is actively exposing and is safe to disable
+ * Poll the logic output of the camera
+ * Logic LOW indicates that the camera is currently downloading a frame, or is not undertaking an exposure sequence
+ * Logic HIGH indicates that the camera is not reading out, and is safe to disable
+ * Polls for the logic level to become high, and then triggers an action after a debounce period
+ *
+ *   MONITOR_START: Align exposure period to time boundary and begin exposing
+ *   MONITOR_ACQUIRE: Send a "Download Complete" notification to the acquisition PC
+ *   MONITOR_STOP: Send a notification to the acquisition PC that it is safe to halt an aquisition sequence
  *
  * The signal is noisy when LOW, so wait for 0.5ms and double-check
  * that the level has indeed changed before acting
  */
 void monitor_tick()
 {
-    if (!debounce_waiting && monitor_level_high != bit_is_clear(MONITOR_PINREG, MONITOR_PIN))
+    // Debounce on level change if MONITOR_ACQUIRE, or high level for other modes
+    bool level_high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
+    bool needs_debounce = (monitor_mode == MONITOR_ACQUIRE) ?
+        monitor_level_high != level_high : level_high;
+
+    if (needs_debounce && !debounce_waiting)
     {
         debounce_waiting = true;
 
         // Set the prescaler to 1/1024; each tick = 64us.
-        // Also starts the timer counting
+        // Overflow after 8 ticks (0.512 ms)
         MONITOR_TCCR = MONITOR_TIMER_SCALE;
-
-        // Set timer2 to overflow after 8 ticks (0.512 ms)
         TCNT2 = 248;
     }
 }
@@ -117,29 +125,25 @@ void monitor_tick()
 ISR(TIMER2_OVF_vect)
 {
     debounce_waiting = false;
-    bool high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
-    if (monitor_level_high != high)
-    {
-        monitor_level_high = high;
+    monitor_level_high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
 
-        if (monitor_level_high)
+    if (monitor_level_high)
+    {
+        switch (monitor_mode)
         {
-            switch (monitor_mode)
-            {
-                case MONITOR_START:
-                    countdown_mode = COUNTDOWN_SYNCING;
-                    monitor_mode = MONITOR_ACQUIRE;
+            case MONITOR_START:
+                countdown_mode = COUNTDOWN_SYNCING;
+                monitor_mode = MONITOR_ACQUIRE;
                 break;
-                case MONITOR_ACQUIRE:
-                    interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
+            case MONITOR_ACQUIRE:
+                interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
                 break;
-                case MONITOR_STOP:
-                    interrupt_flags |= FLAG_STOP_EXPOSURE;
-                    monitor_mode = MONITOR_WAIT;
+            case MONITOR_STOP:
+                interrupt_flags |= FLAG_STOP_EXPOSURE;
+                monitor_mode = MONITOR_WAIT;
                 break;
-                default:
+            default:
                 break;
-            }
         }
     }
 
