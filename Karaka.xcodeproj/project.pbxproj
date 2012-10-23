@@ -95,7 +95,7 @@
 		DAE07DA414F1F48E005F3015 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0430;
+				LastUpgradeCheck = 0450;
 			};
 			buildConfigurationList = DAE07DA714F1F48E005F3015 /* Build configuration list for PBXProject "Karaka" */;
 			compatibilityVersion = "Xcode 3.2";
