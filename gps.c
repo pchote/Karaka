@@ -19,10 +19,10 @@
 #include "command.h"
 
 // Init Trimble: Enable only the 8F-AB primary timing packet
-uint8_t trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
+const uint8_t trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
 
 // Init Magellan: Disable the packets that the OEM software enables; enable timing and status packets
-uint8_t mgl_init[] PROGMEM = "$PMGLI,00,G00,0,A\r\n"
+const uint8_t mgl_init[] PROGMEM = "$PMGLI,00,G00,0,A\r\n"
                              "$PMGLI,00,B00,0,A\r\n"
                              "$PMGLI,00,B02,0,A\r\n"
                              "$PMGLI,00,D00,0,A\r\n"
@@ -33,11 +33,11 @@ uint8_t mgl_init[] PROGMEM = "$PMGLI,00,G00,0,A\r\n"
                              "$PMGLI,00,A00,2,B\r\n"
                              "$PMGLI,00,H00,2,B\r\n";
 
-char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse detected";
-char gps_msg_unknown_mgl_packet[] PROGMEM = "Unknown magellan packet";
-char gps_msg_bad_packet[]         PROGMEM = "Bad GPS packet";
-char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
-char gps_fmt_checksum_failed[]    PROGMEM = "GPS Checksum failed. Got 0x%02x, expected 0x%02x";
+const char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse detected";
+const char gps_msg_unknown_mgl_packet[] PROGMEM = "Unknown magellan packet";
+const char gps_msg_bad_packet[]         PROGMEM = "Bad GPS packet";
+const char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
+const char gps_fmt_checksum_failed[]    PROGMEM = "GPS Checksum failed. Got 0x%02x, expected 0x%02x";
 
 static uint8_t gps_magellan_length = 0;
 static bool gps_magellan_locked = false;

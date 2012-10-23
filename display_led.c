@@ -28,7 +28,7 @@
 #define DISPLAY3 PB4
 
 // Character data, stored in program memory
-const uint8_t char_defs[96][5] PROGMEM = {
+const const uint8_t char_defs[96][5] PROGMEM = {
     {0x00,0x20,0x40,0x60,0x80}, //   :0x20
     {0x04,0x24,0x44,0x60,0x84}, // ! :0x21
     {0x0A,0x2A,0x40,0x60,0x80}, // " :0x22
@@ -128,25 +128,25 @@ const uint8_t char_defs[96][5] PROGMEM = {
 };
 
 // Display messages
-char display_msg_noserial_left[]  PROGMEM = "NO SERIAL ";
-char display_msg_noserial_right[] PROGMEM = "CONNECTION";
-char display_msg_syncing_left[]   PROGMEM = "  SYNCING ";
-char display_msg_syncing_right[]  PROGMEM = "TO SERIAL ";
+const char display_msg_noserial_left[]  PROGMEM = "NO SERIAL ";
+const char display_msg_noserial_right[] PROGMEM = "CONNECTION";
+const char display_msg_syncing_left[]   PROGMEM = "  SYNCING ";
+const char display_msg_syncing_right[]  PROGMEM = "TO SERIAL ";
 
-char display_msg_idle_left[]  PROGMEM = "        ID";
-char display_msg_idle_right[] PROGMEM = "LE        ";
-char display_msg_align[]      PROGMEM = "  ALIGN   ";
-char display_msg_expose[]     PROGMEM = "  EXPOSE  ";
-char display_msg_readout[]    PROGMEM = "  READOUT ";
-char display_msg_wait_left[]  PROGMEM = " WAITING F";
-char display_msg_wait_right[] PROGMEM = "OR CAMERA ";
-char display_fmt_countdown[]  PROGMEM = " %03d/%03d  ";
+const char display_msg_idle_left[]  PROGMEM = "        ID";
+const char display_msg_idle_right[] PROGMEM = "LE        ";
+const char display_msg_align[]      PROGMEM = "  ALIGN   ";
+const char display_msg_expose[]     PROGMEM = "  EXPOSE  ";
+const char display_msg_readout[]    PROGMEM = "  READOUT ";
+const char display_msg_wait_left[]  PROGMEM = " WAITING F";
+const char display_msg_wait_right[] PROGMEM = "OR CAMERA ";
+const char display_fmt_countdown[]  PROGMEM = " %03d/%03d  ";
 
-char display_fmt_time_left[]  PROGMEM = "    %02d:%02d:";
-char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
+const char display_fmt_time_left[]  PROGMEM = "    %02d:%02d:";
+const char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
 
-char display_fmt_time_nolock_left[]  PROGMEM = "%02d:%02d:%02d N";
-char display_fmt_time_nolock_right[] PROGMEM = "O GPS LOCK";
+const char display_fmt_time_nolock_left[]  PROGMEM = "%02d:%02d:%02d N";
+const char display_fmt_time_nolock_right[] PROGMEM = "O GPS LOCK";
 
 volatile uint8_t display_brightness = 0xF7;
 
@@ -195,7 +195,7 @@ static void set_msg_P(uint8_t display, const char *msg)
     }
 }
 
-static void set_fmt_P(uint8_t display, char *fmt, ...)
+static void set_fmt_P(uint8_t display, const char *fmt, ...)
 {
     va_list args;
     char buf[11];

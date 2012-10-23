@@ -28,16 +28,16 @@
 #define DISPLAY1 0xC0
 
 // Display messages
-char display_msg_idle[]      PROGMEM = "      IDLE      ";
-char display_msg_wait[]      PROGMEM = " WAIT FOR CAMERA";
-char display_fmt_align[]     PROGMEM = " ALIGN   %03d/%03d";
-char display_fmt_expose[]    PROGMEM = " EXPOSE  %03d/%03d";
-char display_fmt_readout[]   PROGMEM = " READOUT %03d/%03d";
+const char display_msg_idle[]      PROGMEM = "      IDLE      ";
+const char display_msg_wait[]      PROGMEM = " WAIT FOR CAMERA";
+const char display_fmt_align[]     PROGMEM = " ALIGN   %03d/%03d";
+const char display_fmt_expose[]    PROGMEM = " EXPOSE  %03d/%03d";
+const char display_fmt_readout[]   PROGMEM = " READOUT %03d/%03d";
 
-char display_fmt_time[]        PROGMEM = "  %02d:%02d:%02d UTC  ";
-char display_fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO LOCK";
-char display_msg_noserial[]    PROGMEM = "    NO SERIAL   ";
-char display_msg_syncing[]     PROGMEM = "     SYNCING    ";
+const char display_fmt_time[]        PROGMEM = "  %02d:%02d:%02d UTC  ";
+const char display_fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO LOCK";
+const char display_msg_noserial[]    PROGMEM = "    NO SERIAL   ";
+const char display_msg_syncing[]     PROGMEM = "     SYNCING    ";
 
 /*
  * Queue data to the display
@@ -77,7 +77,7 @@ static void set_msg_P(uint8_t display, const char *msg)
         send_byte(pgm_read_byte(&msg[i]), true);
 }
 
-static void set_fmt_P(uint8_t display, char *fmt, ...)
+static void set_fmt_P(uint8_t display, const char *fmt, ...)
 {
     // Select display
     send_byte(display, false);

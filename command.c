@@ -18,10 +18,10 @@
 #include "gps.h"
 #include "monitor.h"
 
-char command_msg_bad_packet[]     PROGMEM = "Bad packet - ignoring";
-char command_fmt_got_packet[]     PROGMEM = "Got packet '%c'";
-char command_fmt_unknown_packet[] PROGMEM = "Unknown packet type '%c' - ignoring";
-char command_fmt_bad_checksum[]   PROGMEM = "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.";
+const char command_msg_bad_packet[]     PROGMEM = "Bad packet - ignoring";
+const char command_fmt_got_packet[]     PROGMEM = "Got packet '%c'";
+const char command_fmt_unknown_packet[] PROGMEM = "Unknown packet type '%c' - ignoring";
+const char command_fmt_bad_checksum[]   PROGMEM = "Command 0x%02x checksum failed. Expected 0x%02x, calculated 0x%02x.";
 
 static uint8_t usart_packet_type = UNKNOWN_PACKET;
 static uint8_t usart_packet_length = 0;
@@ -187,7 +187,7 @@ void send_downloadcomplete()
     queue_data(DOWNLOADCOMPLETE, NULL, 0);
 }
 
-void send_debug_fmt_P(char *fmt, ...)
+void send_debug_fmt_P(const char *fmt, ...)
 {
     va_list args;
     char buf[128];
@@ -200,7 +200,7 @@ void send_debug_fmt_P(char *fmt, ...)
     queue_data(DEBUG_STRING, (uint8_t *)buf, (uint8_t)len);
 }
 
-void send_debug_string_P(char *string)
+void send_debug_string_P(const char *string)
 {
     queue_data_P(DEBUG_STRING, (uint8_t *)string, strlen_P(string));
 }

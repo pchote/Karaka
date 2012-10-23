@@ -20,8 +20,8 @@
 #include "command.h"
 #include "monitor.h"
 
-char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
-char msg_no_serial[]               PROGMEM = "GPS serial connection lost";
+const char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
+const char msg_no_serial[]       PROGMEM = "GPS serial connection lost";
 
 uint8_t exposure_total = 0;
 volatile uint8_t exposure_countdown = 0;

@@ -34,8 +34,8 @@ typedef enum
 
 void command_init_hardware();
 void command_init_state();
-void send_debug_fmt_P(char *fmt, ...);
-void send_debug_string_P(char *string);
+void send_debug_fmt_P(const char *fmt, ...);
+void send_debug_string_P(const char *string);
 void send_debug_raw(uint8_t *data, uint8_t length);
 void send_timestamp();
 void send_downloadtimestamp();
