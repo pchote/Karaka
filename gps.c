@@ -66,7 +66,7 @@ timestamp gps_last_synctime;
 /*
  * Add a byte to the send queue and start sending data if necessary
  */
-static void queue_send_byte(uint8_t b)
+void gps_send_raw(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
     while (gps_output_write == (uint8_t)(gps_output_read - 1));
@@ -140,13 +140,13 @@ void gps_init_state()
 
     // Send Trimble init data
     for (uint8_t i = 0; i < 9; i++)
-        queue_send_byte(pgm_read_byte(&trimble_init[i]));
+        gps_send_raw(pgm_read_byte(&trimble_init[i]));
 
     // Send Magellan init data
     uint8_t i = 0, b = pgm_read_byte(&mgl_init[0]);
     do
     {
-        queue_send_byte(b);
+        gps_send_raw(b);
         b = pgm_read_byte(&mgl_init[++i]);
     } while (b != '\0');
 }
@@ -231,6 +231,15 @@ void gps_process_buffer()
     // No new data has arrived
     if (gps_input_read == temp_write)
         return;
+
+    // Relay mode - forward all data to the PC
+    if (countdown_mode == COUNTDOWN_RELAY)
+    {
+        for (; gps_input_read != temp_write; gps_input_read++)
+            queue_send_byte(gps_input_buffer[gps_input_read]);
+
+        return;
+    }
 
     // Sync to the start of a packet if necessary
     for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)

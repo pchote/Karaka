@@ -70,7 +70,7 @@ void command_init_state()
 /*
  * Add a byte to the send queue and start sending data if necessary
  */
-static void queue_send_byte(uint8_t b)
+void queue_send_byte(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
     while (usart_output_write == (uint8_t)(usart_output_read - 1));
@@ -245,6 +245,15 @@ void usart_process_buffer()
     if (usart_input_read == temp_write)
         return;
 
+    // Relay mode - forward all data to the GPS
+    if (countdown_mode == COUNTDOWN_RELAY)
+    {
+        for (; usart_input_read != temp_write; usart_input_read++)
+            gps_send_raw(usart_input_buffer[usart_input_read]);
+
+        return;
+    }
+
     // Sync to the start of a packet if necessary
     // Packet format: $$<type><data length><data 0>...<data length-1><checksum>\r\n
     for (; usart_packet_type == UNKNOWN_PACKET && usart_input_read != temp_write; usart_input_read++)
@@ -338,6 +347,13 @@ void usart_process_buffer()
             case SIMULATE_CAMERA:
                 // Enable or disable simulating the camera status output
                 simulate_camera_enable(*data);
+            break;
+            case START_RELAY:
+                countdown_mode = COUNTDOWN_RELAY;
+
+                // Set USB usart baud rate to 9600
+                UBRR0H = 0;
+                UBRR0L = 103;
             break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);

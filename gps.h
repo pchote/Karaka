@@ -54,6 +54,7 @@ extern volatile bool gps_record_synctime;
 extern timestamp gps_last_timestamp;
 extern timestamp gps_last_synctime;
 
+void gps_send_raw(uint8_t b);
 void gps_init_hardware();
 void gps_init_state();
 void gps_process_buffer();

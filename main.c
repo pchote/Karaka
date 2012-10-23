@@ -197,7 +197,7 @@ ISR(PCINT3_vect)
 #endif
 
     // Don't count down unless we have a valid exposure time and the GPS is locked
-    if (gps_state == GPS_ACTIVE) // Do we have a GPS lock?
+    if (gps_state == GPS_ACTIVE && countdown_mode != COUNTDOWN_RELAY)
     {
         // Send a warning about the duplicate pulse
         if (countdown_mode == COUNTDOWN_TRIGGERED)
@@ -217,4 +217,6 @@ ISR(PCINT3_vect)
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
     }
+    else if (countdown_mode == COUNTDOWN_RELAY)
+        trigger_download();
 }

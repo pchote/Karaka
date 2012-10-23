@@ -27,7 +27,8 @@ typedef enum
     COUNTDOWN_DISABLED  = 0,
     COUNTDOWN_SYNCING   = 1,
     COUNTDOWN_ENABLED   = 2,
-    COUNTDOWN_TRIGGERED = 3
+    COUNTDOWN_TRIGGERED = 3,
+    COUNTDOWN_RELAY     = 4,
 } countdownstate;
 extern volatile countdownstate countdown_mode;
 
