@@ -235,7 +235,7 @@ void gps_process_buffer()
     // Relay mode - forward all data to the PC
     if (countdown_mode == COUNTDOWN_RELAY)
         for (uint8_t temp_read = gps_input_read; temp_read != temp_write; temp_read++)
-            queue_send_byte(gps_input_buffer[temp_read]);
+            command_send_raw(gps_input_buffer[temp_read]);
 
     // Sync to the start of a packet if necessary
     for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)

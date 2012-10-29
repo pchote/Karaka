@@ -70,7 +70,7 @@ void command_init_state()
 /*
  * Add a byte to the send queue and start sending data if necessary
  */
-void queue_send_byte(uint8_t b)
+void command_send_raw(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
     while (usart_output_write == (uint8_t)(usart_output_read - 1));
@@ -91,54 +91,54 @@ void queue_send_byte(uint8_t b)
 static void queue_data(uint8_t type, uint8_t *data, uint8_t length)
 {
     // Data packet starts with $$ and packet type (which != $)
-    queue_send_byte('$');
-    queue_send_byte('$');
-    queue_send_byte(type);
+    command_send_raw('$');
+    command_send_raw('$');
+    command_send_raw(type);
 
     // Length of data section
-    queue_send_byte(length);
+    command_send_raw(length);
 
     // Packet data - calculate checksum as we go
     uint8_t csm = 0;
     for (uint8_t i = 0; i < length; i++)
     {
-        queue_send_byte(data[i]);
+        command_send_raw(data[i]);
         csm ^= data[i];
     }
 
     // Checksum
-    queue_send_byte(csm);
+    command_send_raw(csm);
 
     // Data packet ends a linefeed and carriage return
-    queue_send_byte('\r');
-    queue_send_byte('\n');
+    command_send_raw('\r');
+    command_send_raw('\n');
 }
 
 static void queue_data_P(uint8_t type, uint8_t *data, uint8_t length)
 {
     // Data packet starts with $$ and packet type (which != $)
-    queue_send_byte('$');
-    queue_send_byte('$');
-    queue_send_byte(type);
+    command_send_raw('$');
+    command_send_raw('$');
+    command_send_raw(type);
 
     // Length of data section
-    queue_send_byte(length);
+    command_send_raw(length);
 
     // Packet data - calculate checksum as we go
     uint8_t csm = 0;
     for (uint8_t i = 0; i < length; i++)
     {
         uint8_t c = pgm_read_byte(&data[i]);
-        queue_send_byte(c);
+        command_send_raw(c);
         csm ^= c;
     }
 
     // Checksum
-    queue_send_byte(csm);
+    command_send_raw(csm);
 
     // Data packet ends a linefeed and carriage return
-    queue_send_byte('\r');
-    queue_send_byte('\n');
+    command_send_raw('\r');
+    command_send_raw('\n');
 }
 
 /*
