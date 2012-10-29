@@ -141,10 +141,8 @@ const char display_msg_readout[]    PROGMEM = "  READOUT ";
 const char display_msg_wait_left[]  PROGMEM = " WAITING F";
 const char display_msg_wait_right[] PROGMEM = "OR CAMERA ";
 const char display_fmt_countdown[]  PROGMEM = " %03d/%03d  ";
-const char display_msg_relay_tl[]   PROGMEM = "     RELAY";
-const char display_msg_relay_tr[]   PROGMEM = " MODE     ";
-const char display_msg_relay_bl[]   PROGMEM = "CYCLE POWE";
-const char display_msg_relay_br[]   PROGMEM = "R TO RESET";
+const char display_msg_relay_left[] PROGMEM = "     RELAY";
+const char display_msg_relay_right[]PROGMEM = " MODE     ";
 
 const char display_fmt_time_left[]  PROGMEM = "    %02d:%02d:";
 const char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
@@ -278,17 +276,6 @@ void update_display()
         update_display_brightness();
     }
 
-    // Relay mode - Nothing to display
-    if (countdown_mode == COUNTDOWN_RELAY)
-    {
-        set_msg_P(DISPLAY0, display_msg_relay_tl);
-        set_msg_P(DISPLAY1, display_msg_relay_tr);
-
-        set_msg_P(DISPLAY2, display_msg_relay_bl);
-        set_msg_P(DISPLAY3, display_msg_relay_br);
-        return;
-    }
-
     // Update the display every second or when the GPS state changes
     static uint8_t display_gps_seconds = 255; // Bogus value to force redraw on first run
     static uint8_t display_gps_state = GPS_UNAVAILABLE;
@@ -305,7 +292,12 @@ void update_display()
     uint8_t display_monitor_level_high = monitor_level_high;
 
     // Update top row (status and countdown)
-    if (display_monitor_mode == MONITOR_START || display_monitor_mode == MONITOR_STOP)
+    if (display_countdown_mode == COUNTDOWN_RELAY)
+    {
+        set_msg_P(DISPLAY0, display_msg_relay_left);
+        set_msg_P(DISPLAY1, display_msg_relay_right);
+    }
+    else if (display_monitor_mode == MONITOR_START || display_monitor_mode == MONITOR_STOP)
     {
         set_msg_P(DISPLAY0, display_msg_wait_left);
         set_msg_P(DISPLAY1, display_msg_wait_right);
