@@ -38,14 +38,24 @@ static uint8_t usart_output_buffer[256];
 static volatile uint8_t usart_output_read = 0;
 static volatile uint8_t usart_output_write = 0;
 
+static void set_9600_baud()
+{
+    UBRR0H = 0;
+    UBRR0L = 103;
+}
+
+static void set_250k_baud()
+{
+    UBRR0H = 0;
+    UBRR0L = 0x03;
+}
+
 /*
  * Initialize usart0 for talking to the acquisition PC via USB
  */
 void command_init_hardware()
 {
-    // Set the baudrate to 250k (0% error)
-    UBRR0H = 0;
-    UBRR0L = 0x03;
+    set_250k_baud();
 
     // Enable receive, transmit, data received interrupt
     UCSR0B = _BV(RXEN0)|_BV(TXEN0)|_BV(RXCIE0);
@@ -59,6 +69,8 @@ void command_init_hardware()
  */
 void command_init_state()
 {
+    set_250k_baud();
+
     usart_packet_type = UNKNOWN_PACKET;
     usart_packet_length = usart_packet_expected_length = 0;
     usart_input_read = usart_input_write = 0;
@@ -251,6 +263,20 @@ void usart_process_buffer()
         for (; usart_input_read != temp_write; usart_input_read++)
             gps_send_raw(usart_input_buffer[usart_input_read]);
 
+        // Check for a reset command (usart_input_buffer full of 0)
+        if (usart_input_buffer[usart_input_read] == 0 &&
+            usart_input_buffer[usart_input_read + 1] == 0)
+        {
+            bool reset = true;
+            for (uint16_t i = 0; i < 256; i++)
+                if (usart_input_buffer[i] != 0)
+                {
+                    reset = false;
+                    break;
+                }
+            if (reset)
+                set_initial_state();
+        }
         return;
     }
 
@@ -350,10 +376,7 @@ void usart_process_buffer()
             break;
             case START_RELAY:
                 countdown_mode = COUNTDOWN_RELAY;
-
-                // Set USB usart baud rate to 9600
-                UBRR0H = 0;
-                UBRR0L = 103;
+                set_9600_baud();
             break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);
