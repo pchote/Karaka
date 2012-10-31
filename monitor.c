@@ -31,11 +31,8 @@
     #define MONITOR_DDR DDRE
     #define MONITOR_DD DDE4
 
-    #define MONITOR_TIMSK TIMSK
-    #define MONITOR_TCCR TCCR2
-    #define MONITOR_TIMER_SCALE _BV(CS02)|_BV(CS00)
-
-    #define SIMULATE_TIMSK ETIMSK
+    #define MONITOR_STOP_TIMER (TCCR2 = _BV(WGM21))
+    #define MONITOR_START_TIMER (TCCR2 = _BV(WGM21)|_BV(CS21)|_BV(CS20))
 #else
     #define MONITOR_PORT PORTD
     #define MONITOR_PINREG PIND
@@ -43,13 +40,12 @@
     #define MONITOR_DDR DDRD
     #define MONITOR_DD DDD6
 
-    #define MONITOR_TIMSK TIMSK2
-    #define MONITOR_TCCR TCCR2B
-    #define MONITOR_TIMER_SCALE _BV(CS02)|_BV(CS01)|_BV(CS00);
-
-    #define SIMULATE_TIMSK TIMSK3
-
+    #define MONITOR_STOP_TIMER (TCCR2B = 0)
+    #define MONITOR_START_TIMER (TCCR2B = _BV(CS22))
 #endif
+
+#define SIMULATE_STOP_TIMER (TCCR3B = _BV(WGM32))
+#define SIMULATE_START_TIMER (TCCR3B = _BV(WGM32)|_BV(CS32)|_BV(CS30))
 
 bool monitor_simulate_camera = false;
 static volatile bool debounce_waiting = false;
@@ -67,8 +63,7 @@ void monitor_init_state()
     monitor_mode = MONITOR_WAIT;
 
     // Disable timers
-    TCCR3B = 0;
-    MONITOR_TCCR = 0;
+    MONITOR_STOP_TIMER;
 
     simulate_camera_enable(false);
 }
@@ -78,9 +73,14 @@ void monitor_init_state()
  */
 void monitor_init_hardware()
 {
-    // Enable timer2 overflow interrupt
-    MONITOR_TIMSK |= _BV(TOIE2);
-    SIMULATE_TIMSK |= _BV(TOIE3);
+#if HARDWARE_VERSION < 3
+    TIMSK |= _BV(OCIE2A);
+    ETIMSK |= _BV(OCIE3A);
+#else
+    TIMSK2 |= _BV(OCIE2A);
+    TCCR2A = _BV(WGM21);
+    TIMSK3 |= _BV(OCIE3A);
+#endif
 
     // Enable pullup resistor on monitor input
     MONITOR_PORT |= _BV(MONITOR_PIN);
@@ -109,11 +109,7 @@ void monitor_tick()
     if (needs_debounce && !debounce_waiting)
     {
         debounce_waiting = true;
-
-        // Set the prescaler to 1/1024; each tick = 64us.
-        // Overflow after 8 ticks (0.512 ms)
-        MONITOR_TCCR = MONITOR_TIMER_SCALE;
-        TCNT2 = 248;
+        MONITOR_START_TIMER;
     }
 }
 
@@ -122,8 +118,9 @@ void monitor_tick()
  * Checks whether the level is still changed, and triggers
  * the appropriate actions for the level change.
  */
-ISR(TIMER2_OVF_vect)
+ISR(TIMER2_COMPA_vect)
 {
+    MONITOR_STOP_TIMER;
     debounce_waiting = false;
     monitor_level_high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
 
@@ -146,9 +143,6 @@ ISR(TIMER2_OVF_vect)
                 break;
         }
     }
-
-    // Disable timer
-    MONITOR_TCCR = 0;
 }
 
 void simulate_camera_enable(bool enabled)
@@ -181,12 +175,8 @@ void simulate_camera_enable(bool enabled)
 static void set_output_low(uint16_t timer_cnt)
 {
     MONITOR_PORT |= _BV(MONITOR_PIN);
-
-    cli();
-    // Define timer tick as 64us
-    TCCR3B = _BV(CS30)|_BV(CS32);
-    TCNT3 = timer_cnt;
-    sei();
+    OCR3A = timer_cnt;
+    SIMULATE_START_TIMER;
 }
 
 /*
@@ -194,7 +184,7 @@ static void set_output_low(uint16_t timer_cnt)
  */
 void simulate_camera_startup()
 {
-    set_output_low(0x0000);
+    set_output_low(0xFFFF);
 }
 
 /*
@@ -202,7 +192,7 @@ void simulate_camera_startup()
  */
 void simulate_camera_shutdown()
 {
-    set_output_low(0xC2F6);
+    set_output_low(0x3D08);
 }
 
 /*
@@ -210,14 +200,14 @@ void simulate_camera_shutdown()
  */
 void simulate_camera_download()
 {
-    set_output_low(0x3CAF);
+    set_output_low(0xC349);
 }
 
 /*
- * Timer3 overflow interrupt
+ * Timer3 compare match interrupt
  * Return monitor level to high and disable timer
  */
-ISR(TIMER3_OVF_vect)
+ISR(TIMER3_COMPA_vect)
 {
     MONITOR_PORT &= ~_BV(MONITOR_PIN);
     TCCR3B = 0;

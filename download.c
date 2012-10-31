@@ -22,13 +22,17 @@
     #define DOWNLOAD_DD DDA0
     #define DOWNLOAD_TIMSK TIMSK
     #define DOWNLOAD_TCCR TCCR0
+    #define DOWNLOAD_STOP_TIMER (TCCR0 = 0)
+    #define DOWNLOAD_START_TIMER (TCCR0B = _BV(CS02))
 #else
     #define DOWNLOAD_PORT PORTD
     #define DOWNLOAD_DDR DDRD
     #define DOWNLOAD_PIN PD5
     #define DOWNLOAD_DD DDD5
     #define DOWNLOAD_TIMSK TIMSK0
-    #define DOWNLOAD_TCCR TCCR0B
+    #define DOWNLOAD_TCCR TCCR0A
+    #define DOWNLOAD_STOP_TIMER (TCCR0B = 0)
+    #define DOWNLOAD_START_TIMER (TCCR0B = _BV(CS01)|_BV(CS00))
 #endif
 
 /*
@@ -40,11 +44,17 @@ void download_init_hardware()
     DOWNLOAD_DDR |= _BV(DOWNLOAD_DD);
     DOWNLOAD_PORT &= ~_BV(DOWNLOAD_PIN);
 
-    // Enable timer0 overflow interrupt
-    DOWNLOAD_TIMSK |= _BV(TOIE0);
+    // Enable compare interrupt
+    DOWNLOAD_TIMSK |= _BV(OCIE0A);
+
+    // Set timer to compare match after 0.512 ms
+    OCR0A = 127;
+
+    // Set timer to reset to 0 on compare match
+    DOWNLOAD_TCCR = _BV(WGM01);
 
     // Disable the timer until it is needed
-    DOWNLOAD_TCCR = 0x00;
+    DOWNLOAD_STOP_TIMER;
 }
 
 /*
@@ -55,12 +65,7 @@ void trigger_download()
 {
     // Pull PD5 output low to start the download
     DOWNLOAD_PORT |= _BV(DOWNLOAD_PIN);
-
-    // Set the timer tick to 64us
-    DOWNLOAD_TCCR = _BV(CS02)|_BV(CS00);
-
-    // Set timer to overflow after 8 ticks (0.512 ms)
-    TCNT0 = 248;
+    DOWNLOAD_START_TIMER;
 
     // Trigger a fake download
     if (monitor_simulate_camera)
@@ -68,11 +73,11 @@ void trigger_download()
 }
 
 /*
- * timer0 overflow interrupt
+ * timer0 compare interrupt
  * Restores camera output line high
  */
-ISR(TIMER0_OVF_vect)
+ISR(TIMER0_COMPA_vect)
 {
+    DOWNLOAD_STOP_TIMER;
     DOWNLOAD_PORT &= ~_BV(DOWNLOAD_PIN);
-    DOWNLOAD_TCCR = 0x00;
 }
