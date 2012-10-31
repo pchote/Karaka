@@ -48,7 +48,11 @@ void download_init_hardware()
     DOWNLOAD_TIMSK |= _BV(OCIE0A);
 
     // Set timer to compare match after 0.512 ms
+#if HARDWARE_VERSION < 4
     OCR0A = 127;
+#else
+    OCR0A = 79;
+#endif
 
     // Set timer to reset to 0 on compare match
     DOWNLOAD_TCCR = _BV(WGM01);

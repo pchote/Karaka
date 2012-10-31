@@ -10,13 +10,15 @@
 # 1 - Original board design, no monitor
 # 2 - Original board design plus monitor circuit
 # 3 - New board design
+# 4 - New board design, underclocked to 10MHz
 
 HARDWARE_VERSION := 3
 
 PROGRAMMER = -c dragon_jtag -P usb
 OBJECTS    = command.o gps.o download.o monitor.o main.o
 
-ifeq ($(HARDWARE_VERSION),3)
+
+ifeq (1, $(shell if [ "${HARDWARE_VERSION}" -gt "2" ]; then echo 1; fi))
 	DEVICE = atmega1284p
     FUSES  = -U hfuse:w:0x19:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
     OBJECTS += display_led.o

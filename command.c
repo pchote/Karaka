@@ -41,13 +41,23 @@ static volatile uint8_t usart_output_write = 0;
 static void set_9600_baud()
 {
     UBRR0H = 0;
-    UBRR0L = 103;
+#if HARDWARE_VERSION < 4
+    UBRR0L = 0x67;
+#else
+    UCSR0A = _BV(U2X0);
+    UBRR0L = 0x81;
+#endif
 }
 
 static void set_250k_baud()
 {
     UBRR0H = 0;
+#if HARDWARE_VERSION < 4
     UBRR0L = 0x03;
+#else
+    UCSR0A = _BV(U2X0);
+    UBRR0L = 0x04;
+#endif
 }
 
 /*

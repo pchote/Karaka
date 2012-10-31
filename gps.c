@@ -101,7 +101,11 @@ void gps_init_hardware()
 {
     // Set baud rate to 9600
     UBRR1H = 0;
+#if HARDWARE_VERSION < 4
     UBRR1L = 0xCF;
+#else
+    UBRR1L = 0x81;
+#endif
     UCSR1A = _BV(U2X1);
 
     // Enable receive, transmit, data received interrupt

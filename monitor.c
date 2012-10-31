@@ -110,10 +110,12 @@ static void set_output_low(uint16_t timer_cnt)
 }
 
 /*
- * Set output high, delay for 4.19 seconds, then low
+ * Set output high, delay for max time, then low
  */
 void simulate_camera_startup()
 {
+    // 4.19 seconds @ 16MHz
+    // 6.71 seconds @ 10MHz
     set_output_low(0xFFFF);
 }
 
@@ -122,7 +124,11 @@ void simulate_camera_startup()
  */
 void simulate_camera_shutdown()
 {
+#if HARDWARE_VERSION < 4
     set_output_low(0x3D08);
+#else
+    set_output_low(0x2625);
+#endif
 }
 
 /*
@@ -130,7 +136,11 @@ void simulate_camera_shutdown()
  */
 void simulate_camera_download()
 {
+#if HARDWARE_VERSION < 4
     set_output_low(0xC349);
+#else
+    set_output_low(0x7A11);
+#endif
 }
 
 /*

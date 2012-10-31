@@ -17,7 +17,11 @@
 #include <string.h>
 #include <stdint.h>
 
-#define F_CPU 16000000UL  // 16 MHz
+#if HARDWARE_VERSION < 4
+#define F_CPU 16000000UL
+#else
+#define F_CPU 10000000UL
+#endif
 
 extern uint8_t exposure_total;
 extern volatile uint8_t exposure_countdown;
