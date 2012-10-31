@@ -32,7 +32,6 @@ void monitor_init_state();
 void monitor_init_hardware();
 void monitor_tick();
 
-void simulate_camera_enable(bool enabled);
 void simulate_camera_startup();
 void simulate_camera_shutdown();
 void simulate_camera_download();

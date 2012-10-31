@@ -61,8 +61,8 @@ volatile interruptflags interrupt_flags = 0;
  *
  * Timer0: Download pulse length
  * Timer1: GPS serial timeout
- * Timer2: Camera status debounce delay
- * Timer3: Fake camera monitor level delays
+ * Timer2: Unused
+ * Timer3: Monitor debounce and simulated level delays
  *
  * Usart0: USB <-> Acquisition PC
  * Usart1: RS232 <-> GPS
@@ -94,8 +94,8 @@ volatile interruptflags interrupt_flags = 0;
  *
  * Timer0: Download pulse length
  * Timer1: GPS serial timeout
- * Timer2: Camera status debounce delay
- * Timer3: Fake camera monitor level delays
+ * Timer2: Unused
+ * Timer3: Monitor debounce and simulated level delays
  *
  * Usart0: USB <-> Acquisition PC
  * Usart1: RS232 <-> GPS

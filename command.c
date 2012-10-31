@@ -372,7 +372,7 @@ void usart_process_buffer()
             break;
             case SIMULATE_CAMERA:
                 // Enable or disable simulating the camera status output
-                simulate_camera_enable(*data);
+                monitor_simulate_camera = *data;
             break;
             case START_RELAY:
                 countdown_mode = COUNTDOWN_RELAY;

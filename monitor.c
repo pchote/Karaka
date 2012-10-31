@@ -30,25 +30,18 @@
     #define MONITOR_PIN PE4
     #define MONITOR_DDR DDRE
     #define MONITOR_DD DDE4
-
-    #define MONITOR_STOP_TIMER (TCCR2 = _BV(WGM21))
-    #define MONITOR_START_TIMER (TCCR2 = _BV(WGM21)|_BV(CS21)|_BV(CS20))
 #else
     #define MONITOR_PORT PORTD
     #define MONITOR_PINREG PIND
     #define MONITOR_PIN PD6
     #define MONITOR_DDR DDRD
     #define MONITOR_DD DDD6
-
-    #define MONITOR_STOP_TIMER (TCCR2B = 0)
-    #define MONITOR_START_TIMER (TCCR2B = _BV(CS22))
 #endif
 
-#define SIMULATE_STOP_TIMER (TCCR3B = _BV(WGM32))
-#define SIMULATE_START_TIMER (TCCR3B = _BV(WGM32)|_BV(CS32)|_BV(CS30))
+#define MONITOR_STOP_TIMER (TCCR3B = _BV(WGM32))
+#define MONITOR_START_TIMER (TCCR3B = _BV(WGM32)|_BV(CS32)|_BV(CS30))
 
 bool monitor_simulate_camera = false;
-static volatile bool debounce_waiting = false;
 
 volatile bool monitor_level_high = false;
 volatile monitorstate monitor_mode = MONITOR_WAIT;
@@ -58,14 +51,13 @@ volatile monitorstate monitor_mode = MONITOR_WAIT;
  */
 void monitor_init_state()
 {
-    debounce_waiting = false;
     monitor_level_high = false;
     monitor_mode = MONITOR_WAIT;
 
     // Disable timers
     MONITOR_STOP_TIMER;
 
-    simulate_camera_enable(false);
+    monitor_simulate_camera = false;
 }
 
 /*
@@ -74,11 +66,8 @@ void monitor_init_state()
 void monitor_init_hardware()
 {
 #if HARDWARE_VERSION < 3
-    TIMSK |= _BV(OCIE2A);
     ETIMSK |= _BV(OCIE3A);
 #else
-    TIMSK2 |= _BV(OCIE2A);
-    TCCR2A = _BV(WGM21);
     TIMSK3 |= _BV(OCIE3A);
 #endif
 
@@ -101,70 +90,10 @@ void monitor_init_hardware()
  */
 void monitor_tick()
 {
-    // Debounce on level change if MONITOR_ACQUIRE, or high level for other modes
-    bool level_high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
-    bool needs_debounce = (monitor_mode == MONITOR_ACQUIRE) ?
-        monitor_level_high != level_high : level_high;
-
-    if (needs_debounce && !debounce_waiting)
+    if (!monitor_simulate_camera &&
+        monitor_level_high != bit_is_clear(MONITOR_PINREG, MONITOR_PIN))
     {
-        debounce_waiting = true;
         MONITOR_START_TIMER;
-    }
-}
-
-/*
- * timer2 overflow interrupt
- * Checks whether the level is still changed, and triggers
- * the appropriate actions for the level change.
- */
-ISR(TIMER2_COMPA_vect)
-{
-    MONITOR_STOP_TIMER;
-    debounce_waiting = false;
-    monitor_level_high = bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
-
-    if (monitor_level_high)
-    {
-        switch (monitor_mode)
-        {
-            case MONITOR_START:
-                countdown_mode = COUNTDOWN_SYNCING;
-                monitor_mode = MONITOR_ACQUIRE;
-                break;
-            case MONITOR_ACQUIRE:
-                interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
-                break;
-            case MONITOR_STOP:
-                interrupt_flags |= FLAG_STOP_EXPOSURE;
-                monitor_mode = MONITOR_WAIT;
-                break;
-            default:
-                break;
-        }
-    }
-}
-
-void simulate_camera_enable(bool enabled)
-{
-    monitor_simulate_camera = enabled;
-
-    // Set monitor pin as I/O
-    if (enabled)
-    {
-        // Set output
-        MONITOR_DDR |= _BV(MONITOR_DD);
-
-        // Set output high
-        MONITOR_PORT &= ~_BV(MONITOR_PIN);
-    }
-    else
-    {
-        // Set input
-        MONITOR_DDR &= ~_BV(MONITOR_DD);
-
-        // Enable Pullup resistor
-        MONITOR_PORT |= _BV(MONITOR_PIN);
     }
 }
 
@@ -174,9 +103,10 @@ void simulate_camera_enable(bool enabled)
  */
 static void set_output_low(uint16_t timer_cnt)
 {
-    MONITOR_PORT |= _BV(MONITOR_PIN);
+    monitor_level_high = false;
+
     OCR3A = timer_cnt;
-    SIMULATE_START_TIMER;
+    MONITOR_START_TIMER;
 }
 
 /*
@@ -209,6 +139,27 @@ void simulate_camera_download()
  */
 ISR(TIMER3_COMPA_vect)
 {
-    MONITOR_PORT &= ~_BV(MONITOR_PIN);
-    TCCR3B = 0;
+    MONITOR_STOP_TIMER;
+    bool high = monitor_simulate_camera || bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
+    if (monitor_level_high != high)
+    {
+        monitor_level_high = high;
+
+        switch (monitor_mode)
+        {
+            case MONITOR_START:
+                countdown_mode = COUNTDOWN_SYNCING;
+                monitor_mode = MONITOR_ACQUIRE;
+                break;
+            case MONITOR_ACQUIRE:
+                interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
+                break;
+            case MONITOR_STOP:
+                interrupt_flags |= FLAG_STOP_EXPOSURE;
+                monitor_mode = MONITOR_WAIT;
+                break;
+            default:
+                break;
+        }
+    }
 }
