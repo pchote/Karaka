@@ -93,6 +93,11 @@ void monitor_tick()
     if (!monitor_simulate_camera &&
         monitor_level_high != bit_is_clear(MONITOR_PINREG, MONITOR_PIN))
     {
+#if HARDWARE_VERSION < 4
+        OCR3A = 8;
+#else
+        OCR3A = 5;
+#endif
         MONITOR_START_TIMER;
     }
 }
