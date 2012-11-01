@@ -302,13 +302,13 @@ void update_display()
         set_msg_P(DISPLAY0, display_msg_wait_left);
         set_msg_P(DISPLAY1, display_msg_wait_right);
     }
-    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_monitor_mode == MONITOR_ACQUIRE)
+    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED || display_monitor_mode == MONITOR_ACQUIRE)
     {
-        PGM_P msg = (display_countdown_mode == COUNTDOWN_SYNCING) ? display_msg_align :
+        PGM_P msg = (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED) ? display_msg_align :
                     (!display_monitor_level_high) ? display_msg_readout : display_msg_expose;
         set_msg_P(DISPLAY0, msg);
 
-        if (display_countdown_mode == COUNTDOWN_SYNCING)
+        if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED)
             set_fmt_P(DISPLAY1, display_fmt_countdown, gps_last_timestamp.seconds % exposure_total, exposure_total);
         else
             set_fmt_P(DISPLAY1, display_fmt_countdown, exposure_total - display_countdown, exposure_total);

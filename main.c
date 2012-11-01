@@ -222,6 +222,14 @@ ISR(PCINT3_vect)
 
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
+        else if (countdown_mode == COUNTDOWN_ALIGNED)
+        {
+            exposure_countdown = exposure_total;
+            gps_record_synctime = true;
+            trigger_download();
+
+            countdown_mode = COUNTDOWN_TRIGGERED;
+        }
     }
     else if (countdown_mode == COUNTDOWN_RELAY)
         trigger_download();

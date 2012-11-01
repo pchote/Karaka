@@ -134,9 +134,9 @@ void update_display()
     if (display_monitor_mode == MONITOR_START || display_monitor_mode == MONITOR_STOP)
         set_msg_P(DISPLAY0, display_msg_wait);
 
-    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_monitor_mode == MONITOR_ACQUIRE)
+    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED || display_monitor_mode == MONITOR_ACQUIRE)
     {
-        if (display_countdown_mode == COUNTDOWN_SYNCING)
+        if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED)
             set_fmt_P(DISPLAY0, display_fmt_align, gps_last_timestamp.seconds % exposure_total, exposure_total);
         else if (!display_monitor_level_high)
             set_fmt_P(DISPLAY0, display_fmt_readout, exposure_total - display_countdown, exposure_total);
