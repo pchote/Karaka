@@ -162,10 +162,16 @@ int main(void)
             sei();
 
             if (temp_int_flags & FLAG_DOWNLOAD_COMPLETE)
-                send_downloadcomplete();
+                send_status(TIMER_EXPOSING);
+
+            if (temp_int_flags & FLAG_BEGIN_ALIGN)
+                send_status(TIMER_ALIGN);
 
             if (temp_int_flags & FLAG_STOP_EXPOSURE)
+            {
+                send_status(TIMER_IDLE);
                 send_stopexposure();
+            }
 
             if (temp_int_flags & FLAG_NO_SERIAL)
                 send_debug_string_P(msg_no_serial);

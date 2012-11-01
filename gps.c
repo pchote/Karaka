@@ -193,6 +193,7 @@ static void set_time(timestamp *t)
         sei();
 
         send_downloadtimestamp();
+        send_status(TIMER_READOUT);
     }
     send_timestamp();
 }

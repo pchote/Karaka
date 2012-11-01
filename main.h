@@ -41,7 +41,8 @@ typedef enum
     FLAG_DOWNLOAD_COMPLETE = (1 << 0),
     FLAG_STOP_EXPOSURE     = (1 << 1),
     FLAG_NO_SERIAL         = (1 << 2),
-    FLAG_DUPLICATE_PULSE   = (1 << 3)
+    FLAG_DUPLICATE_PULSE   = (1 << 3),
+    FLAG_BEGIN_ALIGN       = (1 << 4)
 } interruptflags;
 
 extern volatile interruptflags interrupt_flags;

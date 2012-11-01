@@ -28,10 +28,19 @@ typedef enum
     START_EXPOSURE = 'E',
     STOP_EXPOSURE = 'F',
     RESET = 'G',
-    DOWNLOADCOMPLETE = 'H',
+    STATUSMODE = 'H',
     SIMULATE_CAMERA = 'I',
     START_RELAY = 'R'
 } commandtype;
+
+typedef enum
+{
+    TIMER_IDLE,
+    TIMER_WAITING,
+    TIMER_ALIGN,
+    TIMER_EXPOSING,
+    TIMER_READOUT
+} TimerMode;
 
 void command_init_hardware();
 void command_init_state();
@@ -42,7 +51,7 @@ void send_debug_raw(uint8_t *data, uint8_t length);
 void send_timestamp();
 void send_downloadtimestamp();
 void send_stopexposure();
-void send_downloadcomplete();
+void send_status(TimerMode mode);
 
 void usart_process_buffer();
 

@@ -204,9 +204,9 @@ void send_stopexposure()
     queue_data(STOP_EXPOSURE, NULL, 0);
 }
 
-void send_downloadcomplete()
+void send_status(TimerMode status)
 {
-    queue_data(DOWNLOADCOMPLETE, NULL, 0);
+    queue_data(STATUSMODE, &status, 1);
 }
 
 void send_debug_fmt_P(const char *fmt, ...)
@@ -356,6 +356,7 @@ void usart_process_buffer()
 
                 // Monitor the camera for a level change indicating it has finished initializing
                 monitor_mode = MONITOR_START;
+                send_status(TIMER_WAITING);
             break;
             case STOP_EXPOSURE:
                 cli();
@@ -369,12 +370,16 @@ void usart_process_buffer()
 
                 // Camera is reading out - Wait for a level change indicating it has finished
                 if (!monitor_level_high)
+                {
                     monitor_mode = MONITOR_STOP;
+                    send_status(TIMER_WAITING);
+                }
                 else
                 {
                     // Camera can be shutdown immediately
                     monitor_mode = MONITOR_WAIT;
                     send_stopexposure();
+                    send_status(TIMER_IDLE);
                 }
             break;
             case RESET:

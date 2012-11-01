@@ -160,6 +160,7 @@ ISR(TIMER3_COMPA_vect)
             case MONITOR_START:
                 countdown_mode = COUNTDOWN_SYNCING;
                 monitor_mode = MONITOR_ACQUIRE;
+                interrupt_flags |= FLAG_BEGIN_ALIGN;
                 break;
             case MONITOR_ACQUIRE:
                 interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
