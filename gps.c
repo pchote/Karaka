@@ -59,6 +59,7 @@ static volatile uint8_t gps_output_write = 0;
 volatile gpsstate gps_state = GPS_UNAVAILABLE;
 volatile bool gps_record_synctime = false;
 static uint8_t bytes_to_sync = 0;
+static uint8_t serial_timeout_counter = 0;
 
 timestamp gps_last_timestamp;
 timestamp gps_last_synctime;
@@ -117,14 +118,22 @@ void gps_init_hardware()
     // Initialize timer1 to monitor GPS loss
     TCCR1A = 0x00;
 
-    // Set prescaler to 1/1024: 64us per tick
-    TCCR1B = _BV(CS10)|_BV(CS12);
+    // Add a serial data timeout.
 #if HARDWARE_VERSION < 3
-    TIMSK |= _BV(TOIE1);
+    TCCR2 = _BV(WGM21)|_BV(CS22)|_BV(CS21)|_BV(CS20);
+    TIMSK |= _BV(OCIE2A);
 #else
-    TIMSK1 |= _BV(TOIE1);
+    TCCR2A = _BV(WGM21);
+    TCCR2B = _BV(CS22)|_BV(CS21)|_BV(CS20);
+    TIMSK2 |= _BV(OCIE2A);
 #endif
-    TCNT1 = 0x0BDB; // Overflow after 62500 ticks: 4.0s
+
+    // Increments a counter every 16.384ms
+#if HARDWARE_VERSION < 4
+    OCR2A = 255;
+#else
+    OCR2A = 159;
+#endif
 }
 
 /*
@@ -141,6 +150,7 @@ void gps_init_state()
 
     gps_record_synctime = false;
     gps_state = GPS_UNAVAILABLE;
+    serial_timeout_counter = 0;
 
     // Send Trimble init data
     for (uint8_t i = 0; i < 9; i++)
@@ -187,15 +197,17 @@ static void set_time(timestamp *t)
     send_timestamp();
 }
 
-
 /*
- * Haven't received any serial data in 4.0 seconds
+ * Haven't received any serial data ~4 seconds
  * The GPS has probably died
  */
-ISR(TIMER1_OVF_vect)
+ISR(TIMER2_COMPA_vect)
 {
-    gps_state = GPS_UNAVAILABLE;
-    interrupt_flags |= FLAG_NO_SERIAL;
+    if (++serial_timeout_counter == 245)
+    {
+        gps_state = GPS_UNAVAILABLE;
+        interrupt_flags |= FLAG_NO_SERIAL;
+    }
 }
 
 /*
@@ -204,7 +216,7 @@ ISR(TIMER1_OVF_vect)
 ISR(USART1_RX_vect)
 {
     // Reset timeout countdown
-    TCNT1 = 0x0BDB;
+    serial_timeout_counter = 0;
 
     // Update status if necessary
     if (gps_state == GPS_UNAVAILABLE)

@@ -60,8 +60,8 @@ volatile interruptflags interrupt_flags = 0;
  *    PG0-2: Unused
  *
  * Timer0: Download pulse length
- * Timer1: GPS serial timeout
- * Timer2: Unused
+ * Timer1: Unused
+ * Timer2: GPS serial timeout
  * Timer3: Monitor debounce and simulated level delays
  *
  * Usart0: USB <-> Acquisition PC
@@ -93,8 +93,8 @@ volatile interruptflags interrupt_flags = 0;
  *    PD7: Spare output
  *
  * Timer0: Download pulse length
- * Timer1: GPS serial timeout
- * Timer2: Unused
+ * Timer1: Unused
+ * Timer2: GPS serial timeout
  * Timer3: Monitor debounce and simulated level delays
  *
  * Usart0: USB <-> Acquisition PC
