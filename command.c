@@ -38,8 +38,12 @@ static uint8_t usart_output_buffer[256];
 static volatile uint8_t usart_output_read = 0;
 static volatile uint8_t usart_output_write = 0;
 
-static void set_9600_baud()
+/*
+ * Initialize usart0 for talking to the acquisition PC via USB
+ */
+void command_init_hardware()
 {
+    // Set 9600 baud rate
     UBRR0H = 0;
 #if HARDWARE_VERSION < 4
     UBRR0L = 0x67;
@@ -47,25 +51,6 @@ static void set_9600_baud()
     UCSR0A = _BV(U2X0);
     UBRR0L = 0x81;
 #endif
-}
-
-static void set_250k_baud()
-{
-    UBRR0H = 0;
-#if HARDWARE_VERSION < 4
-    UBRR0L = 0x03;
-#else
-    UCSR0A = _BV(U2X0);
-    UBRR0L = 0x04;
-#endif
-}
-
-/*
- * Initialize usart0 for talking to the acquisition PC via USB
- */
-void command_init_hardware()
-{
-    set_250k_baud();
 
     // Enable receive, transmit, data received interrupt
     UCSR0B = _BV(RXEN0)|_BV(TXEN0)|_BV(RXCIE0);
@@ -79,8 +64,6 @@ void command_init_hardware()
  */
 void command_init_state()
 {
-    set_250k_baud();
-
     usart_packet_type = UNKNOWN_PACKET;
     usart_packet_length = usart_packet_expected_length = 0;
     usart_input_read = usart_input_write = 0;
@@ -391,7 +374,6 @@ void usart_process_buffer()
             break;
             case START_RELAY:
                 countdown_mode = COUNTDOWN_RELAY;
-                set_9600_baud();
             break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);
