@@ -17,15 +17,21 @@ HARDWARE_VERSION := 3
 PROGRAMMER = -c dragon_jtag -P usb
 OBJECTS    = command.o gps.o download.o monitor.o main.o
 
-
-ifeq (1, $(shell if [ "${HARDWARE_VERSION}" -gt "2" ]; then echo 1; fi))
-	DEVICE = atmega1284p
-    FUSES  = -U hfuse:w:0x19:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
-    OBJECTS += display_led.o
+ifeq (${HARDWARE_VERSION}, 4)
+		DEVICE = atmega1284p
+		# Set fuses to use external clock source
+	    FUSES  = -U hfuse:w:0x19:m -U lfuse:w:0xF0:m efuse:w:0xFF:m
+	    OBJECTS += display_led.o
 else
-	DEVICE = atmega128
-    FUSES  = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
-    OBJECTS += display_lcd.o
+	ifeq (1, $(shell if [ "${HARDWARE_VERSION}" -gt "2" ]; then echo 1; fi))
+		DEVICE = atmega1284p
+	    FUSES  = -U hfuse:w:0x19:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+	    OBJECTS += display_led.o
+	else
+		DEVICE = atmega128
+	    FUSES  = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+	    OBJECTS += display_lcd.o
+	endif
 endif
 
 # Tune the lines below only if you know what you are doing:
