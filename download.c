@@ -22,8 +22,8 @@
     #define DOWNLOAD_DD DDA0
     #define DOWNLOAD_TIMSK TIMSK
     #define DOWNLOAD_TCCR TCCR0
-    #define DOWNLOAD_STOP_TIMER (TCCR0 = 0)
-    #define DOWNLOAD_START_TIMER (TCCR0B = _BV(CS02))
+    #define DOWNLOAD_STOP_TIMER (TCCR0 = _BV(WGM01))
+    #define DOWNLOAD_START_TIMER (TCCR0 = _BV(WGM01)|_BV(CS02))
 #else
     #define DOWNLOAD_PORT PORTD
     #define DOWNLOAD_DDR DDRD
@@ -45,10 +45,15 @@ void download_init_hardware()
     DOWNLOAD_PORT &= ~_BV(DOWNLOAD_PIN);
 
     // Enable compare interrupt
+#if HARDWARE_VERSION < 3
+    DOWNLOAD_TIMSK |= _BV(OCIE0);
+#else
     DOWNLOAD_TIMSK |= _BV(OCIE0A);
-
+#endif
     // Set timer to compare match after 0.512 ms
-#if HARDWARE_VERSION < 4
+#if HARDWARE_VERSION < 3
+	OCR0 = 127;
+#elif HARDWARE_VERSION < 4
     OCR0A = 127;
 #else
     OCR0A = 79;
@@ -80,7 +85,11 @@ void trigger_download()
  * timer0 compare interrupt
  * Restores camera output line high
  */
+#if HARDWARE_VERSION < 3
+ISR(TIMER0_COMP_vect)
+#else
 ISR(TIMER0_COMPA_vect)
+#endif
 {
     DOWNLOAD_STOP_TIMER;
     DOWNLOAD_PORT &= ~_BV(DOWNLOAD_PIN);

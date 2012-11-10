@@ -121,7 +121,7 @@ void gps_init_hardware()
     // Add a serial data timeout.
 #if HARDWARE_VERSION < 3
     TCCR2 = _BV(WGM21)|_BV(CS22)|_BV(CS21)|_BV(CS20);
-    TIMSK |= _BV(OCIE2A);
+    TIMSK |= _BV(OCIE2);
 #else
     TCCR2A = _BV(WGM21);
     TCCR2B = _BV(CS22)|_BV(CS21)|_BV(CS20);
@@ -129,7 +129,9 @@ void gps_init_hardware()
 #endif
 
     // Increments a counter every 16.384ms
-#if HARDWARE_VERSION < 4
+#if HARDWARE_VERSION < 3
+	OCR2 = 255;
+#elif HARDWARE_VERSION < 4
     OCR2A = 255;
 #else
     OCR2A = 159;
@@ -202,7 +204,11 @@ static void set_time(timestamp *t)
  * Haven't received any serial data ~4 seconds
  * The GPS has probably died
  */
+#if HARDWARE_VERSION < 3
+ISR(TIMER2_COMP_vect)
+#else
 ISR(TIMER2_COMPA_vect)
+#endif
 {
     if (++serial_timeout_counter == 245)
     {
