@@ -5,9 +5,13 @@
 
 #include <stdint.h>
 #include <avr/boot.h>
+#include <avr/wdt.h>
 #include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/eeprom.h>
+
+// For boot flag definitions
+#include "main.h"
 
 // Definitions for SPM control
 // 128 words = 256 bytes
@@ -18,6 +22,14 @@
 #else
 #define PARTCODE 0x74
 #endif
+
+// Disable watchdog timer early in boot
+void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
+void wdt_init(void)
+{
+    MCUSR = 0;
+    wdt_disable();
+}
 
 void initbootuart()
 {
@@ -146,7 +158,9 @@ int main(void)
 
     // Boot application unless PC7 is pulled high
     PORTC |= _BV(PC7);
-    if (bit_is_set(PINC, PC7))
+
+    if (bit_is_set(PINC, PC7) &&
+        eeprom_read_byte(BOOTFLAG_EEPROM_OFFSET) == BOOTFLAG_BOOT)
     {
         boot_spm_busy_wait();        
         boot_rww_enable();

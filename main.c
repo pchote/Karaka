@@ -12,6 +12,7 @@
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <avr/eeprom.h>
 
 #include "main.h"
 #include "download.h"
@@ -149,6 +150,9 @@ int main(void)
 
     // Initialize global variables
     set_initial_state();
+
+    // Enable regular boot if we just updated via the bootloader
+    eeprom_update_byte(BOOTFLAG_EEPROM_OFFSET, BOOTFLAG_BOOT);
 
     // Main program loop
     for (;;)

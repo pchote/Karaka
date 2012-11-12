@@ -23,6 +23,10 @@
 #define F_CPU 10000000UL
 #endif
 
+#define BOOTFLAG_EEPROM_OFFSET 0
+#define BOOTFLAG_UPGRADE       0xFF
+#define BOOTFLAG_BOOT          0x42
+
 extern uint8_t exposure_total;
 extern volatile uint8_t exposure_countdown;
 

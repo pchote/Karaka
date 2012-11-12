@@ -10,8 +10,10 @@
 //
 //***************************************************************************
 
+#include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <avr/wdt.h>
 #include <stdio.h>
 #include "command.h"
 #include "main.h"
@@ -374,6 +376,14 @@ void usart_process_buffer()
             break;
             case START_RELAY:
                 countdown_mode = COUNTDOWN_RELAY;
+            break;
+            case START_UPGRADE:
+                eeprom_update_byte(BOOTFLAG_EEPROM_OFFSET, BOOTFLAG_UPGRADE);
+
+                // Reboot into the bootloader
+                cli();
+                wdt_enable(WDTO_15MS);
+                for(;;);
             break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);

@@ -30,7 +30,8 @@ typedef enum
     RESET = 'G',
     STATUSMODE = 'H',
     SIMULATE_CAMERA = 'I',
-    START_RELAY = 'R'
+    START_RELAY = 'R',
+    START_UPGRADE = 'U'
 } commandtype;
 
 typedef enum
