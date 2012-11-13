@@ -186,10 +186,12 @@ static void set_time(timestamp *t)
 
     if (gps_record_synctime)
     {
+        uint8_t sreg = SREG;
         cli();
         gps_last_synctime = gps_last_timestamp;
         gps_record_synctime = false;
         sei();
+        SREG = sreg;
 
         send_downloadtimestamp();
         send_status(TIMER_READOUT);

@@ -107,6 +107,7 @@ volatile interruptflags interrupt_flags = 0;
  */
 void set_initial_state()
 {
+    uint8_t sreg = SREG;
     cli();
     exposure_total = exposure_countdown = 0;
     countdown_mode = COUNTDOWN_DISABLED;
@@ -114,6 +115,7 @@ void set_initial_state()
     command_init_state();
     monitor_init_state();
     sei();
+    SREG = sreg;
 
     // Send config to attached GPS
     // Requires interrupts to be enabled
@@ -160,10 +162,12 @@ int main(void)
         // Handle message flags set via interrupt
         if (interrupt_flags)
         {
+            uint8_t sreg = SREG;
             cli();
             uint8_t temp_int_flags = interrupt_flags;
             interrupt_flags = 0;
             sei();
+            SREG = sreg;
 
             if (temp_int_flags & FLAG_DOWNLOAD_COMPLETE)
                 send_status(TIMER_EXPOSING);
