@@ -309,7 +309,7 @@ void update_display()
         set_msg_P(DISPLAY0, msg);
 
         if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED)
-            set_fmt_P(DISPLAY1, display_fmt_countdown, gps_last_timestamp.seconds % exposure_total, exposure_total);
+            set_fmt_P(DISPLAY1, display_fmt_countdown, gps_last_timestamp.seconds % align_boundary, align_boundary);
         else
             set_fmt_P(DISPLAY1, display_fmt_countdown, exposure_total - display_countdown, exposure_total);
     }

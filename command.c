@@ -333,6 +333,7 @@ void usart_process_buffer()
                 // these is safe to modify with interrupts enabled
                 exposure_countdown = *data;
                 exposure_total = *data;
+                align_boundary = (exposure_total < 60) ? exposure_total : 60;
 
                 // Trigger fake camera output
                 if (monitor_simulate_camera)

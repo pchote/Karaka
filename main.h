@@ -29,6 +29,7 @@
 
 extern uint8_t exposure_total;
 extern volatile uint8_t exposure_countdown;
+extern uint8_t align_boundary;
 
 typedef enum
 {

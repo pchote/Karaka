@@ -181,7 +181,7 @@ static void set_time(timestamp *t)
     gps_state = GPS_ACTIVE;
 
     // Synchronise the exposure with the edge of a minute
-    if (countdown_mode == COUNTDOWN_SYNCING && (gps_last_timestamp.seconds % exposure_total == exposure_total - 1))
+    if (countdown_mode == COUNTDOWN_SYNCING && (gps_last_timestamp.seconds % align_boundary == align_boundary - 1))
         countdown_mode = COUNTDOWN_ALIGNED;
 
     if (gps_record_synctime)

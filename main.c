@@ -25,6 +25,7 @@ const char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
 const char msg_no_serial[]       PROGMEM = "GPS serial connection lost";
 
 uint8_t exposure_total = 0;
+uint8_t align_boundary = 0;
 volatile uint8_t exposure_countdown = 0;
 volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
 volatile interruptflags interrupt_flags = 0;
