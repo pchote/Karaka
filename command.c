@@ -85,10 +85,7 @@ void command_send_raw(uint8_t b)
     usart_output_buffer[usart_output_write++] = b;
 
     // Enable Transmit data register empty interrupt if necessary to send bytes down the line
-    cli();
-    if ((UCSR0B & _BV(UDRIE0)) == 0)
-        UCSR0B |= _BV(UDRIE0);
-    sei();
+    UCSR0B |= _BV(UDRIE0);
 }
 
 
