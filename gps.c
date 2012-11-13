@@ -75,10 +75,7 @@ void gps_send_raw(uint8_t b)
     gps_output_buffer[gps_output_write++] = b;
 
     // Enable Transmit data register empty interrupt if necessary to send bytes down the line
-    cli();
-    if ((UCSR1B & _BV(UDRIE1)) == 0)
-        UCSR1B |= _BV(UDRIE1);
-    sei();
+    UCSR1B |= _BV(UDRIE1);
 }
 
 /*
