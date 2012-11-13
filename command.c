@@ -328,9 +328,11 @@ void usart_process_buffer()
         switch(usart_packet_type)
         {
             case START_EXPOSURE:
-                cli();
-                exposure_countdown = exposure_total = *data;
-                sei();
+                // These are only accessed from interrupt context
+                // when countdown_mode = ENABLED or TRIGGERED so
+                // these is safe to modify with interrupts enabled
+                exposure_countdown = *data;
+                exposure_total = *data;
 
                 // Trigger fake camera output
                 if (monitor_simulate_camera)
@@ -341,12 +343,15 @@ void usart_process_buffer()
                 send_status(TIMER_WAITING);
             break;
             case STOP_EXPOSURE:
-                cli();
-                exposure_total = exposure_countdown = 0;
-                sei();
-
                 // Disable the exposure countdown immediately
                 countdown_mode = COUNTDOWN_DISABLED;
+
+                // These are only accessed from interrupt context
+                // when countdown_mode = ENABLED or TRIGGERED so
+                // these is safe to modify with interrupts enabled
+                exposure_total = 0;
+                exposure_countdown = 0;
+
                 if (monitor_simulate_camera)
                     simulate_camera_shutdown();
 
