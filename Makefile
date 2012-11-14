@@ -6,22 +6,19 @@
 ##
 ##***************************************************************************
 
-# Hardware versions
-# 1 - Original board design, no monitor
-# 2 - Original board design plus monitor circuit
-# 3 - New board design
-# 4 - New board design, underclocked to 10MHz
-
 # System port to find the timer on for upgrading via the bootloader
-PORT     := /dev/tty.usbserial-00001004
+PORT      := /dev/tty.usbserial-00001004
 
-# CPU Frequency; 16 for onboard oscillator, 10 for external clock
-CPU_MHZ  := 16
+# CPU Frequency; 16 or 10
+CPU_MHZ   := 10
+
+# CPU Clock type: 0 for internal oscillator, 1 for external GPS signal
+CPU_CLOCK := 1
 
 # Processor type: 0 for original atmega128 board, 1 for newer atmega1284p boards
-CPU_TYPE := 1
+CPU_TYPE  := 1
 
-HARDWARE_VERSION := 3
+##***************************************************************************
 
 AVRDUDE = avrdude -c dragon_jtag -P usb -p $(DEVICE)
 OBJECTS = command.o gps.o download.o monitor.o main.o
@@ -30,30 +27,29 @@ BOOTLOADER   = avrdude -c avr109 -p $(DEVICE) -b 9600 -P $(PORT)
 BOOT_OBJECTS = bootloader.o
 BOOTSTART    = 0x1E000
 
-ifeq (${HARDWARE_VERSION}, 4)
-    # Set fuses to use external clock source
-    FUSES  = -U hfuse:w:0x18:m -U lfuse:w:0xF0:m efuse:w:0xFF:m
-    OBJECTS += display_led.o
+ifeq (${CPU_CLOCK}, 0)
+    LFUSE = 0xFF
 else
-	ifeq (1, $(shell if [ "${HARDWARE_VERSION}" -gt "2" ]; then echo 1; fi))
-	    FUSES    = -U hfuse:w:0x18:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
-	else
-	    FUSES    = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
-	endif
+    ifeq (${CPU_CLOCK}, 1)
+        LFUSE = 0xF0
+    else
+        $(error Unknown clock type)
+    endif
 endif
 
 ifeq (${CPU_TYPE}, 0)
     DEVICE = atmega128
+    HFUSE = 0x09
     OBJECTS += display_lcd.o
 else
     ifeq (${CPU_TYPE}, 1)
         DEVICE = atmega1284p
+        HFUSE = 0x18
         OBJECTS += display_led.o
     else
         $(error Unknown CPU type)
     endif
 endif
-
 
 COMPILE = avr-gcc -g -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums \
                   -DBOOTSTART=$(BOOTSTART) -DCPU_MHZ=$(CPU_MHZ) -DCPU_TYPE=$(CPU_TYPE)
@@ -67,7 +63,7 @@ all: main.hex bootloader.hex
 	$(COMPILE) -S $< -o $@
 
 fuse:
-	$(AVRDUDE) $(FUSES)
+	$(AVRDUDE) -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m efuse:w:0xFF:m
 
 install: main.hex
 	$(BOOTLOADER) -U flash:w:main.hex:i
