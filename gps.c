@@ -99,10 +99,12 @@ void gps_init_hardware()
 {
     // Set baud rate to 9600
     UBRR1H = 0;
-#if HARDWARE_VERSION < 4
+#if CPU_MHZ == 16
     UBRR1L = 0xCF;
-#else
+#elif CPU_MHZ == 10
     UBRR1L = 0x81;
+#else
+    #error Unknown CPU Frequency
 #endif
     UCSR1A = _BV(U2X1);
 
@@ -126,12 +128,20 @@ void gps_init_hardware()
 #endif
 
     // Increments a counter every 16.384ms
-#if HARDWARE_VERSION < 3
-	OCR2 = 255;
-#elif HARDWARE_VERSION < 4
-    OCR2A = 255;
+#if CPU_MHZ == 16
+#   if HARDWARE_VERSION < 3
+        OCR2 = 255;
+#   else
+        OCR2A = 255;
+#   endif
+#elif CPU_MHZ == 10
+#   if HARDWARE_VERSION < 3
+        OCR2 = 159;
+#   else
+        OCR2A = 159;
+#   endif
 #else
-    OCR2A = 159;
+#   error Unknown CPU Frequency
 #endif
 }
 

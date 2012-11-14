@@ -50,13 +50,22 @@ void download_init_hardware()
 #else
     DOWNLOAD_TIMSK |= _BV(OCIE0A);
 #endif
+
     // Set timer to compare match after 0.512 ms
-#if HARDWARE_VERSION < 3
-	OCR0 = 127;
-#elif HARDWARE_VERSION < 4
-    OCR0A = 127;
+#if CPU_MHZ == 16
+#   if HARDWARE_VERSION < 3
+        OCR0 = 127;
+#   else
+        OCR0A = 127;
+#   endif
+#elif CPU_MHZ == 10
+#   if HARDWARE_VERSION < 3
+        OCR0 = 79;
+#   else
+        OCR0A = 79;
+#   endif
 #else
-    OCR0A = 79;
+#   error Unknown CPU Frequency
 #endif
 
     // Set timer to reset to 0 on compare match

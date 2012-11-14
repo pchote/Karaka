@@ -47,11 +47,13 @@ void command_init_hardware()
 {
     // Set 9600 baud rate
     UBRR0H = 0;
-#if HARDWARE_VERSION < 4
+#if CPU_MHZ == 16
     UBRR0L = 0x67;
-#else
+#elif CPU_MHZ == 10
     UCSR0A = _BV(U2X0);
     UBRR0L = 0x81;
+#else
+    #error Unknown CPU Frequency
 #endif
 
     // Enable receive, transmit, data received interrupt

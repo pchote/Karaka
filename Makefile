@@ -13,6 +13,7 @@
 # 4 - New board design, underclocked to 10MHz
 
 PORT := /dev/tty.usbserial-00001004
+CPU_MHZ := 16
 HARDWARE_VERSION := 3
 
 AVRDUDE = avrdude -c dragon_jtag -P usb -p $(DEVICE)
@@ -23,10 +24,10 @@ BOOT_OBJECTS = bootloader.o
 BOOTSTART    = 0x1E000
 
 ifeq (${HARDWARE_VERSION}, 4)
-		DEVICE = atmega1284p
-		# Set fuses to use external clock source
-	    FUSES  = -U hfuse:w:0x18:m -U lfuse:w:0xF0:m efuse:w:0xFF:m
-	    OBJECTS += display_led.o
+    DEVICE = atmega1284p
+    # Set fuses to use external clock source
+    FUSES  = -U hfuse:w:0x18:m -U lfuse:w:0xF0:m efuse:w:0xFF:m
+    OBJECTS += display_led.o
 else
 	ifeq (1, $(shell if [ "${HARDWARE_VERSION}" -gt "2" ]; then echo 1; fi))
 		DEVICE   = atmega1284p
@@ -40,7 +41,7 @@ else
 endif
 
 COMPILE = avr-gcc -g -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums \
-                  -DHARDWARE_VERSION=${HARDWARE_VERSION} -DBOOTSTART=$(BOOTSTART)
+                  -DHARDWARE_VERSION=${HARDWARE_VERSION} -DBOOTSTART=$(BOOTSTART) -DCPU_MHZ=$(CPU_MHZ)
 
 all: main.hex bootloader.hex
 

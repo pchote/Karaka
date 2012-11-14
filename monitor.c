@@ -93,11 +93,15 @@ void monitor_tick()
     if (!monitor_simulate_camera &&
         monitor_level_high != bit_is_clear(MONITOR_PINREG, MONITOR_PIN))
     {
-#if HARDWARE_VERSION < 4
+
+#if CPU_MHZ == 16
         OCR3A = 8;
-#else
+#elif CPU_MHZ == 10
         OCR3A = 5;
+#else
+#   error Unknown CPU Frequency
 #endif
+
         MONITOR_START_TIMER;
     }
 }
@@ -129,10 +133,12 @@ void simulate_camera_startup()
  */
 void simulate_camera_shutdown()
 {
-#if HARDWARE_VERSION < 4
+#if CPU_MHZ == 16
     set_output_low(0x3D08);
-#else
+#elif CPU_MHZ == 10
     set_output_low(0x2625);
+#else
+#   error Unknown CPU Frequency
 #endif
 }
 
@@ -141,10 +147,12 @@ void simulate_camera_shutdown()
  */
 void simulate_camera_download()
 {
-#if HARDWARE_VERSION < 4
+#if CPU_MHZ == 16
     set_output_low(0xC349);
-#else
+#elif CPU_MHZ == 10
     set_output_low(0x7A11);
+#else
+#   error Unknown CPU Frequency
 #endif
 }
 

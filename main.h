@@ -17,10 +17,12 @@
 #include <string.h>
 #include <stdint.h>
 
-#if HARDWARE_VERSION < 4
-#define F_CPU 16000000UL
+#if CPU_MHZ == 16
+#   define F_CPU 16000000UL
+#elif CPU_MHZ == 10
+#   define F_CPU 10000000UL
 #else
-#define F_CPU 10000000UL
+#   error Unknown CPU Frequency
 #endif
 
 #define BOOTFLAG_EEPROM_OFFSET 0
