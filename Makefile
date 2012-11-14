@@ -12,10 +12,11 @@
 # 3 - New board design
 # 4 - New board design, underclocked to 10MHz
 
+PORT := /dev/tty.usbserial-00001004
 HARDWARE_VERSION := 3
 
 AVRDUDE = avrdude -c dragon_jtag -P usb -p $(DEVICE)
-BOOTLOADER = avrdude -c avr109 -p $(DEVICE) -b 9600 -P /dev/tty.usbserial-00001004
+BOOTLOADER = avrdude -c avr109 -p $(DEVICE) -b 9600 -P $(PORT)
 OBJECTS    = command.o gps.o download.o monitor.o main.o
 BOOTSTART = 0x1E000
 
