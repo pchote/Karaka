@@ -16,9 +16,11 @@ PORT := /dev/tty.usbserial-00001004
 HARDWARE_VERSION := 3
 
 AVRDUDE = avrdude -c dragon_jtag -P usb -p $(DEVICE)
-BOOTLOADER = avrdude -c avr109 -p $(DEVICE) -b 9600 -P $(PORT)
-OBJECTS    = command.o gps.o download.o monitor.o main.o
-BOOTSTART = 0x1E000
+OBJECTS = command.o gps.o download.o monitor.o main.o
+
+BOOTLOADER   = avrdude -c avr109 -p $(DEVICE) -b 9600 -P $(PORT)
+BOOT_OBJECTS = bootloader.o
+BOOTSTART    = 0x1E000
 
 ifeq (${HARDWARE_VERSION}, 4)
 		DEVICE = atmega1284p
@@ -27,19 +29,20 @@ ifeq (${HARDWARE_VERSION}, 4)
 	    OBJECTS += display_led.o
 else
 	ifeq (1, $(shell if [ "${HARDWARE_VERSION}" -gt "2" ]; then echo 1; fi))
-		DEVICE = atmega1284p
-	    FUSES  = -U hfuse:w:0x18:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+		DEVICE   = atmega1284p
+	    FUSES    = -U hfuse:w:0x18:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 	    OBJECTS += display_led.o
 	else
-		DEVICE = atmega128
-	    FUSES  = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
+		DEVICE   = atmega128
+	    FUSES    = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
 	    OBJECTS += display_lcd.o
 	endif
 endif
 
-COMPILE = avr-gcc -g -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums -DHARDWARE_VERSION=${HARDWARE_VERSION} -DBOOTSTART=$(BOOTSTART)
+COMPILE = avr-gcc -g -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums \
+                  -DHARDWARE_VERSION=${HARDWARE_VERSION} -DBOOTSTART=$(BOOTSTART)
 
-all: main.hex
+all: main.hex bootloader.hex
 
 .c.o:
 	$(COMPILE) -c $< -o $@
@@ -47,25 +50,17 @@ all: main.hex
 .c.s:
 	$(COMPILE) -S $< -o $@
 
-flash:	all
-	$(AVRDUDE) -U flash:w:main.hex:i
-
 fuse:
 	$(AVRDUDE) $(FUSES)
 
-bootloader.elf: bootloader.o
-	$(COMPILE) -Wl,--section-start=.text=$(BOOTSTART) -o bootloader.elf bootloader.o
-
-install-bootloader: bootloader.hex
-	$(AVRDUDE) -U flash:w:bootloader.hex:i
-
-install-program: all
+install: main.hex
 	$(BOOTLOADER) -U flash:w:main.hex:i
 
-install: flash fuse
+bootloader: bootloader.hex
+	$(AVRDUDE) -U flash:w:bootloader.hex:i
 
 clean:
-	rm -f main.hex main.elf bootloader.hex bootloader.elf bootloader.o $(OBJECTS)
+	rm -f main.hex main.elf bootloader.hex bootloader.elf $(OBJECTS) $(BOOT_OBJECTS)
 
 main.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS)
@@ -73,6 +68,9 @@ main.elf: $(OBJECTS)
 main.hex: main.elf
 	rm -f main.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
+
+bootloader.elf: bootloader.o
+	$(COMPILE) -Wl,--section-start=.text=$(BOOTSTART) -o bootloader.elf $(BOOT_OBJECTS)
 
 bootloader.hex: bootloader.elf
 	rm -f bootloader.hex
