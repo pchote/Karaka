@@ -1,6 +1,6 @@
 //***************************************************************************
 //
-//  File        : display.c
+//  File        : display_lcd.c
 //  Copyright   : 2012 Paul Chote
 //  Description : LCD display routines
 //
@@ -10,10 +10,13 @@
 //
 //***************************************************************************
 
-#if HARDWARE_VERSION < 3
+#include "main.h"
+
+#if CPU_TYPE != CPU_ATMEGA128
+#   error LCD display only supported by atmega128 board
+#endif
 
 #include "display.h"
-#include "main.h"
 #include "command.h"
 #include "gps.h"
 #include "monitor.h"
@@ -163,5 +166,3 @@ void update_display()
             break;
     }
 }
-
-#endif

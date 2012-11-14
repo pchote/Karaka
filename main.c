@@ -128,18 +128,20 @@ void set_initial_state()
  */
 int main(void)
 {
-    #if HARDWARE_VERSION < 3
-        // Set INT0 to be rising edge triggered
-        EICRA = _BV(ISC01);
-        EIMSK |= _BV(INT0);
-    #else
-        // Enable pin change interrupt for PPS input
-        PCMSK3 |= _BV(PCINT28);
-        PCICR |= _BV(PCIE3);
+#if CPU_TYPE == CPU_ATMEGA128
+    // Set INT0 to be rising edge triggered
+    EICRA = _BV(ISC01);
+    EIMSK |= _BV(INT0);
+#elif CPU_TYPE == CPU_ATMEGA1284p
+    // Enable pin change interrupt for PPS input
+    PCMSK3 |= _BV(PCINT28);
+    PCICR |= _BV(PCIE3);
 
-        // Enable pullup resistor on unused pins
-        PORTA = 0xFF;
-    #endif
+    // Enable pullup resistor on unused pins
+    PORTA = 0xFF;
+#else
+#   error Unknown CPU type
+#endif
 
     // Set other init
     command_init_hardware();
@@ -200,15 +202,18 @@ int main(void)
  * GPS time pulse interrupt handler
  * Fired on any level change from the PPS input (PD3)
  */
-#if HARDWARE_VERSION < 3
+
+#if CPU_TYPE == CPU_ATMEGA128
 ISR(INT0_vect)
 {
-#else
+#elif CPU_TYPE == CPU_ATMEGA1284p
 ISR(PCINT3_vect)
 {
     // Ignore falling edge interrupt
     if (!bit_is_clear(PIND, PD4))
         return;
+#else
+#   error Unknown CPU type
 #endif
 
     // Don't count down unless we have a valid exposure time and the GPS is locked

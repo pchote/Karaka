@@ -1,6 +1,6 @@
 //***************************************************************************
 //
-//  File        : display.c
+//  File        : display_led.c
 //  Copyright   : 2012 Paul Chote
 //  Description : Dot matrix display routines
 //
@@ -10,10 +10,13 @@
 //
 //***************************************************************************
 
-#if HARDWARE_VERSION >= 3
+#include "main.h"
+
+#if CPU_TYPE != CPU_ATMEGA1284p
+#   error LED display only supported by atmega1284p board
+#endif
 
 #include "display.h"
-#include "main.h"
 #include "command.h"
 #include "gps.h"
 #include "monitor.h"
@@ -358,5 +361,3 @@ ISR(ADC_vect)
     uint8_t temp = ADCH;
     display_brightness = (~temp) >> 5;
 }
-
-#endif

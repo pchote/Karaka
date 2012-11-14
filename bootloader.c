@@ -13,14 +13,21 @@
 // For boot flag definitions
 #include "main.h"
 
+// TODO: Fix this
+#if CPU_TYPE != CPU_ATMEGA1284p
+#   error Bootloader only supported by atmega1284p board
+#endif
+
 // Definitions for SPM control
 // 128 words = 256 bytes
 #define PAGESIZE  256
 
-#if HARDWARE_VERSION < 3
-#define PARTCODE 0x43
+#if CPU_TYPE == CPU_ATMEGA1284p
+#   define PARTCODE 0x43
+#elif CPU_TYPE == CPU_ATMEGA128
+#   define PARTCODE 0x74
 #else
-#define PARTCODE 0x74
+#   error Unknown CPU type
 #endif
 
 // Disable watchdog timer early in boot

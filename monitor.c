@@ -24,18 +24,22 @@
 #include "main.h"
 #include "command.h"
 
-#if HARDWARE_VERSION < 3
-    #define MONITOR_PORT PORTE
-    #define MONITOR_PINREG PINE
-    #define MONITOR_PIN PE4
-    #define MONITOR_DDR DDRE
-    #define MONITOR_DD DDE4
+#if CPU_TYPE == CPU_ATMEGA128
+#   define MONITOR_PORT PORTE
+#   define MONITOR_PINREG PINE
+#   define MONITOR_PIN PE4
+#   define MONITOR_DDR DDRE
+#   define MONITOR_DD DDE4
+#   define MONITOR_TIMSK ETIMSK
+#elif CPU_TYPE == CPU_ATMEGA1284p
+#   define MONITOR_PORT PORTD
+#   define MONITOR_PINREG PIND
+#   define MONITOR_PIN PD6
+#   define MONITOR_DDR DDRD
+#   define MONITOR_DD DDD6
+#   define MONITOR_TIMSK TIMSK3
 #else
-    #define MONITOR_PORT PORTD
-    #define MONITOR_PINREG PIND
-    #define MONITOR_PIN PD6
-    #define MONITOR_DDR DDRD
-    #define MONITOR_DD DDD6
+#   error Unknown CPU type
 #endif
 
 #define MONITOR_STOP_TIMER (TCCR3B = _BV(WGM32))
@@ -65,11 +69,7 @@ void monitor_init_state()
  */
 void monitor_init_hardware()
 {
-#if HARDWARE_VERSION < 3
-    ETIMSK |= _BV(OCIE3A);
-#else
-    TIMSK3 |= _BV(OCIE3A);
-#endif
+    MONITOR_TIMSK |= _BV(OCIE3A);
 
     // Enable pullup resistor on monitor input
     MONITOR_PORT |= _BV(MONITOR_PIN);

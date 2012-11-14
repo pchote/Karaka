@@ -12,8 +12,15 @@
 # 3 - New board design
 # 4 - New board design, underclocked to 10MHz
 
-PORT := /dev/tty.usbserial-00001004
-CPU_MHZ := 16
+# System port to find the timer on for upgrading via the bootloader
+PORT     := /dev/tty.usbserial-00001004
+
+# CPU Frequency; 16 for onboard oscillator, 10 for external clock
+CPU_MHZ  := 16
+
+# Processor type: 0 for original atmega128 board, 1 for newer atmega1284p boards
+CPU_TYPE := 1
+
 HARDWARE_VERSION := 3
 
 AVRDUDE = avrdude -c dragon_jtag -P usb -p $(DEVICE)
@@ -24,24 +31,32 @@ BOOT_OBJECTS = bootloader.o
 BOOTSTART    = 0x1E000
 
 ifeq (${HARDWARE_VERSION}, 4)
-    DEVICE = atmega1284p
     # Set fuses to use external clock source
     FUSES  = -U hfuse:w:0x18:m -U lfuse:w:0xF0:m efuse:w:0xFF:m
     OBJECTS += display_led.o
 else
 	ifeq (1, $(shell if [ "${HARDWARE_VERSION}" -gt "2" ]; then echo 1; fi))
-		DEVICE   = atmega1284p
 	    FUSES    = -U hfuse:w:0x18:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
-	    OBJECTS += display_led.o
 	else
-		DEVICE   = atmega128
 	    FUSES    = -U hfuse:w:0x09:m -U lfuse:w:0xFF:m efuse:w:0xFF:m
-	    OBJECTS += display_lcd.o
 	endif
 endif
 
+ifeq (${CPU_TYPE}, 0)
+    DEVICE = atmega128
+    OBJECTS += display_lcd.o
+else
+    ifeq (${CPU_TYPE}, 1)
+        DEVICE = atmega1284p
+        OBJECTS += display_led.o
+    else
+        $(error Unknown CPU type)
+    endif
+endif
+
+
 COMPILE = avr-gcc -g -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums \
-                  -DHARDWARE_VERSION=${HARDWARE_VERSION} -DBOOTSTART=$(BOOTSTART) -DCPU_MHZ=$(CPU_MHZ)
+                  -DBOOTSTART=$(BOOTSTART) -DCPU_MHZ=$(CPU_MHZ) -DCPU_TYPE=$(CPU_TYPE)
 
 all: main.hex bootloader.hex
 

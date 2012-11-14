@@ -15,24 +15,30 @@
 #include "main.h"
 #include "monitor.h"
 
-#if HARDWARE_VERSION < 3
-    #define DOWNLOAD_PORT PORTA
-    #define DOWNLOAD_DDR DDRA
-    #define DOWNLOAD_PIN PA0
-    #define DOWNLOAD_DD DDA0
-    #define DOWNLOAD_TIMSK TIMSK
-    #define DOWNLOAD_TCCR TCCR0
-    #define DOWNLOAD_STOP_TIMER (TCCR0 = _BV(WGM01))
-    #define DOWNLOAD_START_TIMER (TCCR0 = _BV(WGM01)|_BV(CS02))
+#if CPU_TYPE == CPU_ATMEGA128
+#   define DOWNLOAD_PORT PORTA
+#   define DOWNLOAD_DDR DDRA
+#   define DOWNLOAD_PIN PA0
+#   define DOWNLOAD_DD DDA0
+#   define DOWNLOAD_TIMSK TIMSK
+#   define DOWNLOAD_TCCR TCCR0
+#   define DOWNLOAD_STOP_TIMER (TCCR0 = _BV(WGM01))
+#   define DOWNLOAD_START_TIMER (TCCR0 = _BV(WGM01)|_BV(CS02))
+#   define DOWNLOAD_OC_BIT OCIE0
+#   define DOWNLOAD_OCR OCR0
+#elif CPU_TYPE == CPU_ATMEGA1284p
+#   define DOWNLOAD_PORT PORTD
+#   define DOWNLOAD_DDR DDRD
+#   define DOWNLOAD_PIN PD5
+#   define DOWNLOAD_DD DDD5
+#   define DOWNLOAD_TIMSK TIMSK0
+#   define DOWNLOAD_TCCR TCCR0A
+#   define DOWNLOAD_STOP_TIMER (TCCR0B = 0)
+#   define DOWNLOAD_START_TIMER (TCCR0B = _BV(CS01)|_BV(CS00))
+#   define DOWNLOAD_OC_BIT OCIE0A
+#   define DOWNLOAD_OCR OCR0A
 #else
-    #define DOWNLOAD_PORT PORTD
-    #define DOWNLOAD_DDR DDRD
-    #define DOWNLOAD_PIN PD5
-    #define DOWNLOAD_DD DDD5
-    #define DOWNLOAD_TIMSK TIMSK0
-    #define DOWNLOAD_TCCR TCCR0A
-    #define DOWNLOAD_STOP_TIMER (TCCR0B = 0)
-    #define DOWNLOAD_START_TIMER (TCCR0B = _BV(CS01)|_BV(CS00))
+#   error Unknown CPU type
 #endif
 
 /*
@@ -45,25 +51,13 @@ void download_init_hardware()
     DOWNLOAD_PORT &= ~_BV(DOWNLOAD_PIN);
 
     // Enable compare interrupt
-#if HARDWARE_VERSION < 3
-    DOWNLOAD_TIMSK |= _BV(OCIE0);
-#else
-    DOWNLOAD_TIMSK |= _BV(OCIE0A);
-#endif
+    DOWNLOAD_TIMSK |= _BV(DOWNLOAD_OC_BIT);
 
     // Set timer to compare match after 0.512 ms
 #if CPU_MHZ == 16
-#   if HARDWARE_VERSION < 3
-        OCR0 = 127;
-#   else
-        OCR0A = 127;
-#   endif
+    DOWNLOAD_OCR = 127;
 #elif CPU_MHZ == 10
-#   if HARDWARE_VERSION < 3
-        OCR0 = 79;
-#   else
-        OCR0A = 79;
-#   endif
+    DOWNLOAD_OCR = 79;
 #else
 #   error Unknown CPU Frequency
 #endif
@@ -94,10 +88,12 @@ void trigger_download()
  * timer0 compare interrupt
  * Restores camera output line high
  */
-#if HARDWARE_VERSION < 3
+#if CPU_TYPE == CPU_ATMEGA128
 ISR(TIMER0_COMP_vect)
-#else
+#elif CPU_TYPE == CPU_ATMEGA1284p
 ISR(TIMER0_COMPA_vect)
+#else
+#   error Unknown CPU type
 #endif
 {
     DOWNLOAD_STOP_TIMER;
