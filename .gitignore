@@ -1,4 +1,6 @@
 *.o
-main.elf
-main.hex
+*.elf
+*.hex
 build
+Karaka.xcodeproj/xcuserdata/
+Karaka.xcodeproj/project.xcworkspace/xcuserdata/
