@@ -68,11 +68,23 @@ fuse:
 install: main.hex
 	$(BOOTLOADER) -U flash:w:main.hex:i
 
-bootloader: bootloader.hex
-	$(AVRDUDE) -U flash:w:bootloader.hex:i
+jtag: combined.hex
+	$(AVRDUDE) -U flash:w:combined.hex:i
 
 clean:
 	rm -f main.hex main.elf bootloader.hex bootloader.elf $(OBJECTS) $(BOOT_OBJECTS)
+
+disasm:	main.elf
+	avr-objdump -d main.elf
+
+size: main.elf
+	avr-size -C --mcu=$(DEVICE) main.elf
+
+debug: main.elf
+	avarice -g --part $(DEVICE) --dragon --jtag usb --file main.elf :4242
+
+debug-bootloader: bootloader.elf
+	avarice -g --part $(DEVICE) --dragon --jtag usb --file bootloader.elf :4242
 
 main.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS)
@@ -88,14 +100,5 @@ bootloader.hex: bootloader.elf
 	rm -f bootloader.hex
 	avr-objcopy -j .text -j .data -O ihex bootloader.elf bootloader.hex
 
-disasm:	main.elf
-	avr-objdump -d main.elf
-
-size: main.elf
-	avr-size -C --mcu=$(DEVICE) main.elf
-
-debug: main.elf
-	avarice -g --part $(DEVICE) --dragon --jtag usb --file main.elf :4242
-
-debug-bootloader: bootloader.elf
-	avarice -g --part $(DEVICE) --dragon --jtag usb --file bootloader.elf :4242
+combined.hex: bootloader.hex main.hex
+	srec_cat bootloader.hex -I main.hex -I -o combined.hex -I
