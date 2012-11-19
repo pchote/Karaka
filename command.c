@@ -162,9 +162,10 @@ void send_timestamp()
         gps_last_timestamp.year & 0x00FF,
         gps_last_timestamp.year >> 8,
         gps_last_timestamp.locked,
-        exposure_countdown
+        exposure_countdown & 0x00FF,
+        exposure_countdown >> 8
     };
-    queue_data(CURRENTTIME, data, 9);
+    queue_data(CURRENTTIME, data, 10);
 }
 
 void send_downloadtimestamp()
@@ -333,8 +334,8 @@ void usart_process_buffer()
                 // These are only accessed from interrupt context
                 // when countdown_mode = ENABLED or TRIGGERED so
                 // these is safe to modify with interrupts enabled
-                exposure_countdown = *data;
-                exposure_total = *data;
+                exposure_countdown = data[0] | data[1] << 8;
+                exposure_total = exposure_countdown;
                 align_boundary = (exposure_total < 60) ? exposure_total : 60;
 
                 // Trigger fake camera output

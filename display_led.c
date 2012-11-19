@@ -291,8 +291,13 @@ void update_display()
     // Take a local copy of state that can be changed by interrupts
     uint8_t display_monitor_mode = monitor_mode;
     uint8_t display_countdown_mode = countdown_mode;
-    uint8_t display_countdown = exposure_countdown;
     uint8_t display_monitor_level_high = monitor_level_high;
+
+    uint16_t display_countdown;
+    ATOMIC_BLOCK(ATOMIC_FORCEON)
+    {
+        display_countdown = exposure_countdown;
+    }
 
     // Update top row (status and countdown)
     if (display_countdown_mode == COUNTDOWN_RELAY)

@@ -25,9 +25,9 @@
 const char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
 const char msg_no_serial[]       PROGMEM = "GPS serial connection lost";
 
-uint8_t exposure_total = 0;
+uint16_t exposure_total = 0;
 uint8_t align_boundary = 0;
-volatile uint8_t exposure_countdown = 0;
+volatile uint16_t exposure_countdown = 0;
 volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
 volatile interruptflags interrupt_flags = 0;
 
@@ -227,6 +227,7 @@ ISR(PCINT3_vect)
         {
             // End of exposure - send a syncpulse to the camera
             // and store a flag so the gps can save the synctime.
+            // This is a 16-bit operation, but we are in an interrupt so it is atomic
             if (--exposure_countdown == 0)
             {
                 exposure_countdown = exposure_total;

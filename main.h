@@ -32,8 +32,8 @@
 #define BOOTFLAG_UPGRADE       0xFF
 #define BOOTFLAG_BOOT          0x42
 
-extern uint8_t exposure_total;
-extern volatile uint8_t exposure_countdown;
+extern uint16_t exposure_total;
+extern volatile uint16_t exposure_countdown;
 extern uint8_t align_boundary;
 
 typedef enum
