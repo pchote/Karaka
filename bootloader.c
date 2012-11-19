@@ -4,19 +4,28 @@
  */
 
 #include <stdint.h>
-#include <avr/boot.h>
 #include <avr/wdt.h>
 #include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/eeprom.h>
 
+/*
+ * avr-libc 1.8.0 throws a poisoned identifier error
+ * as soon as we include boot.h for the atmega128
+ * To fix, modify boot.h:110-116 to the following:
+ *
+ *  #if defined(SPMCSR)
+ *  #  define __SPM_REG     SPMCSR
+ *  #elif !defined (__AVR_ATmega128__)
+ *  #  if defined(SPMCR)
+ *  #    define __SPM_REG   SPMCR
+ *  #  endif
+ *  #endif
+*/
+#include <avr/boot.h>
+
 // For boot flag definitions
 #include "main.h"
-
-// TODO: Fix this
-#if CPU_TYPE != CPU_ATMEGA1284p
-#   error Bootloader only supported by atmega1284p board
-#endif
 
 // Definitions for SPM control
 // 128 words = 256 bytes
@@ -34,7 +43,13 @@
 void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
 void wdt_init(void)
 {
+#if CPU_TYPE == CPU_ATMEGA128
+    MCUCSR = 0;
+#elif CPU_TYPE == CPU_ATMEGA1284p
     MCUSR = 0;
+#else
+#   error Unknown CPU type
+#endif
     wdt_disable();
 }
 
