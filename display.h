@@ -12,6 +12,12 @@
 
 #ifndef KARAKA_DISPLAY_H
 #define KARAKA_DISPLAY_H
+
+#define DISPLAY_EXPOSURE_REGULAR 0
+#define DISPLAY_EXPOSURE_PERCENT 1
+#define DISPLAY_EXPOSURE_HIDE    2
+extern uint8_t display_exposure_type;
+
 void display_init_hardware();
 void update_display();
 #endif

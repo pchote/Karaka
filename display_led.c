@@ -141,6 +141,8 @@ static const char msg_noserial[]    PROGMEM = "NO SERIAL CONNECTION";
 static const char msg_idle[]        PROGMEM = "        IDLE        ";
 static const char msg_wait[]        PROGMEM = " WAITING FOR CAMERA ";
 static const char msg_relay[]       PROGMEM = "     RELAY MODE     ";
+static const char msg_expose_c[]    PROGMEM = "       EXPOSE       ";
+static const char msg_readout_c[]   PROGMEM = "       READOUT      ";
 
 // For display with countdown
 static const char msg_align[]       PROGMEM = "  ALIGN             ";
@@ -155,6 +157,7 @@ static const char fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO GPS LOCK";
 static const char msg_syncing[]     PROGMEM = "  SYNCING TO SERIAL ";
 
 volatile uint8_t display_brightness = 0xF7;
+uint8_t display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
 
 /*
  * Queue data to the display
@@ -367,9 +370,30 @@ void update_display()
     else if (display_monitor_mode == MONITOR_ACQUIRE)
     {
         // Exposing / Readout
-        const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
-        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
-        set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, exposure_total - display_countdown, exposure_total);
+        switch (display_exposure_type)
+        {
+            case DISPLAY_EXPOSURE_HIDE:
+            {
+                const char *msg = display_monitor_level_high ? msg_expose_c : msg_readout_c;
+                set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg);
+                break;
+            }
+            case DISPLAY_EXPOSURE_REGULAR:
+            {
+                const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
+                set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
+                set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, exposure_total - display_countdown, exposure_total);
+                break;
+            }
+            case DISPLAY_EXPOSURE_PERCENT:
+            {
+                const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
+                uint16_t percentage = (exposure_total - display_countdown) / (exposure_total / 100);
+                set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
+                set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_percentage, percentage);
+                break;
+            }
+        }
     }
     else
     {

@@ -19,6 +19,7 @@
 #include "main.h"
 #include "gps.h"
 #include "monitor.h"
+#include "display.h"
 
 const char command_msg_bad_packet[]     PROGMEM = "Bad packet - ignoring";
 const char command_fmt_got_packet[]     PROGMEM = "Got packet '%c'";
@@ -337,6 +338,14 @@ void usart_process_buffer()
                 exposure_countdown = data[0] | data[1] << 8;
                 exposure_total = exposure_countdown;
                 align_boundary = (exposure_total < 60) ? exposure_total : 60;
+
+                // Set exposure display mode
+                if (exposure_total < 2)
+                    display_exposure_type = DISPLAY_EXPOSURE_HIDE;
+                else if (exposure_total > 999)
+                    display_exposure_type = DISPLAY_EXPOSURE_PERCENT;
+                else
+                    display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
 
                 // Trigger fake camera output
                 if (monitor_simulate_camera)

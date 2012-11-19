@@ -26,21 +26,28 @@
 #include <avr/interrupt.h>
 #include <stdio.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 
 #define DISPLAY0 0x02
 #define DISPLAY1 0xC0
 
 // Display messages
-const char display_msg_idle[]      PROGMEM = "      IDLE      ";
-const char display_msg_wait[]      PROGMEM = " WAIT FOR CAMERA";
-const char display_fmt_align[]     PROGMEM = " ALIGN   %03d/%03d";
-const char display_fmt_expose[]    PROGMEM = " EXPOSE  %03d/%03d";
-const char display_fmt_readout[]   PROGMEM = " READOUT %03d/%03d";
+const char display_msg_idle[]            PROGMEM = "      IDLE      ";
+const char display_msg_wait[]            PROGMEM = " WAIT FOR CAMERA";
+const char display_fmt_align[]           PROGMEM = " ALIGN   %03d/%03d";
+const char display_fmt_expose[]          PROGMEM = " EXPOSE  %03d/%03d";
+const char display_fmt_expose_percent[]  PROGMEM = " EXPOSE    %3d%% ";
+const char display_msg_expose_blank[]    PROGMEM = "     EXPOSE     ";
+const char display_fmt_readout[]         PROGMEM = " READOUT %03d/%03d";
+const char display_fmt_readout_percent[] PROGMEM = " READOUT   %3d%% ";
+const char display_msg_readout_blank[]   PROGMEM = "     READOUT    ";
 
 const char display_fmt_time[]        PROGMEM = "  %02d:%02d:%02d UTC  ";
 const char display_fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO LOCK";
 const char display_msg_noserial[]    PROGMEM = "    NO SERIAL   ";
 const char display_msg_syncing[]     PROGMEM = "     SYNCING    ";
+
+uint8_t display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
 
 /*
  * Queue data to the display
@@ -146,10 +153,32 @@ void update_display()
     {
         if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED)
             set_fmt_P(DISPLAY0, display_fmt_align, gps_last_timestamp.seconds % align_boundary, align_boundary);
-        else if (!display_monitor_level_high)
-            set_fmt_P(DISPLAY0, display_fmt_readout, exposure_total - display_countdown, exposure_total);
-        else 
-            set_fmt_P(DISPLAY0, display_fmt_expose, exposure_total - display_countdown, exposure_total);
+        else
+        {
+            switch (display_exposure_type)
+            {
+                case DISPLAY_EXPOSURE_HIDE:
+                {
+                    PGM_P msg = (!display_monitor_level_high) ? display_msg_readout_blank : display_msg_expose_blank;
+                    set_msg_P(DISPLAY0, msg);
+                    break;
+                }
+                case DISPLAY_EXPOSURE_PERCENT:
+                {
+                    PGM_P msg = (!display_monitor_level_high) ? display_fmt_readout_percent : display_fmt_expose_percent;
+                    uint16_t percentage = (exposure_total - display_countdown) / (exposure_total / 100);
+                    set_fmt_P(DISPLAY0, msg, percentage);
+                    break;
+                }
+                default:
+                case DISPLAY_EXPOSURE_REGULAR:
+                {
+                    PGM_P msg = (!display_monitor_level_high) ? display_fmt_readout : display_fmt_expose;
+                    set_fmt_P(DISPLAY0, msg, exposure_total - display_countdown, exposure_total);
+                    break;
+                }
+            }
+        }
     }
     else
         set_msg_P(DISPLAY0, display_msg_idle);
