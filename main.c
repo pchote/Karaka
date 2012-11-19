@@ -13,6 +13,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
+#include <util/atomic.h>
 
 #include "main.h"
 #include "download.h"
@@ -108,15 +109,14 @@ volatile interruptflags interrupt_flags = 0;
  */
 void set_initial_state()
 {
-    uint8_t sreg = SREG;
-    cli();
-    exposure_total = exposure_countdown = 0;
-    countdown_mode = COUNTDOWN_DISABLED;
-    interrupt_flags = 0;
-    command_init_state();
-    monitor_init_state();
-    sei();
-    SREG = sreg;
+    ATOMIC_BLOCK(ATOMIC_FORCEON)
+    {
+        exposure_total = exposure_countdown = 0;
+        countdown_mode = COUNTDOWN_DISABLED;
+        interrupt_flags = 0;
+        command_init_state();
+        monitor_init_state();
+    }
 
     // Send config to attached GPS
     // Requires interrupts to be enabled
@@ -165,12 +165,12 @@ int main(void)
         // Handle message flags set via interrupt
         if (interrupt_flags)
         {
-            uint8_t sreg = SREG;
-            cli();
-            uint8_t temp_int_flags = interrupt_flags;
-            interrupt_flags = 0;
-            sei();
-            SREG = sreg;
+            uint8_t temp_int_flags = 0;
+            ATOMIC_BLOCK(ATOMIC_FORCEON)
+            {
+                temp_int_flags = interrupt_flags;
+                interrupt_flags = 0;
+            }
 
             if (temp_int_flags & FLAG_DOWNLOAD_COMPLETE)
                 send_status(TIMER_EXPOSING);

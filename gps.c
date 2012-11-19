@@ -13,6 +13,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <util/atomic.h>
 #include <stdio.h>
 #include "main.h"
 #include "gps.h"
@@ -198,12 +199,11 @@ static void set_time(timestamp *t)
 
     if (gps_record_synctime)
     {
-        uint8_t sreg = SREG;
-        cli();
-        gps_last_synctime = gps_last_timestamp;
-        gps_record_synctime = false;
-        sei();
-        SREG = sreg;
+        ATOMIC_BLOCK(ATOMIC_FORCEON)
+        {
+            gps_last_synctime = gps_last_timestamp;
+            gps_record_synctime = false;
+        }
 
         send_downloadtimestamp();
         send_status(TIMER_READOUT);
