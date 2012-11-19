@@ -23,7 +23,13 @@
 
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 #include <stdio.h>
+
+#define DISPLAY_TOP    (1 << 0)
+#define DISPLAY_BOTTOM (1 << 1)
+#define DISPLAY_LEFT   (1 << 2)
+#define DISPLAY_RIGHT  (1 << 3)
 
 #define DISPLAY0 PB1
 #define DISPLAY1 PB2
@@ -131,27 +137,22 @@ const const uint8_t char_defs[96][5] PROGMEM = {
 };
 
 // Display messages
-const char display_msg_noserial_left[]  PROGMEM = "NO SERIAL ";
-const char display_msg_noserial_right[] PROGMEM = "CONNECTION";
-const char display_msg_syncing_left[]   PROGMEM = "  SYNCING ";
-const char display_msg_syncing_right[]  PROGMEM = "TO SERIAL ";
+static const char msg_noserial[]    PROGMEM = "NO SERIAL CONNECTION";
+static const char msg_idle[]        PROGMEM = "        IDLE        ";
+static const char msg_wait[]        PROGMEM = " WAITING FOR CAMERA ";
+static const char msg_relay[]       PROGMEM = "     RELAY MODE     ";
 
-const char display_msg_idle_left[]  PROGMEM = "        ID";
-const char display_msg_idle_right[] PROGMEM = "LE        ";
-const char display_msg_align[]      PROGMEM = "  ALIGN   ";
-const char display_msg_expose[]     PROGMEM = "  EXPOSE  ";
-const char display_msg_readout[]    PROGMEM = "  READOUT ";
-const char display_msg_wait_left[]  PROGMEM = " WAITING F";
-const char display_msg_wait_right[] PROGMEM = "OR CAMERA ";
-const char display_fmt_countdown[]  PROGMEM = " %03d/%03d  ";
-const char display_msg_relay_left[] PROGMEM = "     RELAY";
-const char display_msg_relay_right[]PROGMEM = " MODE     ";
+// For display with countdown
+static const char msg_align[]       PROGMEM = "  ALIGN             ";
+static const char msg_expose[]      PROGMEM = "  EXPOSE            ";
+static const char msg_readout[]     PROGMEM = "  READOUT           ";
+static const char fmt_countdown[]   PROGMEM = "           %03d/%03d  ";
+static const char fmt_percentage[]  PROGMEM = "              %3d%%  ";
 
-const char display_fmt_time_left[]  PROGMEM = "    %02d:%02d:";
-const char display_fmt_time_right[] PROGMEM = "%02d UTC    ";
-
-const char display_fmt_time_nolock_left[]  PROGMEM = "%02d:%02d:%02d N";
-const char display_fmt_time_nolock_right[] PROGMEM = "O GPS LOCK";
+// Bottom display
+static const char fmt_time[]        PROGMEM = "    %02d:%02d:%02d UTC    ";
+static const char fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO GPS LOCK";
+static const char msg_syncing[]     PROGMEM = "  SYNCING TO SERIAL ";
 
 volatile uint8_t display_brightness = 0xF7;
 
@@ -178,17 +179,15 @@ static void send_data(uint8_t display, uint8_t *data, uint8_t length)
 }
 
 /*
- * Set a 10 character message on the requested display module
- * Assumes that msg is at least 10 bytes, all in the range 0x20 - 0x7F
+ * Read a 10 char string from flash and display on the requested module
  */
-static void set_msg_P(uint8_t display, const char *msg)
+static void set_display_P(uint8_t display, const char *msg)
 {
-    // Iterate over the characters in the message
+    // Characters are defined by 6 bytes
+    uint8_t c[6];
+
     for (uint8_t i = 0; i < 10; i++)
     {
-        // Characters are defined by 6 bytes
-        uint8_t c[6];
-
         // First byte gives 'character' opcode plus index
         c[0] = 0xB0 | i;
 
@@ -200,22 +199,72 @@ static void set_msg_P(uint8_t display, const char *msg)
     }
 }
 
-static void set_fmt_P(uint8_t display, const char *fmt, ...)
+/*
+ * Read a 10 char string from ram and display on the requested module
+ */
+static void set_display(uint8_t display, const char *msg)
+{
+    // Characters are defined by 6 bytes
+    uint8_t c[6];
+
+    for (uint8_t i = 0; i < 10; i++)
+    {
+        // First byte gives 'character' opcode plus index
+        c[0] = 0xB0 | i;
+
+        // Remaining 5 bytes define character bitmap
+        for (uint8_t j = 0; j < 5; j++)
+            c[j+1] = pgm_read_byte(&(char_defs[msg[i] - 0x20][j]));
+
+        send_data(display, c, 6);
+    }
+}
+
+/*
+ * Display a string on a subset of display modules
+ */
+static void set_msg_P(uint8_t flags, const char *msg)
+{
+    if (flags & DISPLAY_TOP)
+    {
+        if (flags & DISPLAY_LEFT)
+            set_display_P(DISPLAY0, msg);
+        if (flags & DISPLAY_RIGHT)
+            set_display_P(DISPLAY1, msg + 10);
+    }
+
+    if (flags & DISPLAY_BOTTOM)
+    {
+        if (flags & DISPLAY_LEFT)
+            set_display_P(DISPLAY2, msg);
+        if (flags & DISPLAY_RIGHT)
+            set_display_P(DISPLAY3, msg + 10);
+    }
+}
+
+static void set_fmt_P(uint8_t flags, const char *fmt, ...)
 {
     va_list args;
-    char buf[11];
+    char buf[21];
 
     va_start(args, fmt);
     vsprintf_P(buf, fmt, args);
     va_end(args);
 
-    uint8_t c[6];
-    for (uint8_t i = 0; i < 10; i++)
+    if (flags & DISPLAY_TOP)
     {
-        c[0] = 0xB0 | i;
-        for (uint8_t j = 0; j < 5; j++)
-            c[j+1] = pgm_read_byte(&(char_defs[buf[i] - 0x20][j]));
-        send_data(display, c, 6);
+        if (flags & DISPLAY_LEFT)
+            set_display(DISPLAY0, buf);
+        if (flags & DISPLAY_RIGHT)
+            set_display(DISPLAY1, buf + 10);
+    }
+
+    if (flags & DISPLAY_BOTTOM)
+    {
+        if (flags & DISPLAY_LEFT)
+            set_display(DISPLAY2, buf);
+        if (flags & DISPLAY_RIGHT)
+            set_display(DISPLAY3, buf + 10);
     }
 }
 
@@ -299,60 +348,53 @@ void update_display()
         display_countdown = exposure_countdown;
     }
 
-    // Update top row (status and countdown)
     if (display_countdown_mode == COUNTDOWN_RELAY)
     {
-        set_msg_P(DISPLAY0, display_msg_relay_left);
-        set_msg_P(DISPLAY1, display_msg_relay_right);
+        // Relay Mode
+        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_relay);
     }
     else if (display_monitor_mode == MONITOR_START || display_monitor_mode == MONITOR_STOP)
     {
-        set_msg_P(DISPLAY0, display_msg_wait_left);
-        set_msg_P(DISPLAY1, display_msg_wait_right);
+        // Waiting for camera
+        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_wait);
     }
-    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED || display_monitor_mode == MONITOR_ACQUIRE)
+    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED)
     {
-        PGM_P msg = (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED) ? display_msg_align :
-                    (!display_monitor_level_high) ? display_msg_readout : display_msg_expose;
-        set_msg_P(DISPLAY0, msg);
-
-        if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED)
-            set_fmt_P(DISPLAY1, display_fmt_countdown, gps_last_timestamp.seconds % align_boundary, align_boundary);
-        else
-            set_fmt_P(DISPLAY1, display_fmt_countdown, exposure_total - display_countdown, exposure_total);
+        // Aligning
+        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg_align);
+        set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, gps_last_timestamp.seconds % align_boundary, align_boundary);
+    }
+    else if (display_monitor_mode == MONITOR_ACQUIRE)
+    {
+        // Exposing / Readout
+        const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
+        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
+        set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, exposure_total - display_countdown, exposure_total);
     }
     else
     {
-        set_msg_P(DISPLAY0, display_msg_idle_left);
-        set_msg_P(DISPLAY1, display_msg_idle_right);
+        // Idle
+        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_idle);
     }
 
     // Update bottom row (time and locked state)
     switch (display_gps_state)
     {
         case GPS_ACTIVE:
-            if (gps_last_timestamp.locked)
-            {
-                set_fmt_P(DISPLAY2, display_fmt_time_left, gps_last_timestamp.hours, gps_last_timestamp.minutes);
-                set_fmt_P(DISPLAY3, display_fmt_time_right, gps_last_timestamp.seconds);
-            }
-            else
-            {
-                set_fmt_P(DISPLAY2, display_fmt_time_nolock_left,
-                    gps_last_timestamp.hours,
-                    gps_last_timestamp.minutes,
-                    gps_last_timestamp.seconds
-                );
-                set_msg_P(DISPLAY3, display_fmt_time_nolock_right);
-            }
-        break;
+        {
+            const char *fmt = gps_last_timestamp.locked ? fmt_time : fmt_time_nolock;
+            set_fmt_P(DISPLAY_BOTTOM | DISPLAY_LEFT | DISPLAY_RIGHT, fmt,
+                gps_last_timestamp.hours,
+                gps_last_timestamp.minutes,
+                gps_last_timestamp.seconds
+            );
+            break;
+        }
         case GPS_SYNCING:
-            set_msg_P(DISPLAY2, display_msg_syncing_left);
-            set_msg_P(DISPLAY3, display_msg_syncing_right);
+            set_msg_P(DISPLAY_BOTTOM | DISPLAY_LEFT | DISPLAY_RIGHT, msg_syncing);
         break;
         case GPS_UNAVAILABLE:
-            set_msg_P(DISPLAY2, display_msg_noserial_left);
-            set_msg_P(DISPLAY3, display_msg_noserial_right);
+            set_msg_P(DISPLAY_BOTTOM | DISPLAY_LEFT | DISPLAY_RIGHT, msg_noserial);
         break;
     }
 }
