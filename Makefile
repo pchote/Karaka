@@ -10,10 +10,10 @@
 PORT      := /dev/tty.usbserial-00001004
 
 # CPU Frequency; 16 or 10
-CPU_MHZ   := 10
+CPU_MHZ   := 16
 
 # CPU Clock type: 0 for internal oscillator, 1 for external GPS signal
-CPU_CLOCK := 1
+CPU_CLOCK := 0
 
 # Processor type: 0 for original atmega128 board, 1 for newer atmega1284p boards
 CPU_TYPE  := 1
