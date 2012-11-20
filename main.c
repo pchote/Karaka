@@ -31,7 +31,7 @@ volatile uint16_t exposure_countdown = 0;
 volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
 volatile interruptflags interrupt_flags = 0;
 
-timestamp download_timestamp;
+volatile timestamp download_timestamp;
 
 /* Hardware usage (ATmega12-15AI) - Hardware versions 1-2:
  * PORTA:

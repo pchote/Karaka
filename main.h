@@ -73,7 +73,7 @@ typedef struct
     bool locked;
 } timestamp;
 
-extern timestamp download_timestamp;
+extern volatile timestamp download_timestamp;
 
 void set_initial_state();
 #endif
