@@ -268,15 +268,11 @@ void usart_process_buffer()
         if (usart_input_buffer[usart_input_read] == 0 &&
             usart_input_buffer[usart_input_read + 1] == 0)
         {
-            bool reset = true;
-            for (uint16_t i = 0; i < 256; i++)
+            for (uint8_t i = 0; i < 255; i++)
                 if (usart_input_buffer[i] != 0)
-                {
-                    reset = false;
-                    break;
-                }
-            if (reset)
-                trigger_restart();
+                    return;
+
+            trigger_restart();
         }
         return;
     }
