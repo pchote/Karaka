@@ -171,16 +171,18 @@ void send_timestamp()
 
 void send_downloadtimestamp()
 {
+    // This is non-atomic, but something is very wrong if this
+    // doesn't get sent before the next exposure is triggered
     uint8_t data[] =
     {
-        gps_last_synctime.hours,
-        gps_last_synctime.minutes,
-        gps_last_synctime.seconds,
-        gps_last_synctime.day,
-        gps_last_synctime.month,
-        gps_last_synctime.year & 0x00FF,
-        gps_last_synctime.year >> 8,
-        gps_last_synctime.locked
+        download_timestamp.hours,
+        download_timestamp.minutes,
+        download_timestamp.seconds,
+        download_timestamp.day,
+        download_timestamp.month,
+        download_timestamp.year & 0x00FF,
+        download_timestamp.year >> 8,
+        download_timestamp.locked
     };
     queue_data(DOWNLOADTIME, data, 8);
 }

@@ -37,22 +37,10 @@ typedef enum
     MAGELLAN_STATUS_PACKET = 3
 } gpspackettype;
 
-typedef struct
-{
-    uint16_t year;
-    uint8_t month;
-    uint8_t day;
-    uint8_t hours;
-    uint8_t minutes;
-    uint8_t seconds;
-    bool locked;
-} timestamp;
-
 extern volatile gpsstate gps_state;
-extern volatile bool gps_record_synctime;
+extern volatile bool gps_record_trigger;
 
 extern timestamp gps_last_timestamp;
-extern timestamp gps_last_synctime;
 
 void gps_send_raw(uint8_t b);
 void gps_init_hardware();

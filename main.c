@@ -31,6 +31,8 @@ volatile uint16_t exposure_countdown = 0;
 volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
 volatile interruptflags interrupt_flags = 0;
 
+timestamp download_timestamp;
+
 /* Hardware usage (ATmega12-15AI) - Hardware versions 1-2:
  * PORTA:
  *    PA0: INTG output
@@ -172,6 +174,15 @@ int main(void)
                 interrupt_flags = 0;
             }
 
+            if (temp_int_flags & FLAG_SEND_TRIGGER)
+            {
+                send_downloadtimestamp();
+                send_status(TIMER_READOUT);
+            }
+
+            if (temp_int_flags & FLAG_SEND_TIMESTAMP)
+                send_timestamp();
+
             if (temp_int_flags & FLAG_DOWNLOAD_COMPLETE)
                 send_status(TIMER_EXPOSING);
 
@@ -230,18 +241,18 @@ ISR(PCINT3_vect)
             // This is a 16-bit operation, but we are in an interrupt so it is atomic
             if (--exposure_countdown == 0)
             {
-                exposure_countdown = exposure_total;
-                gps_record_synctime = true;
                 trigger_download();
+                exposure_countdown = exposure_total;
+                gps_record_trigger = true;
             }
 
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
         else if (countdown_mode == COUNTDOWN_ALIGNED)
         {
-            exposure_countdown = exposure_total;
-            gps_record_synctime = true;
             trigger_download();
+            exposure_countdown = exposure_total;
+            gps_record_trigger = true;
 
             countdown_mode = COUNTDOWN_TRIGGERED;
         }

@@ -58,12 +58,12 @@ static volatile uint8_t gps_output_read = 0;
 static volatile uint8_t gps_output_write = 0;
 
 volatile gpsstate gps_state = GPS_UNAVAILABLE;
-volatile bool gps_record_synctime = false;
+volatile bool gps_record_trigger = false;
 static uint8_t bytes_to_sync = 0;
 static uint8_t serial_timeout_counter = 0;
 
+
 timestamp gps_last_timestamp;
-timestamp gps_last_synctime;
 
 /*
  * Add a byte to the send queue and start sending data if necessary
@@ -160,7 +160,7 @@ void gps_init_state()
     gps_packet_type = gps_packet_length = 0;
     gps_output_read = gps_output_write = 0;
 
-    gps_record_synctime = false;
+    gps_record_trigger = false;
     gps_state = GPS_UNAVAILABLE;
     serial_timeout_counter = 0;
 
@@ -192,23 +192,18 @@ static void set_time(timestamp *t)
 
     // Mark that we have a valid timestamp
     gps_state = GPS_ACTIVE;
+    interrupt_flags |= FLAG_SEND_TIMESTAMP;
 
     // Synchronise the exposure with the edge of a minute
     if (countdown_mode == COUNTDOWN_SYNCING && (gps_last_timestamp.seconds % align_boundary == align_boundary - 1))
         countdown_mode = COUNTDOWN_ALIGNED;
 
-    if (gps_record_synctime)
+    if (gps_record_trigger)
     {
-        ATOMIC_BLOCK(ATOMIC_FORCEON)
-        {
-            gps_last_synctime = gps_last_timestamp;
-            gps_record_synctime = false;
-        }
-
-        send_downloadtimestamp();
-        send_status(TIMER_READOUT);
+        download_timestamp = gps_last_timestamp;
+        gps_record_trigger = false;
+        interrupt_flags |= FLAG_SEND_TRIGGER;
     }
-    send_timestamp();
 }
 
 /*

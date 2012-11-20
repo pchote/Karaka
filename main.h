@@ -16,6 +16,7 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #if CPU_MHZ == 16
 #   define F_CPU 16000000UL
@@ -53,10 +54,26 @@ typedef enum
     FLAG_STOP_EXPOSURE     = (1 << 1),
     FLAG_NO_SERIAL         = (1 << 2),
     FLAG_DUPLICATE_PULSE   = (1 << 3),
-    FLAG_BEGIN_ALIGN       = (1 << 4)
+    FLAG_BEGIN_ALIGN       = (1 << 4),
+    FLAG_SEND_TIMESTAMP    = (1 << 5),
+    FLAG_SEND_TRIGGER      = (1 << 6),
 } interruptflags;
 
 extern volatile interruptflags interrupt_flags;
+
+typedef struct
+{
+    uint16_t year;
+    uint8_t month;
+    uint8_t day;
+    uint8_t hours;
+    uint8_t minutes;
+    uint8_t seconds;
+    uint16_t milliseconds;
+    bool locked;
+} timestamp;
+
+extern timestamp download_timestamp;
 
 void set_initial_state();
 #endif
