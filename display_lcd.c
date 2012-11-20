@@ -107,7 +107,7 @@ static void set_fmt_P(uint8_t display, const char *fmt, ...)
 /*
  * Initialise the LCD
  */
-void display_init_hardware()
+void display_init()
 {
     // Set all of PORTC as data output
     DDRC |= 0xFF;

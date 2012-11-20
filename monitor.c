@@ -51,10 +51,15 @@ volatile bool monitor_level_high = false;
 volatile monitorstate monitor_mode = MONITOR_WAIT;
 
 /*
- * (re-)Set initial monitor state
+ * Initialize camera state input and timer0 for debouncing input
  */
-void monitor_init_state()
+void monitor_init()
 {
+    MONITOR_TIMSK |= _BV(OCIE3A);
+
+    // Enable pullup resistor on monitor input
+    MONITOR_PORT |= _BV(MONITOR_PIN);
+
     monitor_level_high = false;
     monitor_mode = MONITOR_WAIT;
 
@@ -62,17 +67,6 @@ void monitor_init_state()
     MONITOR_STOP_TIMER;
 
     monitor_simulate_camera = false;
-}
-
-/*
- * Initialize camera state input and timer0 for debouncing input
- */
-void monitor_init_hardware()
-{
-    MONITOR_TIMSK |= _BV(OCIE3A);
-
-    // Enable pullup resistor on monitor input
-    MONITOR_PORT |= _BV(MONITOR_PIN);
 }
 
 /*

@@ -18,6 +18,6 @@
 #define DISPLAY_EXPOSURE_HIDE    2
 extern uint8_t display_exposure_type;
 
-void display_init_hardware();
+void display_init();
 void update_display();
 #endif

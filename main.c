@@ -10,9 +10,10 @@
 //
 //***************************************************************************
 
+#include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/eeprom.h>
+#include <avr/wdt.h>
 #include <util/atomic.h>
 
 #include "main.h"
@@ -107,23 +108,15 @@ volatile timestamp download_timestamp;
  */
 
 /*
- * Reset internal state to startup values
+ * Trigger a hardware restart
  */
-void set_initial_state()
+void trigger_restart()
 {
-    ATOMIC_BLOCK(ATOMIC_FORCEON)
-    {
-        exposure_total = exposure_countdown = 0;
-        countdown_mode = COUNTDOWN_DISABLED;
-        interrupt_flags = 0;
-        command_init_state();
-        monitor_init_state();
-    }
-
-    // Send config to attached GPS
-    // Requires interrupts to be enabled
-    gps_init_state();
+    cli();
+    wdt_enable(WDTO_15MS);
+    for(;;);
 }
+
 
 /*
  * Initialize the unit and wait for interrupts.
@@ -147,17 +140,22 @@ int main(void)
 #endif
 
     // Set other init
-    command_init_hardware();
-    gps_init_hardware();
-    download_init_hardware();
-    monitor_init_hardware();
-    display_init_hardware();
+    command_init();
+    gps_init();
+    download_init();
+    monitor_init();
+    display_init();
+
+    exposure_total = exposure_countdown = 0;
+    countdown_mode = COUNTDOWN_DISABLED;
+    interrupt_flags = 0;
 
     // Enable interrupts
     sei();
 
-    // Initialize global variables
-    set_initial_state();
+    // Send config to attached GPS
+    // Requires interrupts to be enabled
+    gps_configure_gps();
 
     // Enable regular boot if we just updated via the bootloader
     eeprom_update_byte(BOOTFLAG_EEPROM_OFFSET, BOOTFLAG_BOOT);

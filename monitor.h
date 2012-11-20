@@ -28,8 +28,7 @@ extern volatile bool monitor_level_high;
 extern volatile monitorstate monitor_mode;
 extern bool monitor_simulate_camera;
 
-void monitor_init_state();
-void monitor_init_hardware();
+void monitor_init();
 void monitor_tick();
 
 void simulate_camera_startup();

@@ -43,8 +43,7 @@ typedef enum
     TIMER_READOUT
 } TimerMode;
 
-void command_init_hardware();
-void command_init_state();
+void command_init();
 void command_send_raw(uint8_t b);
 void send_debug_fmt_P(const char *fmt, ...);
 void send_debug_string_P(const char *string);

@@ -44,7 +44,7 @@
 /*
  * Enable the camera output line and setup timer0 for setting the pulse length
  */
-void download_init_hardware()
+void download_init()
 {
     // Set pin as an output, initially high
     DOWNLOAD_DDR |= _BV(DOWNLOAD_DD);

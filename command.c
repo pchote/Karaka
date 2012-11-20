@@ -13,7 +13,6 @@
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/wdt.h>
 #include <util/atomic.h>
 #include <stdio.h>
 #include "command.h"
@@ -45,7 +44,7 @@ static volatile uint8_t usart_output_write = 0;
 /*
  * Initialize usart0 for talking to the acquisition PC via USB
  */
-void command_init_hardware()
+void command_init()
 {
     // Set 9600 baud rate
     UBRR0H = 0;
@@ -63,19 +62,11 @@ void command_init_hardware()
 
     // Set 8-bit data frame
     UCSR0C = _BV(UCSZ01)|_BV(UCSZ00);
-}
 
-/*
- * Reset input data buffer on reset
- */
-void command_init_state()
-{
     usart_packet_type = UNKNOWN_PACKET;
     usart_packet_length = usart_packet_expected_length = 0;
     usart_input_read = usart_input_write = 0;
-
-    // Don't clear the output buffer, as we may be in the middle of sending a packet
-    //usart_output_read = usart_output_write = 0;
+    usart_output_read = usart_output_write = 0;
 }
 
 /*
@@ -285,7 +276,7 @@ void usart_process_buffer()
                     break;
                 }
             if (reset)
-                set_initial_state();
+                trigger_restart();
         }
         return;
     }
@@ -397,7 +388,7 @@ void usart_process_buffer()
                 }
             break;
             case RESET:
-                set_initial_state();
+                trigger_restart();
             break;
             case SIMULATE_CAMERA:
                 // Enable or disable simulating the camera status output
@@ -408,11 +399,7 @@ void usart_process_buffer()
             break;
             case START_UPGRADE:
                 eeprom_update_byte(BOOTFLAG_EEPROM_OFFSET, BOOTFLAG_UPGRADE);
-
-                // Reboot into the bootloader
-                cli();
-                wdt_enable(WDTO_15MS);
-                for(;;);
+                trigger_restart();
             break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);

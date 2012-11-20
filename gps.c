@@ -104,29 +104,11 @@ ISR(USART1_UDRE_vect)
  * Initialize usart1 for communicating with the GPS via RS232
  * Enable timer1 to monitor for serial connection loss
  */
-void gps_init_hardware()
+void gps_init()
 {
-    // Set baud rate to 9600
-    UBRR1H = 0;
-#if CPU_MHZ == 16
-    UBRR1L = 0xCF;
-#elif CPU_MHZ == 10
-    UBRR1L = 0x81;
-#else
-    #error Unknown CPU Frequency
-#endif
-    UCSR1A = _BV(U2X1);
-
-    // Enable receive, transmit, data received interrupt
-    UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);
-
-    // Set 8-bit data frame
-    UCSR1C = _BV(UCSZ11)|_BV(UCSZ10);
-
-    // Initialize timer1 to monitor GPS loss
+    // Configure serial data timeout timer
     TCCR1A = 0x00;
-
-    // Add a serial data timeout.
+    serial_timeout_counter = 0;
 #if CPU_TYPE == CPU_ATMEGA128
     TCCR2 = _BV(WGM21)|_BV(CS22)|_BV(CS21)|_BV(CS20);
     TIMSK |= _BV(OCIE2);
@@ -138,22 +120,26 @@ void gps_init_hardware()
 #   error Unknown CPU type
 #endif
 
-    // Increments a counter every 16.384ms
+    // Set baud rate to 9600
+    // and timeout counter to 16.384ms
+    UBRR1H = 0;
 #if CPU_MHZ == 16
+    UBRR1L = 0xCF;
     GPS_OCR = 255;
 #elif CPU_MHZ == 10
+    UBRR1L = 0x81;
     GPS_OCR = 159;
 #else
-#   error Unknown CPU Frequency
+    #error Unknown CPU Frequency
 #endif
-}
+    UCSR1A = _BV(U2X1);
 
-/*
- * Reset data buffers and send configuration data for both GPS units
- * The connected GPS will ignore the data for other unit
- */
-void gps_init_state()
-{
+    // Enable receive, transmit, data received interrupt
+    UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);
+
+    // Set 8-bit data frame
+    UCSR1C = _BV(UCSZ11)|_BV(UCSZ10);
+
     gps_magellan_length = 0;
     gps_magellan_locked = false;
     gps_input_read = gps_input_write = 0;
@@ -162,8 +148,14 @@ void gps_init_state()
 
     gps_record_trigger = false;
     gps_state = GPS_UNAVAILABLE;
-    serial_timeout_counter = 0;
+}
 
+/*
+ * Reset data buffers and send configuration data for both GPS units
+ * The connected GPS will ignore the data for other unit
+ */
+void gps_configure_gps()
+{
     // Send Trimble init data
     for (uint8_t i = 0; i < 9; i++)
         gps_send_raw(pgm_read_byte(&trimble_init[i]));

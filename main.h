@@ -75,5 +75,5 @@ typedef struct
 
 extern volatile timestamp download_timestamp;
 
-void set_initial_state();
+void trigger_restart();
 #endif
