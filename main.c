@@ -131,8 +131,9 @@ void set_initial_state()
 int main(void)
 {
 #if CPU_TYPE == CPU_ATMEGA128
-    // Set INT0 to be rising edge triggered
-    EICRA = _BV(ISC01);
+    // Set INT0 to be falling edge triggered
+    // Note that the input buffer inverts the signal
+    EICRA = _BV(ISC01) | _BV(ISC00);
     EIMSK |= _BV(INT0);
 #elif CPU_TYPE == CPU_ATMEGA1284p
     // Enable pin change interrupt for PPS input
@@ -220,8 +221,15 @@ ISR(INT0_vect)
 #elif CPU_TYPE == CPU_ATMEGA1284p
 ISR(PCINT3_vect)
 {
-    // Ignore falling edge interrupt
-    if (!bit_is_clear(PIND, PD4))
+    // Trigger on the falling edge of the PPS pulse
+    // Note that the input buffer inverts the signal
+    //
+    // Triggering on the rising edge is unreliable as
+    // this check will fail of other interrupts delay
+    // the interrupt by >10us.
+    // This is needed for millisecond-mode as the timer
+    // interrupt fires at the same time as the PPS arrives.
+    if (bit_is_clear(PIND, PD4))
         return;
 #else
 #   error Unknown CPU type
