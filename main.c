@@ -198,7 +198,7 @@ int main(void)
             if (temp_int_flags & FLAG_NO_SERIAL)
                 send_debug_string_P(msg_no_serial);
 
-            if (temp_int_flags & FLAG_DUPLICATE_PULSE)
+            if (temp_int_flags & FLAG_TIME_DRIFT)
                 send_debug_string_P(msg_duplicate_pulse);
         }
 
@@ -232,7 +232,7 @@ ISR(PCINT3_vect)
     {
         // Send a warning about the duplicate pulse
         if (countdown_mode == COUNTDOWN_TRIGGERED)
-            interrupt_flags |= FLAG_DUPLICATE_PULSE;
+            interrupt_flags |= FLAG_TIME_DRIFT;
 
         if (countdown_mode == COUNTDOWN_ENABLED || countdown_mode == COUNTDOWN_TRIGGERED)
         {

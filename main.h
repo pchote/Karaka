@@ -53,7 +53,7 @@ typedef enum
     FLAG_DOWNLOAD_COMPLETE = (1 << 0),
     FLAG_STOP_EXPOSURE     = (1 << 1),
     FLAG_NO_SERIAL         = (1 << 2),
-    FLAG_DUPLICATE_PULSE   = (1 << 3),
+    FLAG_TIME_DRIFT        = (1 << 3),
     FLAG_BEGIN_ALIGN       = (1 << 4),
     FLAG_SEND_TIMESTAMP    = (1 << 5),
     FLAG_SEND_TRIGGER      = (1 << 6),
