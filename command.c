@@ -14,6 +14,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
+#include <util/atomic.h>
 #include <stdio.h>
 #include "command.h"
 #include "main.h"
@@ -153,20 +154,29 @@ static void queue_data_P(uint8_t type, uint8_t *data, uint8_t length)
  */
 void send_timestamp()
 {
+    uint16_t count;
+    ATOMIC_BLOCK(ATOMIC_FORCEON)
+    {
+        count = exposure_countdown;
+    }
+    count = exposure_total - count;
+
     uint8_t data[] =
     {
+        gps_last_timestamp.year & 0xFF,
+        gps_last_timestamp.year >> 8,
+        gps_last_timestamp.month,
+        gps_last_timestamp.day,
         gps_last_timestamp.hours,
         gps_last_timestamp.minutes,
         gps_last_timestamp.seconds,
-        gps_last_timestamp.day,
-        gps_last_timestamp.month,
-        gps_last_timestamp.year & 0x00FF,
-        gps_last_timestamp.year >> 8,
+        gps_last_timestamp.milliseconds & 0xFF,
+        gps_last_timestamp.milliseconds >> 8,
         gps_last_timestamp.locked,
-        exposure_countdown & 0x00FF,
-        exposure_countdown >> 8
+        count & 0x00FF,
+        count >> 8
     };
-    queue_data(CURRENTTIME, data, 10);
+    queue_data(CURRENTTIME, data, 12);
 }
 
 void send_downloadtimestamp()
@@ -175,16 +185,18 @@ void send_downloadtimestamp()
     // doesn't get sent before the next exposure is triggered
     uint8_t data[] =
     {
+        download_timestamp.year & 0x00FF,
+        download_timestamp.year >> 8,
+        download_timestamp.month,
+        download_timestamp.day,
         download_timestamp.hours,
         download_timestamp.minutes,
         download_timestamp.seconds,
-        download_timestamp.day,
-        download_timestamp.month,
-        download_timestamp.year & 0x00FF,
-        download_timestamp.year >> 8,
+        download_timestamp.milliseconds & 0xFF,
+        download_timestamp.milliseconds >> 8,
         download_timestamp.locked
     };
-    queue_data(DOWNLOADTIME, data, 8);
+    queue_data(DOWNLOADTIME, data, 10);
 }
 
 void send_stopexposure()

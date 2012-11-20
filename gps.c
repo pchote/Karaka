@@ -354,13 +354,14 @@ void gps_process_buffer()
                     if (gps_packet[20] == ETX && gps_packet[19] == DLE)
                     {
                         set_time(&(timestamp){
+                            .year = ((gps_packet[17] << 8) & 0xFF00) | (gps_packet[18] & 0x00FF),
+                            .month = gps_packet[16],
+                            .day = gps_packet[15],
                             .hours = gps_packet[14],
                             .minutes = gps_packet[13],
                             .seconds = gps_packet[12],
-                            .day = gps_packet[15],
-                            .month = gps_packet[16],
-                            .year = ((gps_packet[17] << 8) & 0xFF00) | (gps_packet[18] & 0x00FF),
-                            .locked = gps_packet[11] == 0x03 ? true : false
+                            .milliseconds = 0,
+                            .locked = gps_packet[11] == 0x03
                         });
                     }
                     else
@@ -435,12 +436,13 @@ void gps_process_buffer()
                                 }
 
                                 set_time(&(timestamp){
+                                    .year = year,
+                                    .month = month,
+                                    .day = day,
                                     .hours = gps_packet[4],
                                     .minutes = gps_packet[5],
                                     .seconds = gps_packet[6],
-                                    .day = day,
-                                    .month = month,
-                                    .year = year,
+                                    .milliseconds = 0,
                                     .locked = gps_magellan_locked
                                 });
                             }
