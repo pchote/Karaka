@@ -170,7 +170,9 @@ ISR(TIMER3_COMPA_vect)
                 interrupt_flags |= FLAG_BEGIN_ALIGN;
                 break;
             case MONITOR_ACQUIRE:
-                interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
+                // Ignore the download start transition
+                if (high)
+                    interrupt_flags |= FLAG_DOWNLOAD_COMPLETE;
                 break;
             case MONITOR_STOP:
                 interrupt_flags |= FLAG_STOP_EXPOSURE;
