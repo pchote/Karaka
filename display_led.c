@@ -432,5 +432,5 @@ ISR(ADC_vect)
 {
     // Only care about top 3 bits, inverted
     uint8_t temp = ADCH;
-    display_brightness = (~temp) >> 5;
+    display_brightness = ((uint8_t)~temp) >> 5;
 }
