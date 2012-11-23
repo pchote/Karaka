@@ -333,10 +333,18 @@ void usart_process_buffer()
         switch(usart_packet_type)
         {
             case START_EXPOSURE:
+                // First byte specifies whether the logic monitor is enabled
+                monitor_simulate_camera = !data[0];
+
+                // Second byte indicates mode (ms or normal)
+                // TODO
+
+                // Remaining bytes specify 16-bit exposure
+                //
                 // These are only accessed from interrupt context
                 // when countdown_mode = ENABLED or TRIGGERED so
                 // these is safe to modify with interrupts enabled
-                exposure_countdown = data[0] | data[1] << 8;
+                exposure_countdown = data[2] | data[3] << 8;
                 exposure_total = exposure_countdown;
                 align_boundary = (exposure_total < 60) ? exposure_total : 60;
 
@@ -385,10 +393,6 @@ void usart_process_buffer()
             break;
             case RESET:
                 trigger_restart();
-            break;
-            case SIMULATE_CAMERA:
-                // Enable or disable simulating the camera status output
-                monitor_simulate_camera = *data;
             break;
             case START_RELAY:
                 countdown_mode = COUNTDOWN_RELAY;

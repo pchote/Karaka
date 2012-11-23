@@ -29,7 +29,6 @@ typedef enum
     STOP_EXPOSURE = 'F',
     RESET = 'G',
     STATUSMODE = 'H',
-    SIMULATE_CAMERA = 'I',
     START_RELAY = 'R',
     START_UPGRADE = 'U'
 } commandtype;
