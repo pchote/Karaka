@@ -48,13 +48,14 @@ volatile int16_t millisecond_drift = 0;
 volatile timestamp download_timestamp;
 
 // Constants for configuring the millisecond timer
+// MILLISECOND_TCNT is calibrated with an oscilloscope
+// to minimize the offset between 1Hz signal and triggers
 #if CPU_MHZ == 16
 #   define MILLISECOND_OCR 15999
-// TODO: Calibrate this
-#   define MILLISECOND_TCNT 241
+#   define MILLISECOND_TCNT 150
 #elif CPU_MHZ == 10
 #   define MILLISECOND_OCR 9999
-#   define MILLISECOND_TCNT 241
+#   define MILLISECOND_TCNT 254
 #else
 #   error Unknown CPU Frequency
 #endif
