@@ -62,10 +62,14 @@ all: main.hex bootloader.hex
 .c.s:
 	$(COMPILE) -S $< -o $@
 
+reset:
+	$(CC) -o $@ reset.c
+
 fuse:
 	$(AVRDUDE) -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m efuse:w:0xFF:m
 
-install: main.hex
+install: main.hex reset
+	./reset $(PORT)
 	$(BOOTLOADER) -U flash:w:main.hex:i
 
 jtag: combined.hex

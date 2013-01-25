@@ -419,10 +419,6 @@ void usart_process_buffer()
             case START_RELAY:
                 countdown_mode = COUNTDOWN_RELAY;
             break;
-            case START_UPGRADE:
-                eeprom_update_byte(BOOTFLAG_EEPROM_OFFSET, BOOTFLAG_UPGRADE);
-                trigger_restart();
-            break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);
             break;

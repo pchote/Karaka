@@ -29,10 +29,6 @@
 #define CPU_ATMEGA128   0
 #define CPU_ATMEGA1284p 1
 
-#define BOOTFLAG_EEPROM_OFFSET 0
-#define BOOTFLAG_UPGRADE       0xFF
-#define BOOTFLAG_BOOT          0x42
-
 typedef enum
 {
     MODE_PPSCOUNTER = 0,

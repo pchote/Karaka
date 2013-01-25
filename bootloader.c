@@ -40,12 +40,15 @@
 #endif
 
 // Disable watchdog timer early in boot
+uint8_t boot_mcusr __attribute__ ((section(".noinit")));
 void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
 void wdt_init(void)
 {
 #if CPU_TYPE == CPU_ATMEGA128
+    boot_mcusr = MCUCSR;
     MCUCSR = 0;
 #elif CPU_TYPE == CPU_ATMEGA1284p
+    boot_mcusr = MCUSR;
     MCUSR = 0;
 #else
 #   error Unknown CPU type
@@ -173,28 +176,29 @@ void block_read(uint16_t size, uint8_t mem, uint32_t *address)
 
 int main(void)
 {
-    // Set up function pointer to RESET vector.
     uint32_t address = 0;
     uint16_t temp_int = 0;
     uint8_t val = 0;
 
-    initbootuart();
-
-    // Boot application unless PC7 is pulled high
-    PORTC |= _BV(PC7);
-
-    if (bit_is_set(PINC, PC7) &&
-        eeprom_read_byte(BOOTFLAG_EEPROM_OFFSET) == BOOTFLAG_BOOT)
+    // Exit bootloader if reset by watchdog
+    if (!(boot_mcusr & _BV(EXTRF)))
     {
-        boot_spm_busy_wait();        
+        boot_spm_busy_wait();
         boot_rww_enable();
         asm("jmp 0000");
     }
 
+    initbootuart();
+
+    // Exit bootloader if no data is recieved after ~1 second
+    wdt_enable(WDTO_500MS);
     for (;;)
     {
+        uint8_t b = recchar();
+        wdt_disable();
+
         // Wait for command character
-        switch (recchar())
+        switch (b)
         {
             // Check autoincrement status
             case 'a': 
@@ -203,7 +207,7 @@ int main(void)
 
             // Set address
             case 'A':
-                    address = (recchar() << 8) | recchar();
+                address = (recchar() << 8) | recchar();
                 sendchar('\r');
             break;
 
@@ -348,10 +352,9 @@ int main(void)
 
             // Exit bootloader
             case 'E':
-                boot_spm_busy_wait();        
-                boot_rww_enable();
                 sendchar('\r');
-                asm("jmp 0000");
+                wdt_enable(WDTO_15MS);
+                for(;;);
             break;
 
             // Get programmer type

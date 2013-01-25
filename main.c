@@ -10,7 +10,6 @@
 //
 //***************************************************************************
 
-#include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
@@ -190,9 +189,6 @@ int main(void)
     // Send config to attached GPS
     // Requires interrupts to be enabled
     gps_configure_gps();
-
-    // Enable regular boot if we just updated via the bootloader
-    eeprom_update_byte(BOOTFLAG_EEPROM_OFFSET, BOOTFLAG_BOOT);
 
     // Main program loop
     for (;;)
