@@ -24,27 +24,6 @@
 #include "main.h"
 #include "command.h"
 
-#if CPU_TYPE == CPU_ATMEGA128
-#   define MONITOR_PORT PORTE
-#   define MONITOR_PINREG PINE
-#   define MONITOR_PIN PE4
-#   define MONITOR_DDR DDRE
-#   define MONITOR_DD DDE4
-#   define MONITOR_TIMSK ETIMSK
-#elif CPU_TYPE == CPU_ATMEGA1284p
-#   define MONITOR_PORT PORTD
-#   define MONITOR_PINREG PIND
-#   define MONITOR_PIN PD6
-#   define MONITOR_DDR DDRD
-#   define MONITOR_DD DDD6
-#   define MONITOR_TIMSK TIMSK3
-#else
-#   error Unknown CPU type
-#endif
-
-#define MONITOR_STOP_TIMER (TCCR3B = _BV(WGM32))
-#define MONITOR_START_TIMER (TCCR3B = _BV(WGM32)|_BV(CS32)|_BV(CS30))
-
 bool monitor_simulate_camera = false;
 
 volatile bool monitor_level_high = false;
@@ -55,16 +34,16 @@ volatile monitorstate monitor_mode = MONITOR_WAIT;
  */
 void monitor_init()
 {
-    MONITOR_TIMSK |= _BV(OCIE3A);
+    TIMSK3 |= _BV(OCIE3A);
 
     // Enable pullup resistor on monitor input
-    MONITOR_PORT |= _BV(MONITOR_PIN);
+    PORTD |= _BV(PD6);
 
     monitor_level_high = false;
     monitor_mode = MONITOR_WAIT;
 
     // Disable timers
-    MONITOR_STOP_TIMER;
+    TCCR3B = _BV(WGM32);
 
     monitor_simulate_camera = false;
 }
@@ -85,18 +64,10 @@ void monitor_init()
 void monitor_tick()
 {
     if (!monitor_simulate_camera &&
-        monitor_level_high != bit_is_clear(MONITOR_PINREG, MONITOR_PIN))
+        monitor_level_high != bit_is_clear(PIND, PD6))
     {
-
-#if CPU_MHZ == 16
-        OCR3A = 8;
-#elif CPU_MHZ == 10
         OCR3A = 5;
-#else
-#   error Unknown CPU Frequency
-#endif
-
-        MONITOR_START_TIMER;
+        TCCR3B = _BV(WGM32) | _BV(CS32) | _BV(CS30);
     }
 }
 
@@ -109,7 +80,7 @@ static void set_output_low(uint16_t timer_cnt)
     monitor_level_high = false;
 
     OCR3A = timer_cnt;
-    MONITOR_START_TIMER;
+    TCCR3B = _BV(WGM32) | _BV(CS32) | _BV(CS30);
 }
 
 /*
@@ -127,13 +98,7 @@ void simulate_camera_startup()
  */
 void simulate_camera_shutdown()
 {
-#if CPU_MHZ == 16
-    set_output_low(0x3D08);
-#elif CPU_MHZ == 10
     set_output_low(0x2625);
-#else
-#   error Unknown CPU Frequency
-#endif
 }
 
 /*
@@ -141,13 +106,7 @@ void simulate_camera_shutdown()
  */
 void simulate_camera_download()
 {
-#if CPU_MHZ == 16
-    set_output_low(0xC349);
-#elif CPU_MHZ == 10
     set_output_low(0x7A11);
-#else
-#   error Unknown CPU Frequency
-#endif
 }
 
 /*
@@ -156,8 +115,10 @@ void simulate_camera_download()
  */
 ISR(TIMER3_COMPA_vect)
 {
-    MONITOR_STOP_TIMER;
-    bool high = monitor_simulate_camera || bit_is_clear(MONITOR_PINREG, MONITOR_PIN);
+    // Disable timer
+    TCCR3B = _BV(WGM32);
+
+    bool high = monitor_simulate_camera || bit_is_clear(PIND, PD6);
     if (monitor_level_high != high)
     {
         monitor_level_high = high;

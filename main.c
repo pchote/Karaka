@@ -49,15 +49,8 @@ volatile timestamp download_timestamp;
 // Constants for configuring the millisecond timer
 // MILLISECOND_TCNT is calibrated with an oscilloscope
 // to minimize the offset between 1Hz signal and triggers
-#if CPU_MHZ == 16
-#   define MILLISECOND_OCR 15999
-#   define MILLISECOND_TCNT 150
-#elif CPU_MHZ == 10
-#   define MILLISECOND_OCR 9999
-#   define MILLISECOND_TCNT 254
-#else
-#   error Unknown CPU Frequency
-#endif
+#define MILLISECOND_OCR 9999
+#define MILLISECOND_TCNT 254
 
 /* Hardware usage (ATmega12-15AI) - Hardware versions 1-2:
  * PORTA:
@@ -147,15 +140,6 @@ void trigger_restart()
  */
 int main(void)
 {
-#if CPU_TYPE == CPU_ATMEGA128
-    // Set INT0 to be falling edge triggered
-    // Note that the input buffer inverts the signal
-    EICRA = _BV(ISC01) | _BV(ISC00);
-    EIMSK |= _BV(INT0);
-
-    // Enable output compare interrupt for ms timer
-    TIMSK |= _BV(OCIE1A);
-#elif CPU_TYPE == CPU_ATMEGA1284p
     // Enable pin change interrupt for PPS input
     PCMSK3 |= _BV(PCINT28);
     PCICR |= _BV(PCIE3);
@@ -165,9 +149,6 @@ int main(void)
 
     // Enable output compare interrupt for ms timer
     TIMSK1 |= _BV(OCIE1A);
-#else
-#   error Unknown CPU type
-#endif
     OCR1A = MILLISECOND_OCR;
     STOP_MILLISECOND_TIMER;
 
@@ -266,10 +247,6 @@ ISR(TIMER1_COMPA_vect)
  * GPS time pulse interrupt handler
  * Fired on any level change from the PPS input (PD4)
  */
-#if CPU_TYPE == CPU_ATMEGA128
-ISR(INT0_vect)
-{
-#elif CPU_TYPE == CPU_ATMEGA1284p
 ISR(PCINT3_vect)
 {
     // Trigger on the falling edge of the PPS pulse
@@ -282,9 +259,6 @@ ISR(PCINT3_vect)
     // interrupt fires at the same time as the PPS arrives.
     if (bit_is_clear(PIND, PD4))
         return;
-#else
-#   error Unknown CPU type
-#endif
 
     if (timing_mode == MODE_HIGHRES)
     {

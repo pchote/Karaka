@@ -19,9 +19,8 @@
 		DA3A422214F1F51D00A5D305 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; name = Makefile; path = ../../phd/karaka/Makefile; sourceTree = "<group>"; };
 		DA3A422314F1F51D00A5D305 /* monitor.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = monitor.c; path = ../../phd/karaka/monitor.c; sourceTree = "<group>"; };
 		DA3A422414F1F51D00A5D305 /* monitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = monitor.h; path = ../../phd/karaka/monitor.h; sourceTree = "<group>"; };
+		DA78048816B77ED10086F948 /* display.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = display.c; sourceTree = "<group>"; };
 		DA9DD237165049820046305E /* bootloader.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bootloader.c; sourceTree = "<group>"; };
-		DAA94884150076630091F027 /* display_lcd.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = display_lcd.c; sourceTree = "<group>"; };
-		DAA94885150076630091F027 /* display_led.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = display_led.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -30,10 +29,9 @@
 			children = (
 				DA3A420A14F1F51D00A5D305 /* command.c */,
 				DA3A420B14F1F51D00A5D305 /* command.h */,
+				DA78048816B77ED10086F948 /* display.c */,
 				DA3A420E14F1F51D00A5D305 /* display.h */,
 				DA3A421114F1F51D00A5D305 /* download.c */,
-				DAA94884150076630091F027 /* display_lcd.c */,
-				DAA94885150076630091F027 /* display_led.c */,
 				DA3A421214F1F51D00A5D305 /* download.h */,
 				DA3A421814F1F51D00A5D305 /* gps.c */,
 				DA3A421914F1F51D00A5D305 /* gps.h */,

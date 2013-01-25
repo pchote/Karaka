@@ -7,52 +7,27 @@
 ##***************************************************************************
 
 # System port to find the timer on for upgrading via the bootloader
-PORT      := /dev/tty.usbserial-00001004
-
-# CPU Frequency; 16 or 10
-CPU_MHZ   := 16
-
-# CPU Clock type: 0 for internal oscillator, 1 for external GPS signal
-CPU_CLOCK := 0
-
-# Processor type: 0 for original atmega128 board, 1 for newer atmega1284p boards
-CPU_TYPE  := 1
+PORT      := /dev/tty.usbserial-A5016EZP
 
 ##***************************************************************************
 
 AVRDUDE = avrdude -c dragon_jtag -P usb -p $(DEVICE)
-OBJECTS = command.o gps.o download.o monitor.o main.o
+OBJECTS = command.o gps.o download.o monitor.o main.o display.o
 
 BOOTLOADER   = avrdude -c avr109 -p $(DEVICE) -b 9600 -P $(PORT)
 BOOT_OBJECTS = bootloader.o
+DEVICE       = atmega1284p
+PARTCODE     = 0x43
 BOOTSTART    = 0x1E000
+PAGESIZE     = 256
+F_CPU        = 10000000UL
+HFUSE        = 0x18
+LFUSE        = 0xF0
 
-ifeq (${CPU_CLOCK}, 0)
-    LFUSE = 0xFF
-else
-    ifeq (${CPU_CLOCK}, 1)
-        LFUSE = 0xF0
-    else
-        $(error Unknown clock type)
-    endif
-endif
-
-ifeq (${CPU_TYPE}, 0)
-    DEVICE = atmega128
-    HFUSE = 0x09
-    OBJECTS += display_lcd.o
-else
-    ifeq (${CPU_TYPE}, 1)
-        DEVICE = atmega1284p
-        HFUSE = 0x18
-        OBJECTS += display_led.o
-    else
-        $(error Unknown CPU type)
-    endif
-endif
+##***************************************************************************
 
 COMPILE = avr-gcc -g -mmcu=$(DEVICE) -Wall -Wextra -Werror -Os -std=gnu99 -funsigned-bitfields -fshort-enums \
-                  -DBOOTSTART=$(BOOTSTART) -DCPU_MHZ=$(CPU_MHZ) -DCPU_TYPE=$(CPU_TYPE)
+                  -DBOOTSTART=$(BOOTSTART) -DPAGESIZE=$(PAGESIZE) -DPARTCODE=$(PARTCODE) -DF_CPU=$(F_CPU)
 
 all: main.hex bootloader.hex
 

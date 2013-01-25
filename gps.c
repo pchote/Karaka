@@ -92,14 +92,6 @@ ISR(USART1_UDRE_vect)
         UCSR1B &= ~_BV(UDRIE1);
 }
 
-#if CPU_TYPE == CPU_ATMEGA128
-#   define GPS_OCR OCR2
-#elif CPU_TYPE == CPU_ATMEGA1284p
-#   define GPS_OCR OCR2A
-#else
-#   error Unknown CPU type
-#endif
-
 /*
  * Initialize usart1 for communicating with the GPS via RS232
  * Enable timer1 to monitor for serial connection loss
@@ -109,16 +101,9 @@ void gps_init()
     // Configure serial data timeout timer
     TCCR1A = 0x00;
     serial_timeout_counter = 0;
-#if CPU_TYPE == CPU_ATMEGA128
-    TCCR2 = _BV(WGM21)|_BV(CS22)|_BV(CS21)|_BV(CS20);
-    TIMSK |= _BV(OCIE2);
-#elif CPU_TYPE == CPU_ATMEGA1284p
     TCCR2A = _BV(WGM21);
     TCCR2B = _BV(CS22)|_BV(CS21)|_BV(CS20);
     TIMSK2 |= _BV(OCIE2A);
-#else
-#   error Unknown CPU type
-#endif
 
     // Set baud rate to 9600
     // and timeout counter to 16.384ms
@@ -130,13 +115,7 @@ void gps_init()
     UCSR1A = _BV(U2X0);
 #endif
 
-#if CPU_MHZ == 16
-    GPS_OCR = 255;
-#elif CPU_MHZ == 10
-    GPS_OCR = 159;
-#else
-    #error Unknown CPU Frequency
-#endif
+    OCR2A = 159;
 
     // Enable receive, transmit, data received interrupt
     UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);
@@ -218,13 +197,7 @@ static void set_time(timestamp *t)
  * Haven't received any serial data ~4 seconds
  * The GPS has probably died
  */
-#if CPU_TYPE == CPU_ATMEGA128
-ISR(TIMER2_COMP_vect)
-#elif CPU_TYPE == CPU_ATMEGA1284p
 ISR(TIMER2_COMPA_vect)
-#else
-#   error Unknown CPU type
-#endif
 {
     if (++serial_timeout_counter == 245)
     {

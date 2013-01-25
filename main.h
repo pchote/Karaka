@@ -18,17 +18,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#if CPU_MHZ == 16
-#   define F_CPU 16000000UL
-#elif CPU_MHZ == 10
-#   define F_CPU 10000000UL
-#else
-#   error Unknown CPU Frequency
-#endif
-
-#define CPU_ATMEGA128   0
-#define CPU_ATMEGA1284p 1
-
 typedef enum
 {
     MODE_PPSCOUNTER = 0,

@@ -8,51 +8,15 @@
 #include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/eeprom.h>
-
-/*
- * avr-libc 1.8.0 throws a poisoned identifier error
- * as soon as we include boot.h for the atmega128
- * To fix, modify boot.h:110-116 to the following:
- *
- *  #if defined(SPMCSR)
- *  #  define __SPM_REG     SPMCSR
- *  #elif !defined (__AVR_ATmega128__)
- *  #  if defined(SPMCR)
- *  #    define __SPM_REG   SPMCR
- *  #  endif
- *  #endif
-*/
 #include <avr/boot.h>
-
-// For boot flag definitions
-#include "main.h"
-
-// Definitions for SPM control
-// 128 words = 256 bytes
-#define PAGESIZE  256
-
-#if CPU_TYPE == CPU_ATMEGA1284p
-#   define PARTCODE 0x43
-#elif CPU_TYPE == CPU_ATMEGA128
-#   define PARTCODE 0x74
-#else
-#   error Unknown CPU type
-#endif
 
 // Disable watchdog timer early in boot
 uint8_t boot_mcusr __attribute__ ((section(".noinit")));
 void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
 void wdt_init(void)
 {
-#if CPU_TYPE == CPU_ATMEGA128
-    boot_mcusr = MCUCSR;
-    MCUCSR = 0;
-#elif CPU_TYPE == CPU_ATMEGA1284p
     boot_mcusr = MCUSR;
     MCUSR = 0;
-#else
-#   error Unknown CPU type
-#endif
     wdt_disable();
 }
 
