@@ -122,17 +122,21 @@ void gps_init()
 
     // Set baud rate to 9600
     // and timeout counter to 16.384ms
-    UBRR1H = 0;
+#define BAUD 9600
+#include <util/setbaud.h>
+    UBRR1H = UBRRH_VALUE;
+    UBRR1L = UBRRL_VALUE;
+#if USE_2X
+    UCSR1A = _BV(U2X0);
+#endif
+
 #if CPU_MHZ == 16
-    UBRR1L = 0xCF;
     GPS_OCR = 255;
 #elif CPU_MHZ == 10
-    UBRR1L = 0x81;
     GPS_OCR = 159;
 #else
     #error Unknown CPU Frequency
 #endif
-    UCSR1A = _BV(U2X1);
 
     // Enable receive, transmit, data received interrupt
     UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);

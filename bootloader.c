@@ -59,14 +59,12 @@ void wdt_init(void)
 void initbootuart()
 {
     // Set 9600 baud rate
-    UBRR0H = 0;
-#if CPU_MHZ == 16
-    UBRR0L = 0x67;
-#elif CPU_MHZ == 10
+#define BAUD 9600
+#include <util/setbaud.h>
+    UBRR0H = UBRRH_VALUE;
+    UBRR0L = UBRRL_VALUE;
+#if USE_2X
     UCSR0A = _BV(U2X0);
-    UBRR0L = 0x81;
-#else
-    #error Unknown CPU Frequency
 #endif
 
     // Enable receive, transmit
