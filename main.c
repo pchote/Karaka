@@ -218,7 +218,7 @@ int main(void)
         monitor_tick();
         usart_process_buffer();
         gps_process_buffer();
-        update_display();
+        display_update();
     }
 }
 

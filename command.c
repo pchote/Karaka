@@ -356,23 +356,6 @@ void usart_process_buffer()
 
                 align_boundary = temp_boundary;
 
-                // Set exposure display mode
-                display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
-                if (timing_mode == MODE_HIGHRES)
-                {
-                    if (exposure_total < 2000)
-                        display_exposure_type = DISPLAY_EXPOSURE_HIDE;
-                    else if (exposure_total % 1000)
-                        display_exposure_type = DISPLAY_EXPOSURE_PERCENT;
-                }
-                else
-                {
-                    if (exposure_total < 2)
-                        display_exposure_type = DISPLAY_EXPOSURE_HIDE;
-                    else if (exposure_total > 999)
-                        display_exposure_type = DISPLAY_EXPOSURE_PERCENT;
-                }
-
                 // Trigger fake camera output
                 if (monitor_simulate_camera)
                     simulate_camera_startup();
@@ -380,6 +363,9 @@ void usart_process_buffer()
                 // Monitor the camera for a level change indicating it has finished initializing
                 monitor_mode = MONITOR_START;
                 send_status(TIMER_WAITING);
+
+                // Update display configuration for new sequence
+                display_update_config();
             break;
             case STOP_EXPOSURE:
                 // Disable the exposure countdown immediately

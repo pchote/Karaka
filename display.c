@@ -1,8 +1,8 @@
 //***************************************************************************
 //
 //  File        : display.c
-//  Copyright   : 2012 Paul Chote
-//  Description : Dot matrix display routines
+//  Copyright   : 2012, 2013 Paul Chote
+//  Description : Dot matrix display controller
 //
 //  This file is part of Karaka, which is free software. It is made available
 //  to you under the terms of version 3 of the GNU General Public License, as
@@ -21,18 +21,7 @@
 #include <util/atomic.h>
 #include <stdio.h>
 
-#define DISPLAY_TOP    (1 << 0)
-#define DISPLAY_BOTTOM (1 << 1)
-#define DISPLAY_LEFT   (1 << 2)
-#define DISPLAY_RIGHT  (1 << 3)
-
-#define DISPLAY0 PB1
-#define DISPLAY1 PB2
-#define DISPLAY2 PB3
-#define DISPLAY3 PB4
-
-// Character data, stored in program memory
-const const uint8_t char_defs[96][5] PROGMEM = {
+static const uint8_t led_chars[96][5] PROGMEM = {
     {0x00,0x20,0x40,0x60,0x80}, //   :0x20
     {0x04,0x24,0x44,0x60,0x84}, // ! :0x21
     {0x0A,0x2A,0x40,0x60,0x80}, // " :0x22
@@ -131,6 +120,21 @@ const const uint8_t char_defs[96][5] PROGMEM = {
     {0x04,0x3C,0x5F,0x68,0x84}, // <-:0x7F
 };
 
+enum display_flags
+{
+    DISPLAY_TOP    = _BV(0),
+    DISPLAY_BOTTOM = _BV(1),
+    DISPLAY_LEFT   = _BV(2),
+    DISPLAY_RIGHT  = _BV(3)
+};
+
+enum display_exposure_mode
+{
+    EXPOSURE_SECONDS = _BV(0),
+    EXPOSURE_PERCENT = _BV(1),
+    EXPOSURE_HIDE    = _BV(2),
+};
+
 // Display messages
 static const char msg_noserial[]    PROGMEM = "NO SERIAL CONNECTION";
 static const char msg_idle[]        PROGMEM = "        IDLE        ";
@@ -151,29 +155,83 @@ static const char fmt_time[]        PROGMEM = "    %02d:%02d:%02d UTC    ";
 static const char fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO GPS LOCK";
 static const char msg_syncing[]     PROGMEM = "  SYNCING TO SERIAL ";
 
-volatile uint8_t display_brightness = 0xF7;
-uint8_t display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
+static const uint8_t led_display_map[4] = {_BV(PB1), _BV(PB2), _BV(PB3), _BV(PB4)};
+
+volatile uint8_t led_brightness = 0xF7;
+enum display_exposure_mode exposure_mode;
+
 
 /*
- * Queue data to the display
+ * Queue data to the display via SPI
  */
-static void send_data(uint8_t display, uint8_t *data, uint8_t length)
+static void led_send_byte(uint8_t display, uint8_t b)
 {
-    // Push the data to the display via SPI
-    // Transmit synchronously for now
-    for (uint8_t i = 0; i < length; i++)
+    // Toggle load line for the appropriate display
+    PORTB &= ~display;
+
+    // Load data into SPI out
+    SPDR = b;
+    loop_until_bit_is_set(SPSR, SPIF);
+
+    // Return load line to end read
+    PORTB |= display;
+}
+
+/*
+ * Set the brightness of the display
+ * Uses bottom 3 bits of display_brightness to set
+ * values: 1, 0.53, 0.4, 0.27, 0.2, 0.13, 0.066, 0
+ */
+static void led_update_brightness()
+{
+    static uint8_t last_led_brightness = 0xFF;
+    uint8_t temp = led_brightness;
+
+    if (last_led_brightness != temp)
     {
-        // Toggle load line for the appropriate display
-        PORTB &= ~_BV(display);
+        last_led_brightness = temp;
+        uint8_t c = 0xF0 | (0x07 & led_brightness);
+        if (c == 0xF7) c = 0xFF; // 0% brightness
 
-        // Load data into SPI out
-        SPDR = data[i];
-
-        loop_until_bit_is_set(SPSR, SPIF);
-
-        // Return load line to end read
-        PORTB |= _BV(display);
+        for (uint8_t i = 0; i < 4; i++)
+            led_send_byte(led_display_map[i], c);
     }
+}
+
+/*
+ * Brightness pot sample handler
+ */
+ISR(ADC_vect)
+{
+    // Only care about top 3 bits, inverted
+    led_brightness = ((uint8_t)~ADCH) >> 5;
+}
+
+/*
+ * Initialize the SPI bus and display select lines
+ * Clear the displays and set initial brightness to 0%
+ */
+static void led_init()
+{
+    // Set MOSI, SCK, display select pins to output
+    DDRB |= 0xBE;
+
+    // Enable SPI Master @ 2MHz, transmit LSB first
+    SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPI2X) | _BV(SPR0) | _BV(DORD);
+
+    // Enable ADC for brightness level input
+    // Set sample rate to 125khz
+    ADCSRA |= _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+
+    // Left-align output in ADCH
+    ADMUX |= _BV(ADLAR);
+
+    // Enable ADC; enable free running mode; enable interrupt; start measuring
+    ADCSRA |= _BV(ADEN) | _BV(ADATE) | _BV(ADIE) | _BV(ADSC);
+
+    // Clear display
+    for (uint8_t i = 0; i < 4; i++)
+        led_send_byte(led_display_map[i], 0xC0);
 }
 
 /*
@@ -181,19 +239,17 @@ static void send_data(uint8_t display, uint8_t *data, uint8_t length)
  */
 static void set_display_P(uint8_t display, const char *msg)
 {
-    // Characters are defined by 6 bytes
-    uint8_t c[6];
-
     for (uint8_t i = 0; i < 10; i++)
     {
         // First byte gives 'character' opcode plus index
-        c[0] = 0xB0 | i;
+        led_send_byte(led_display_map[display], 0xB0 | i);
 
         // Remaining 5 bytes define character bitmap
         for (uint8_t j = 0; j < 5; j++)
-            c[j+1] = pgm_read_byte(&(char_defs[pgm_read_byte(&msg[i]) - 0x20][j]));
-
-        send_data(display, c, 6);
+        {
+            uint8_t b = pgm_read_byte(&(led_chars[pgm_read_byte(&msg[i]) - 0x20][j]));
+            led_send_byte(led_display_map[display], b);
+        }
     }
 }
 
@@ -202,45 +258,43 @@ static void set_display_P(uint8_t display, const char *msg)
  */
 static void set_display(uint8_t display, const char *msg)
 {
-    // Characters are defined by 6 bytes
-    uint8_t c[6];
-
     for (uint8_t i = 0; i < 10; i++)
     {
         // First byte gives 'character' opcode plus index
-        c[0] = 0xB0 | i;
+        led_send_byte(led_display_map[display], 0xB0 | i);
 
         // Remaining 5 bytes define character bitmap
         for (uint8_t j = 0; j < 5; j++)
-            c[j+1] = pgm_read_byte(&(char_defs[msg[i] - 0x20][j]));
-
-        send_data(display, c, 6);
+        {
+            uint8_t b = pgm_read_byte(&(led_chars[msg[i] - 0x20][j]));
+            led_send_byte(led_display_map[display], b);
+        }
     }
 }
 
 /*
  * Display a string on a subset of display modules
  */
-static void set_msg_P(uint8_t flags, const char *msg)
+static void set_msg_P(enum display_flags flags, const char *msg)
 {
     if (flags & DISPLAY_TOP)
     {
         if (flags & DISPLAY_LEFT)
-            set_display_P(DISPLAY0, msg);
+            set_display_P(0, msg);
         if (flags & DISPLAY_RIGHT)
-            set_display_P(DISPLAY1, msg + 10);
+            set_display_P(1, msg + 10);
     }
 
     if (flags & DISPLAY_BOTTOM)
     {
         if (flags & DISPLAY_LEFT)
-            set_display_P(DISPLAY2, msg);
+            set_display_P(2, msg);
         if (flags & DISPLAY_RIGHT)
-            set_display_P(DISPLAY3, msg + 10);
+            set_display_P(3, msg + 10);
     }
 }
 
-static void set_fmt_P(uint8_t flags, const char *fmt, ...)
+static void set_fmt_P(enum display_flags flags, const char *fmt, ...)
 {
     va_list args;
     char buf[21];
@@ -252,81 +306,49 @@ static void set_fmt_P(uint8_t flags, const char *fmt, ...)
     if (flags & DISPLAY_TOP)
     {
         if (flags & DISPLAY_LEFT)
-            set_display(DISPLAY0, buf);
+            set_display(0, buf);
         if (flags & DISPLAY_RIGHT)
-            set_display(DISPLAY1, buf + 10);
+            set_display(1, buf + 10);
     }
 
     if (flags & DISPLAY_BOTTOM)
     {
         if (flags & DISPLAY_LEFT)
-            set_display(DISPLAY2, buf);
+            set_display(2, buf);
         if (flags & DISPLAY_RIGHT)
-            set_display(DISPLAY3, buf + 10);
+            set_display(3, buf + 10);
     }
 }
 
-/*
- * Set the brightness of the display
- * Uses bottom 3 bits of display_brightness to set
- * values: 1, 0.53, 0.4, 0.27, 0.2, 0.13, 0.066, 0
- */
-static void update_display_brightness()
-{
-    uint8_t c = 0xF0 | (0x07 & display_brightness);
-    if (c == 0xF7) c = 0xFF; // 0% brightness
-    
-    send_data(DISPLAY0, &c, 1);
-    send_data(DISPLAY1, &c, 1);
-    send_data(DISPLAY2, &c, 1);
-    send_data(DISPLAY3, &c, 1);
-}
-
-/*
- * Initialize the SPI bus and display select lines
- * Clear the displays and set initial brightness to 0%
- */
 void display_init()
 {
-    // Set MOSI, SCK, display select pins to output
-    DDRB |= _BV(DDB5)|_BV(DDB7)|_BV(DISPLAY0)|_BV(DISPLAY1)|_BV(DISPLAY2)|_BV(DISPLAY3);
-
-    // Enable SPI Master @ 2MHz, transmit LSB first
-    SPCR = _BV(SPE)|_BV(MSTR)|_BV(SPI2X)|_BV(SPR0)|_BV(DORD);
-
-    // Enable ADC for brightness level input
-    // Set sample rate to 125khz
-    ADCSRA |= _BV(ADPS2)|_BV(ADPS1)|_BV(ADPS0);
-
-    // Left-align output in ADCH
-    ADMUX |= _BV(ADLAR);
-
-    // Enable ADC; enable free running mode; enable interrupt; start measuring
-    ADCSRA |= _BV(ADEN)|_BV(ADATE)|_BV(ADIE)|_BV(ADSC);
-
-    // Clear display
-    uint8_t c = 0xC0;
-    send_data(DISPLAY0, &c, 1);
-    send_data(DISPLAY1, &c, 1);
-    send_data(DISPLAY2, &c, 1);
-    send_data(DISPLAY3, &c, 1);
-
-    update_display_brightness();
-
-    display_exposure_type = DISPLAY_EXPOSURE_REGULAR;
+    led_init();
+    display_update_config();
 }
 
-void update_display()
+void display_update_config()
+{
+    exposure_mode = EXPOSURE_SECONDS;
+    if (timing_mode == MODE_HIGHRES)
+    {
+        if (exposure_total < 2000)
+            exposure_mode = EXPOSURE_HIDE;
+        else if (exposure_total % 1000)
+            exposure_mode = EXPOSURE_PERCENT;
+    }
+    else
+    {
+        if (exposure_total < 2)
+            exposure_mode = EXPOSURE_HIDE;
+        else if (exposure_total > 999)
+            exposure_mode = EXPOSURE_PERCENT;
+    }
+}
+
+void display_update()
 {
     // Change display brightness if necessary
-    static uint8_t last_display_brightness = 0xF7;
-    uint8_t temp = display_brightness;
-
-    if (last_display_brightness != temp)
-    {
-        last_display_brightness = temp;
-        update_display_brightness();
-    }
+    led_update_brightness();
 
     // Update the display every second or when the GPS state changes
     static uint8_t display_gps_seconds = 255; // Bogus value to force redraw on first run
@@ -367,15 +389,15 @@ void update_display()
     else if (display_monitor_mode == MONITOR_ACQUIRE)
     {
         // Exposing / Readout
-        switch (display_exposure_type)
+        switch (exposure_mode)
         {
-            case DISPLAY_EXPOSURE_HIDE:
+            case EXPOSURE_HIDE:
             {
                 const char *msg = display_monitor_level_high ? msg_expose_c : msg_readout_c;
                 set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg);
                 break;
             }
-            case DISPLAY_EXPOSURE_REGULAR:
+            case EXPOSURE_SECONDS:
             {
                 const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
                 set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
@@ -387,7 +409,7 @@ void update_display()
                               exposure_total - display_countdown, exposure_total);
                 break;
             }
-            case DISPLAY_EXPOSURE_PERCENT:
+            case EXPOSURE_PERCENT:
             {
                 const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
                 uint16_t percentage = (exposure_total - display_countdown) / (exposure_total / 100);
@@ -423,14 +445,4 @@ void update_display()
             set_msg_P(DISPLAY_BOTTOM | DISPLAY_LEFT | DISPLAY_RIGHT, msg_noserial);
         break;
     }
-}
-
-/*
- * ADC sample completed interrupt handler
- */
-ISR(ADC_vect)
-{
-    // Only care about top 3 bits, inverted
-    uint8_t temp = ADCH;
-    display_brightness = ((uint8_t)~temp) >> 5;
 }
