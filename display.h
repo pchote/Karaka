@@ -2,7 +2,7 @@
 //
 //  File        : display.h
 //  Copyright   : 2012, 2013 Paul Chote
-//  Description : Dot matrix display controller
+//  Description : Dot matrix / LCD display controller
 //
 //  This file is part of Karaka, which is free software. It is made available
 //  to you under the terms of version 3 of the GNU General Public License, as

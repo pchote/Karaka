@@ -2,7 +2,7 @@
 //
 //  File        : display.c
 //  Copyright   : 2012, 2013 Paul Chote
-//  Description : Dot matrix display controller
+//  Description : Dot matrix / LCD display controller
 //
 //  This file is part of Karaka, which is free software. It is made available
 //  to you under the terms of version 3 of the GNU General Public License, as
@@ -18,6 +18,7 @@
 
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include <util/atomic.h>
 #include <stdio.h>
 
@@ -135,6 +136,19 @@ enum display_exposure_mode
     EXPOSURE_HIDE    = _BV(2),
 };
 
+enum display_type
+{
+    DISPLAY_LED = _BV(0),
+    DISPLAY_LCD = _BV(1)
+};
+
+enum lcd_data_type
+{
+    LCD_COMMAND = 0x00,
+    LCD_CHAR    = 0x01,
+    LCD_STARTUP = 0x02
+};
+
 // Display messages
 static const char msg_noserial[]    PROGMEM = "NO SERIAL CONNECTION";
 static const char msg_idle[]        PROGMEM = "        IDLE        ";
@@ -156,10 +170,11 @@ static const char fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO GPS LOCK";
 static const char msg_syncing[]     PROGMEM = "  SYNCING TO SERIAL ";
 
 static const uint8_t led_display_map[4] = {_BV(PB1), _BV(PB2), _BV(PB3), _BV(PB4)};
+static const uint8_t lcd_display_map[4] = {0x80, 0x8A, 0xC0, 0xCA};
 
+enum display_type display_type = DISPLAY_LED;
 volatile uint8_t led_brightness = 0xF7;
 enum display_exposure_mode exposure_mode;
-
 
 /*
  * Queue data to the display via SPI
@@ -234,21 +249,93 @@ static void led_init()
         led_send_byte(led_display_map[i], 0xC0);
 }
 
+static void lcd_send_byte(enum lcd_data_type type, uint8_t b)
+{
+    // Wait until the busy flag clears
+    // Only available after configuration is complete
+    if (!(type & LCD_STARTUP))
+    {
+        // Switch data bus to input
+        DDRA = 0x00;
+
+        // Set RS/RW
+        PORTC &= 0xFC;
+        PORTC |= _BV(PC1);
+
+        do
+        {
+            // Ensure full clock cycle is at least 1us
+            _delay_us(0.5);
+
+            // Clock for at least 450ns
+            PORTC |= _BV(PC6);
+            _delay_us(0.5);
+            PORTC &= ~_BV(PC6); // Clock low
+        } while (bit_is_set(PINA, PA7));
+    }
+
+    // Load the character into the data output
+    DDRA = 0xFF;
+    PORTA = b;
+
+    // Set RS/RW
+    PORTC &= 0xFC;
+    PORTC |= type & 0x01;
+
+    // Wait for at least 140ns before clocking
+    _delay_us(0.15);
+
+    // Clock for at least 450ns
+    PORTC |= _BV(PC6);
+    _delay_us(0.5);
+    PORTC &= ~_BV(PC6);
+}
+
+static void lcd_init()
+{
+    // Set all of PORTA as data output
+    DDRA = 0xFF;
+
+    // Set status pins as output
+    DDRC |= _BV(PC0) | _BV(PC1) | _BV(PC6);
+
+    // Manual startup sequence
+    _delay_ms(15);
+    lcd_send_byte(LCD_STARTUP, 0x38);
+    _delay_ms(4.1);
+    lcd_send_byte(LCD_STARTUP, 0x38);
+    _delay_us(100);
+    lcd_send_byte(LCD_STARTUP, 0x38);
+
+    lcd_send_byte(LCD_COMMAND, 0x06); // Increment on write
+    lcd_send_byte(LCD_COMMAND, 0x0C); // Display on / no cursor
+    lcd_send_byte(LCD_COMMAND, 0x01); // Clear display
+}
+
 /*
  * Read a 10 char string from flash and display on the requested module
  */
 static void set_display_P(uint8_t display, const char *msg)
 {
-    for (uint8_t i = 0; i < 10; i++)
+    if (display_type == DISPLAY_LCD)
     {
-        // First byte gives 'character' opcode plus index
-        led_send_byte(led_display_map[display], 0xB0 | i);
-
-        // Remaining 5 bytes define character bitmap
-        for (uint8_t j = 0; j < 5; j++)
+        lcd_send_byte(LCD_COMMAND, lcd_display_map[display]);
+        for (uint8_t i = 0; i < 10; i++)
+            lcd_send_byte(LCD_CHAR, pgm_read_byte(&msg[i]));
+    }
+    else
+    {
+        for (uint8_t i = 0; i < 10; i++)
         {
-            uint8_t b = pgm_read_byte(&(led_chars[pgm_read_byte(&msg[i]) - 0x20][j]));
-            led_send_byte(led_display_map[display], b);
+            // First byte gives 'character' opcode plus index
+            led_send_byte(led_display_map[display], 0xB0 | i);
+
+            // Remaining 5 bytes define character bitmap
+            for (uint8_t j = 0; j < 5; j++)
+            {
+                uint8_t b = pgm_read_byte(&(led_chars[pgm_read_byte(&msg[i]) - 0x20][j]));
+                led_send_byte(led_display_map[display], b);
+            }
         }
     }
 }
@@ -258,16 +345,25 @@ static void set_display_P(uint8_t display, const char *msg)
  */
 static void set_display(uint8_t display, const char *msg)
 {
-    for (uint8_t i = 0; i < 10; i++)
+    if (display_type == DISPLAY_LCD)
     {
-        // First byte gives 'character' opcode plus index
-        led_send_byte(led_display_map[display], 0xB0 | i);
-
-        // Remaining 5 bytes define character bitmap
-        for (uint8_t j = 0; j < 5; j++)
+        lcd_send_byte(LCD_COMMAND, lcd_display_map[display]);
+        for (uint8_t i = 0; i < 10; i++)
+            lcd_send_byte(LCD_CHAR, msg[i]);
+    }
+    else
+    {
+        for (uint8_t i = 0; i < 10; i++)
         {
-            uint8_t b = pgm_read_byte(&(led_chars[msg[i] - 0x20][j]));
-            led_send_byte(led_display_map[display], b);
+            // First byte gives 'character' opcode plus index
+            led_send_byte(led_display_map[display], 0xB0 | i);
+
+            // Remaining 5 bytes define character bitmap
+            for (uint8_t j = 0; j < 5; j++)
+            {
+                uint8_t b = pgm_read_byte(&(led_chars[msg[i] - 0x20][j]));
+                led_send_byte(led_display_map[display], b);
+            }
         }
     }
 }
@@ -322,7 +418,15 @@ static void set_fmt_P(enum display_flags flags, const char *fmt, ...)
 
 void display_init()
 {
-    led_init();
+    // Read display select pin
+    DDRD &= ~_BV(PD7);
+    display_type = (bit_is_set(PIND, PD7)) ? DISPLAY_LCD : DISPLAY_LED;
+
+    if (display_type == DISPLAY_LCD)
+        lcd_init();
+    else
+        led_init();
+
     display_update_config();
 }
 
@@ -348,7 +452,8 @@ void display_update_config()
 void display_update()
 {
     // Change display brightness if necessary
-    led_update_brightness();
+    if (display_type == DISPLAY_LED)
+        led_update_brightness();
 
     // Update the display every second or when the GPS state changes
     static uint8_t display_gps_seconds = 255; // Bogus value to force redraw on first run
