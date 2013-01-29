@@ -11,10 +11,14 @@
 //***************************************************************************
 
 #include <stdio.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
+#ifdef _WIN32
+#   include <windows.h>
+#else
+#   include <fcntl.h>
+#   include <termios.h>
+#   include <unistd.h>
+#   include <sys/ioctl.h>
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -24,18 +28,31 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+#ifdef _WIN32
+    HANDLE port = CreateFile(argv[1], GENERIC_READ | GENERIC_WRITE, 0, 0, 
+                             OPEN_EXISTING, 0, 0);
+    if (port == INVALID_HANDLE_VALUE)
+    {
+        printf("Failed to open port: %s\n", argv[1]);
+        return 1;
+    }
+
+    EscapeCommFunction(port, SETDTR);
+    Sleep(1000);
+    EscapeCommFunction(port, CLRDTR);
+    CloseHandle(port);
+#else
     int port = open(argv[1], O_RDWR | O_NOCTTY | O_NDELAY);
     if (port == -1)
     {
         printf("Failed to open port: %s\n", argv[1]);
         return 1;
     }
-    
-    // Toggle DTR to trigger a hardware reset
+
     ioctl(port, TIOCMSET, &(int){TIOCM_DTR});
     sleep(1);
     ioctl(port, TIOCMSET, &(int){0});
     close(port);
-
+#endif
     return 0;
 }
