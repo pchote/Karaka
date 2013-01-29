@@ -10,6 +10,7 @@
 //
 //***************************************************************************
 
+#include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
@@ -163,6 +164,13 @@ int main(void)
     millisecond_count = millisecond_drift = 0;
     countdown_mode = COUNTDOWN_DISABLED;
     interrupt_flags = 0;
+
+	// Enable relay mode until reboot
+	if (eeprom_read_byte(RELAY_EEPROM_OFFSET) == RELAY_ENABLED)
+	{
+		countdown_mode = COUNTDOWN_RELAY;
+		eeprom_update_byte(RELAY_EEPROM_OFFSET, RELAY_DISABLED);
+	}
 
     // Enable interrupts
     sei();

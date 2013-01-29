@@ -12,8 +12,6 @@
 
 #include <stdarg.h>
 #include <stdint.h>
-#include "gps.h"
-
 
 #ifndef KARAKA_COMMAND_H
 #define KARAKA_COMMAND_H
@@ -29,8 +27,7 @@ typedef enum
     STOP_EXPOSURE = 'F',
     RESET = 'G',
     STATUSMODE = 'H',
-    START_RELAY = 'R',
-    START_UPGRADE = 'U'
+	ENABLE_RELAY = 'R',
 } commandtype;
 
 typedef enum

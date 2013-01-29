@@ -261,16 +261,6 @@ void usart_process_buffer()
         for (; usart_input_read != temp_write; usart_input_read++)
             gps_send_raw(usart_input_buffer[usart_input_read]);
 
-        // Check for a reset command (usart_input_buffer full of 0)
-        if (usart_input_buffer[usart_input_read] == 0 &&
-            usart_input_buffer[usart_input_read + 1] == 0)
-        {
-            for (uint8_t i = 0; i < 255; i++)
-                if (usart_input_buffer[i] != 0)
-                    return;
-
-            trigger_restart();
-        }
         return;
     }
 
@@ -399,8 +389,9 @@ void usart_process_buffer()
             case RESET:
                 trigger_restart();
             break;
-            case START_RELAY:
-                countdown_mode = COUNTDOWN_RELAY;
+            case ENABLE_RELAY:
+				eeprom_update_byte(RELAY_EEPROM_OFFSET, RELAY_ENABLED);
+				eeprom_update_byte(BOOTLOADER_EEPROM_OFFSET, BIPASS_ENABLED);
             break;
             default:
                 send_debug_fmt_P(command_fmt_unknown_packet, usart_packet_type);
