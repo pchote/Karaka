@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		DA3A420A14F1F51D00A5D305 /* command.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = command.c; path = ../../phd/karaka/command.c; sourceTree = "<group>"; };
-		DA3A420B14F1F51D00A5D305 /* command.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = command.h; path = ../../phd/karaka/command.h; sourceTree = "<group>"; };
+		DA3A420A14F1F51D00A5D305 /* usb.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = usb.c; path = ../../phd/karaka/usb.c; sourceTree = "<group>"; };
+		DA3A420B14F1F51D00A5D305 /* usb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = usb.h; path = ../../phd/karaka/usb.h; sourceTree = "<group>"; };
 		DA3A420E14F1F51D00A5D305 /* display.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = display.h; path = ../../phd/karaka/display.h; sourceTree = "<group>"; };
 		DA3A421114F1F51D00A5D305 /* download.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = download.c; path = ../../phd/karaka/download.c; sourceTree = "<group>"; };
 		DA3A421214F1F51D00A5D305 /* download.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = download.h; path = ../../phd/karaka/download.h; sourceTree = "<group>"; };
@@ -27,8 +27,8 @@
 		DAE07DA214F1F48E005F3015 = {
 			isa = PBXGroup;
 			children = (
-				DA3A420A14F1F51D00A5D305 /* command.c */,
-				DA3A420B14F1F51D00A5D305 /* command.h */,
+				DA3A420A14F1F51D00A5D305 /* usb.c */,
+				DA3A420B14F1F51D00A5D305 /* usb.h */,
 				DA78048816B77ED10086F948 /* display.c */,
 				DA3A420E14F1F51D00A5D305 /* display.h */,
 				DA3A421114F1F51D00A5D305 /* download.c */,

@@ -18,11 +18,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum
+enum timing_mode
 {
     MODE_PPSCOUNTER = 0,
     MODE_HIGHRES = 1,
-} timingmode;
+};
+
 extern uint8_t timing_mode;
 
 // Run millisecond timer without a prescaler:
@@ -81,9 +82,9 @@ typedef struct
     uint8_t seconds;
     uint16_t milliseconds;
     bool locked;
+    uint16_t exposure_progress;
 } timestamp;
 
 extern volatile timestamp download_timestamp;
 
-void trigger_restart();
 #endif

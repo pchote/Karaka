@@ -12,7 +12,7 @@ PORT      := /dev/tty.usbserial-A5016EZP
 ##***************************************************************************
 
 AVRDUDE = avrdude -c dragon_jtag -P usb -p $(DEVICE)
-OBJECTS = command.o gps.o download.o monitor.o main.o display.o
+OBJECTS = usb.o gps.o download.o monitor.o main.o display.o
 
 BOOTLOADER   = avrdude -c avr109 -p $(DEVICE) -b 9600 -P $(PORT)
 BOOT_OBJECTS = bootloader.o

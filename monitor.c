@@ -22,7 +22,6 @@
 #include <avr/interrupt.h>
 #include "monitor.h"
 #include "main.h"
-#include "command.h"
 
 bool monitor_simulate_camera = false;
 

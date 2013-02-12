@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include "main.h"
 #include "gps.h"
-#include "command.h"
+#include "usb.h"
 
 // Init Trimble: Enable only the 8F-AB primary timing packet
 const uint8_t trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
@@ -68,7 +68,7 @@ timestamp gps_last_timestamp;
 /*
  * Add a byte to the send queue and start sending data if necessary
  */
-void gps_send_raw(uint8_t b)
+void gps_send_byte(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
     while (gps_output_write == (uint8_t)(gps_output_read - 1));
@@ -141,13 +141,13 @@ void gps_configure_gps()
 {
     // Send Trimble init data
     for (uint8_t i = 0; i < 9; i++)
-        gps_send_raw(pgm_read_byte(&trimble_init[i]));
+        gps_send_byte(pgm_read_byte(&trimble_init[i]));
 
     // Send Magellan init data
     uint8_t i = 0, b = pgm_read_byte(&mgl_init[0]);
     do
     {
-        gps_send_raw(b);
+        gps_send_byte(b);
         b = pgm_read_byte(&mgl_init[++i]);
     } while (b != '\0');
 }
@@ -172,7 +172,7 @@ static void set_time(timestamp *t)
         else if (countdown_mode == COUNTDOWN_ENABLED)
         {
             // We should always receive the PPS pulse before the time packet
-            send_debug_string_P(gps_msg_missed_pps);
+            usb_send_message_P(gps_msg_missed_pps);
         }
 
         if (gps_record_trigger)
@@ -247,7 +247,7 @@ void gps_process_buffer()
     // Relay mode - forward all data to the PC
     if (countdown_mode == COUNTDOWN_RELAY)
         for (uint8_t temp_read = gps_input_read; temp_read != temp_write; temp_read++)
-            command_send_raw(gps_input_buffer[temp_read]);
+            usb_send_byte(gps_input_buffer[temp_read]);
 
     // Sync to the start of a packet if necessary
     for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)
@@ -270,12 +270,12 @@ void gps_process_buffer()
             }
             else // Some other Magellan packet - ignore it
             {
-                send_debug_string_P(gps_msg_unknown_mgl_packet);
+                usb_send_message_P(gps_msg_unknown_mgl_packet);
                 continue;
             }
 
             if (bytes_to_sync > 3)
-                send_debug_fmt_P(gps_fmt_skipped_bytes, bytes_to_sync);
+                usb_send_message_fmt_P(gps_fmt_skipped_bytes, bytes_to_sync);
 
             bytes_to_sync = 0;
 
@@ -347,8 +347,8 @@ void gps_process_buffer()
                     }
                     else
                     {
-                        send_debug_string_P(gps_msg_bad_packet);
-                        send_debug_raw(gps_packet, gps_packet_length);
+                        usb_send_message_P(gps_msg_bad_packet);
+                        usb_send_raw(gps_packet, gps_packet_length);
                     }
 
                     // Reset for next packet
@@ -434,20 +434,20 @@ void gps_process_buffer()
                             }
                             else
                             {
-                                send_debug_string_P(gps_msg_bad_packet);
-                                send_debug_raw(gps_packet, gps_packet_length);
+                                usb_send_message_P(gps_msg_bad_packet);
+                                usb_send_raw(gps_packet, gps_packet_length);
                             }
                         }
                         else
                         {
-                            send_debug_fmt_P(gps_fmt_checksum_failed, csm, gps_packet[gps_packet_length - 2]);
-                            send_debug_raw(gps_packet, gps_packet_length);
+                            usb_send_message_fmt_P(gps_fmt_checksum_failed, csm, gps_packet[gps_packet_length - 2]);
+                            usb_send_raw(gps_packet, gps_packet_length);
                         }
                     }
                     else
                     {
-                        send_debug_string_P(gps_msg_bad_packet);
-                        send_debug_raw(gps_packet, gps_packet_length);
+                        usb_send_message_P(gps_msg_bad_packet);
+                        usb_send_raw(gps_packet, gps_packet_length);
                     }
 
                     // Reset buffer for the next packet

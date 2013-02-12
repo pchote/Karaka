@@ -20,7 +20,7 @@
 #include "download.h"
 #include "gps.h"
 #include "display.h"
-#include "command.h"
+#include "usb.h"
 #include "monitor.h"
 
 const char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
@@ -127,16 +127,6 @@ volatile timestamp download_timestamp;
  */
 
 /*
- * Trigger a hardware restart
- */
-void trigger_restart()
-{
-    cli();
-    wdt_enable(WDTO_15MS);
-    for(;;);
-}
-
-/*
  * Initialize the unit and wait for interrupts.
  */
 int main(void)
@@ -154,7 +144,7 @@ int main(void)
     STOP_MILLISECOND_TIMER;
 
     // Set other init
-    command_init();
+    usb_initialize();
     gps_init();
     download_init();
     monitor_init();
@@ -194,37 +184,37 @@ int main(void)
 
             if (temp_int_flags & FLAG_SEND_TRIGGER)
             {
-                send_downloadtimestamp();
-                send_status(TIMER_READOUT);
+                usb_send_trigger();
+                usb_send_status(TIMER_READOUT);
             }
 
             if (temp_int_flags & FLAG_SEND_TIMESTAMP)
-                send_timestamp();
+                usb_send_timestamp();
 
             if (temp_int_flags & FLAG_DOWNLOAD_COMPLETE)
-                send_status(TIMER_EXPOSING);
+                usb_send_status(TIMER_EXPOSING);
 
             if (temp_int_flags & FLAG_BEGIN_ALIGN)
-                send_status(TIMER_ALIGN);
+                usb_send_status(TIMER_ALIGN);
 
             if (temp_int_flags & FLAG_STOP_EXPOSURE)
             {
-                send_status(TIMER_IDLE);
-                send_stopexposure();
+                usb_send_status(TIMER_IDLE);
+                usb_stop_exposure();
             }
 
             if (temp_int_flags & FLAG_NO_SERIAL)
-                send_debug_string_P(msg_no_serial);
+                usb_send_message_P(msg_no_serial);
 
             if (temp_int_flags & FLAG_DUPLICATE_PPS)
-                send_debug_string_P(msg_duplicate_pulse);
+                usb_send_message_P(msg_duplicate_pulse);
 
             if (temp_int_flags & FLAG_TIME_DRIFT)
-                send_debug_fmt_P(fmt_time_drift, millisecond_drift);
+                usb_send_message_fmt_P(fmt_time_drift, millisecond_drift);
         }
 
         monitor_tick();
-        usart_process_buffer();
+        usb_tick();
         gps_process_buffer();
         display_update();
     }

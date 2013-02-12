@@ -12,7 +12,6 @@
 
 #include "main.h"
 #include "display.h"
-#include "command.h"
 #include "gps.h"
 #include "monitor.h"
 
