@@ -245,7 +245,7 @@ void gps_process_buffer()
         return;
 
     // Relay mode - forward all data to the PC
-    if (countdown_mode == COUNTDOWN_RELAY)
+    if (timer_status == TIMER_RELAY)
         for (uint8_t temp_read = gps_input_read; temp_read != temp_write; temp_read++)
             usb_send_byte(gps_input_buffer[temp_read]);
 

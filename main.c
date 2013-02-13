@@ -164,7 +164,7 @@ int main(void)
 	// Enable relay mode until reboot
 	if (eeprom_read_byte(RELAY_EEPROM_OFFSET) == RELAY_ENABLED)
 	{
-		countdown_mode = COUNTDOWN_RELAY;
+        set_timer_status(TIMER_RELAY);
 		eeprom_update_byte(RELAY_EEPROM_OFFSET, RELAY_DISABLED);
 	}
 
@@ -284,7 +284,7 @@ ISR(PCINT3_vect)
     else
     {
         // Don't count down unless we have a valid exposure time and the GPS is locked
-        if (gps_state == GPS_ACTIVE && countdown_mode != COUNTDOWN_RELAY)
+        if (gps_state == GPS_ACTIVE && timer_status != TIMER_RELAY)
         {
             // Send a warning about the duplicate pulse
             if (countdown_mode == COUNTDOWN_TRIGGERED)
@@ -315,6 +315,6 @@ ISR(PCINT3_vect)
         }
     }
 
-    if (countdown_mode == COUNTDOWN_RELAY)
+    if (timer_status == TIMER_RELAY)
         camera_trigger_readout();
 }

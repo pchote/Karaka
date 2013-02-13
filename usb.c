@@ -250,7 +250,7 @@ void usb_tick()
     while (byte_available())
     {
         uint8_t b = read_byte();
-        if (countdown_mode == COUNTDOWN_RELAY)
+        if (timer_status == TIMER_RELAY)
             gps_send_byte(b);
 
         switch (p.state)

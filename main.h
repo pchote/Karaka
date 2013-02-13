@@ -54,7 +54,6 @@ typedef enum
     COUNTDOWN_ALIGNED   = 2,
     COUNTDOWN_ENABLED   = 3,
     COUNTDOWN_TRIGGERED = 4,
-    COUNTDOWN_RELAY     = 5,
 } countdownstate;
 extern volatile countdownstate countdown_mode;
 
@@ -92,7 +91,8 @@ enum timer_status
     TIMER_WAITING,
     TIMER_ALIGN,
     TIMER_EXPOSING,
-    TIMER_READOUT
+    TIMER_READOUT,
+    TIMER_RELAY
 };
 
 extern volatile enum timer_status timer_status;

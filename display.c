@@ -462,9 +462,6 @@ void display_update()
     display_gps_state = gps_state;
     display_gps_seconds = gps_last_timestamp.seconds;
 
-    // Take a local copy of state that can be changed by interrupts
-    uint8_t display_countdown_mode = countdown_mode;
-
     uint16_t display_countdown;
     enum timer_status status;
     ATOMIC_BLOCK(ATOMIC_FORCEON)
@@ -473,59 +470,53 @@ void display_update()
         status = timer_status;
     }
 
-    if (display_countdown_mode == COUNTDOWN_RELAY)
+    switch (status)
     {
-        // Relay Mode
-        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_relay);
-    }
-    else if (status == TIMER_WAITING)
-    {
-        // Waiting for camera
-        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_wait);
-    }
-    else if (display_countdown_mode == COUNTDOWN_SYNCING || display_countdown_mode == COUNTDOWN_ALIGNED)
-    {
-        // Aligning
-        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg_align);
-        set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, gps_last_timestamp.seconds % align_boundary, align_boundary);
-    }
-    else if (status == TIMER_EXPOSING || status == TIMER_READOUT)
-    {
-        // Exposing / Readout
-        switch (exposure_mode)
-        {
-            case EXPOSURE_HIDE:
+        case TIMER_RELAY:
+            set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_relay);
+            break;
+        case TIMER_WAITING:
+            set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_wait);
+            break;
+        case TIMER_ALIGN:
+            set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg_align);
+            set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, gps_last_timestamp.seconds % align_boundary, align_boundary);
+            break;
+        case TIMER_EXPOSING:
+        case TIMER_READOUT:
+            switch (exposure_mode)
             {
-                const char *msg = status == TIMER_EXPOSING ? msg_expose_c : msg_readout_c;
-                set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg);
-                break;
+                case EXPOSURE_HIDE:
+                {
+                    const char *msg = status == TIMER_EXPOSING ? msg_expose_c : msg_readout_c;
+                    set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg);
+                    break;
+                }
+                case EXPOSURE_SECONDS:
+                {
+                    const char *msg = status == TIMER_EXPOSING ? msg_expose : msg_readout;
+                    set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
+                    if (timing_mode == MODE_HIGHRES)
+                        set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
+                                  (exposure_total - display_countdown) / 1000, exposure_total / 1000);
+                    else
+                        set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
+                                  exposure_total - display_countdown, exposure_total);
+                    break;
+                }
+                case EXPOSURE_PERCENT:
+                {
+                    const char *msg = status == TIMER_EXPOSING ? msg_expose : msg_readout;
+                    uint16_t percentage = (exposure_total - display_countdown) / (exposure_total / 100);
+                    set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
+                    set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_percentage, percentage);
+                    break;
+                }
             }
-            case EXPOSURE_SECONDS:
-            {
-                const char *msg = status == TIMER_EXPOSING ? msg_expose : msg_readout;
-                set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
-                if (timing_mode == MODE_HIGHRES)
-                    set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
-                              (exposure_total - display_countdown) / 1000, exposure_total / 1000);
-                else
-                    set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
-                              exposure_total - display_countdown, exposure_total);
-                break;
-            }
-            case EXPOSURE_PERCENT:
-            {
-                const char *msg = status == TIMER_EXPOSING ? msg_expose : msg_readout;
-                uint16_t percentage = (exposure_total - display_countdown) / (exposure_total / 100);
-                set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
-                set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_percentage, percentage);
-                break;
-            }
-        }
-    }
-    else
-    {
-        // Idle
-        set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_idle);
+            break;
+        case TIMER_IDLE:
+        default:
+            set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_idle);
     }
 
     // Update bottom row (time and locked state)
