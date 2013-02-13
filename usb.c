@@ -46,6 +46,12 @@ struct packet_startexposure
     uint16_t exposure;
 };
 
+struct packet_status
+{
+    enum timer_status timer;
+    enum gps_status gps;
+};
+
 struct timer_packet
 {
     enum packet_state state;
@@ -155,11 +161,11 @@ static uint8_t read_byte()
 
 ISR(USART0_UDRE_vect)
 {
-    if(output_write != output_read)
+    if (output_write != output_read)
         UDR0 = output_buffer[output_read++];
 
     // Ran out of data to send - disable the interrupt
-    if(output_write == output_read)
+    if (output_write == output_read)
         UCSR0B &= ~_BV(UDRIE0);
 }
 
@@ -347,16 +353,16 @@ void usb_send_timestamp()
     {
         count = exposure_countdown;
     }
-    gps_last_timestamp.exposure_progress = exposure_total - count;
+    current_timestamp.exposure_progress = exposure_total - count;
 
-    queue_data(TIMESTAMP, &gps_last_timestamp, sizeof(gps_last_timestamp));
+    queue_data(TIMESTAMP, &current_timestamp, sizeof(struct timestamp));
 }
 
 void usb_send_trigger()
 {
     // This is non-atomic, but something is very wrong if this
     // doesn't get sent before the next exposure is triggered
-    queue_data(TRIGGER, (void *)&download_timestamp, sizeof(download_timestamp));
+    queue_data(TRIGGER, (void *)&download_timestamp, sizeof(struct timestamp));
 }
 
 void usb_stop_exposure()
@@ -364,9 +370,13 @@ void usb_stop_exposure()
     queue_data(STOP_EXPOSURE, NULL, 0);
 }
 
-void usb_send_status(enum timer_status status)
+void usb_send_status(enum timer_status timer, enum gps_status gps)
 {
-    queue_data(STATUSMODE, &status, 1);
+    struct packet_status data = {
+        .timer = timer,
+        .gps = gps
+    };
+    queue_data(STATUSMODE, &data, sizeof(struct packet_status));
 }
 
 void usb_send_raw(uint8_t *data, uint8_t length)

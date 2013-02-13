@@ -61,16 +61,15 @@ typedef enum
 {
     FLAG_SEND_STATUS       = (1 << 0),
     FLAG_STOP_EXPOSURE     = (1 << 1),
-    FLAG_NO_SERIAL         = (1 << 2),
-    FLAG_TIME_DRIFT        = (1 << 3),
-    FLAG_DUPLICATE_PPS     = (1 << 4),
-    FLAG_SEND_TIMESTAMP    = (1 << 5),
-    FLAG_SEND_TRIGGER      = (1 << 6),
+    FLAG_TIME_DRIFT        = (1 << 2),
+    FLAG_DUPLICATE_PPS     = (1 << 3),
+    FLAG_SEND_TIMESTAMP    = (1 << 4),
+    FLAG_SEND_TRIGGER      = (1 << 5),
 } interruptflags;
 
 extern volatile interruptflags interrupt_flags;
 
-typedef struct
+struct timestamp
 {
     uint16_t year;
     uint8_t month;
@@ -81,9 +80,10 @@ typedef struct
     uint16_t milliseconds;
     bool locked;
     uint16_t exposure_progress;
-} timestamp;
+};
 
-extern volatile timestamp download_timestamp;
+extern volatile struct timestamp download_timestamp;
+extern struct timestamp current_timestamp;
 
 enum timer_status
 {
@@ -97,6 +97,18 @@ enum timer_status
 
 extern volatile enum timer_status timer_status;
 void set_timer_status(enum timer_status status);
+
+enum gps_status
+{
+    GPS_UNAVAILABLE = 0,
+    GPS_SYNCING     = 1,
+    GPS_ACTIVE      = 2
+};
+
+extern volatile enum gps_status gps_status;
+void set_gps_status(enum gps_status status);
+
+void set_time(struct timestamp *t);
 
 
 #endif

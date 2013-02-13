@@ -24,7 +24,7 @@ void usb_send_message_fmt_P(const char *fmt, ...);
 void usb_send_raw(uint8_t *data, uint8_t length);
 void usb_send_timestamp();
 void usb_send_trigger();
-void usb_send_status(enum timer_status mode);
+void usb_send_status(enum timer_status timer, enum gps_status gps);
 void usb_stop_exposure();
 
 void usb_send_byte(uint8_t b);

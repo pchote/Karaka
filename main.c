@@ -23,8 +23,8 @@
 #include "camera.h"
 
 const char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
+const char msg_missed_pps[]      PROGMEM = "Missing PPS pulse detected";
 const char fmt_time_drift[]      PROGMEM = "WARNING: %dms time drift";
-const char msg_no_serial[]       PROGMEM = "GPS serial connection lost";
 
 // Internal timing mode
 //    MODE_PPSCOUNTER counts the 1Hz input signal and
@@ -41,6 +41,7 @@ volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
 volatile interruptflags interrupt_flags = 0;
 
 volatile enum timer_status timer_status = TIMER_IDLE;
+volatile enum gps_status gps_status = GPS_UNAVAILABLE;
 
 inline void set_timer_status(enum timer_status status)
 {
@@ -48,11 +49,23 @@ inline void set_timer_status(enum timer_status status)
     interrupt_flags |= FLAG_SEND_STATUS;
 }
 
+inline void set_gps_status(enum gps_status status)
+{
+    enum gps_status old = gps_status;
+    gps_status = status;
+
+    if (old != gps_status)
+        interrupt_flags |= FLAG_SEND_STATUS;
+}
+
 // Internal millisecond count
 // Remains zero if timing_mode == MODE_PPSCOUNTER
 volatile uint16_t millisecond_count = 0;
 volatile int16_t millisecond_drift = 0;
-volatile timestamp download_timestamp;
+volatile struct timestamp download_timestamp;
+volatile bool record_trigger = false;
+
+struct timestamp current_timestamp;
 
 // Constants for configuring the millisecond timer
 // MILLISECOND_TCNT is calibrated with an oscilloscope
@@ -152,7 +165,6 @@ int main(void)
 
     // Set other init
     usb_initialize();
-    gps_init();
     camera_initialize();
     display_init();
 
@@ -170,10 +182,7 @@ int main(void)
 
     // Enable interrupts
     sei();
-
-    // Send config to attached GPS
-    // Requires interrupts to be enabled
-    gps_configure_gps();
+    gps_initialize();
 
     // Main program loop
     for (;;)
@@ -195,13 +204,10 @@ int main(void)
                 usb_send_timestamp();
 
             if (temp_int_flags & FLAG_SEND_STATUS)
-                usb_send_status(timer_status);
+                usb_send_status(timer_status, gps_status);
 
             if (temp_int_flags & FLAG_STOP_EXPOSURE)
                 usb_stop_exposure();
-
-            if (temp_int_flags & FLAG_NO_SERIAL)
-                usb_send_message_P(msg_no_serial);
 
             if (temp_int_flags & FLAG_DUPLICATE_PPS)
                 usb_send_message_P(msg_duplicate_pulse);
@@ -212,7 +218,7 @@ int main(void)
 
         camera_tick();
         usb_tick();
-        gps_process_buffer();
+        gps_tick();
         display_update();
     }
 }
@@ -231,7 +237,7 @@ ISR(TIMER1_COMPA_vect)
     {
         camera_trigger_readout();
         exposure_countdown = exposure_total;
-        download_timestamp = gps_last_timestamp;
+        download_timestamp = current_timestamp;
 
         download_timestamp.milliseconds = millisecond_count;
         interrupt_flags |= FLAG_SEND_TRIGGER;
@@ -284,7 +290,7 @@ ISR(PCINT3_vect)
     else
     {
         // Don't count down unless we have a valid exposure time and the GPS is locked
-        if (gps_state == GPS_ACTIVE && timer_status != TIMER_RELAY)
+        if (gps_status == GPS_ACTIVE && timer_status != TIMER_RELAY)
         {
             // Send a warning about the duplicate pulse
             if (countdown_mode == COUNTDOWN_TRIGGERED)
@@ -299,7 +305,7 @@ ISR(PCINT3_vect)
                 {
                     camera_trigger_readout();
                     exposure_countdown = exposure_total;
-                    gps_record_trigger = true;
+                    record_trigger = true;
                 }
 
                 countdown_mode = COUNTDOWN_TRIGGERED;
@@ -308,7 +314,7 @@ ISR(PCINT3_vect)
             {
                 camera_trigger_readout();
                 exposure_countdown = exposure_total;
-                gps_record_trigger = true;
+                record_trigger = true;
 
                 countdown_mode = COUNTDOWN_TRIGGERED;
             }
@@ -317,4 +323,45 @@ ISR(PCINT3_vect)
 
     if (timer_status == TIMER_RELAY)
         camera_trigger_readout();
+}
+
+void set_time(struct timestamp *t)
+{
+    current_timestamp = *t;
+
+    // Mark that we have a valid timestamp
+    set_gps_status(GPS_ACTIVE);
+    interrupt_flags |= FLAG_SEND_TIMESTAMP;
+
+    // Synchronise the exposure with the edge of a minute
+    if (countdown_mode == COUNTDOWN_SYNCING && (current_timestamp.seconds % align_boundary == align_boundary - 1))
+        countdown_mode = COUNTDOWN_ALIGNED;
+
+    if (timing_mode == MODE_PPSCOUNTER)
+    {
+        // Enable the counter for the next PPS pulse
+        if (countdown_mode == COUNTDOWN_TRIGGERED)
+            countdown_mode = COUNTDOWN_ENABLED;
+        else if (countdown_mode == COUNTDOWN_ENABLED)
+        {
+            // We should always receive the PPS pulse before the time packet
+            usb_send_message_P(msg_missed_pps);
+        }
+
+        if (record_trigger)
+        {
+            download_timestamp = current_timestamp;
+            record_trigger = false;
+            interrupt_flags |= FLAG_SEND_TRIGGER;
+        }
+    }
+    else
+    {
+        // Reset rollover count
+        ATOMIC_BLOCK(ATOMIC_FORCEON)
+        {
+            while (millisecond_count > 1000)
+                millisecond_count -= 1000;
+        }
+    }
 }

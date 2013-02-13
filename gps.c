@@ -1,8 +1,8 @@
 //***************************************************************************
 //
 //  File        : gps.c
-//  Copyright   : 2009-2012 Johnny McClymont, Paul Chote
-//  Description : Extracts timestamps from a Trimble or Magellan serial stream
+//  Copyright   : 2013 Paul Chote
+//  Description : Parses time information from a Trimble or Magellan serial stream
 //
 //  This file is part of Karaka, which is free software. It is made available
 //  to you under the terms of version 3 of the GNU General Public License, as
@@ -19,51 +19,94 @@
 #include "gps.h"
 #include "usb.h"
 
-// Init Trimble: Enable only the 8F-AB primary timing packet
-const uint8_t trimble_init[9] PROGMEM = {0x10, 0x8E, 0xA5, 0x00, 0x01, 0x00, 0x00, 0x10, 0x03};
+enum packet_state {TB_HEADER = 0, TB_TYPEA, TB_TYPEB, TB_DATA, TB_FOOTERA, TB_FOOTERB,
+                   MGL_HEADERA, MGL_HEADERB, MGL_TYPE, MGL_DATA, MGL_CHECKSUM, MGL_FOOTER};
+
+struct trimble_timestamp
+{
+    // Big endian
+    uint32_t gps_seconds;
+    uint16_t gps_week;
+    int16_t utc_offset;
+
+    uint8_t flags;
+    uint8_t seconds;
+    uint8_t minutes;
+    uint8_t hours;
+    uint8_t day;
+    uint8_t month;
+
+    // Big endian
+    uint16_t year;
+};
+
+struct magellan_timestamp
+{
+    uint8_t unknown;
+    uint8_t hours;
+    uint8_t minutes;
+    uint8_t seconds;
+    uint8_t day;
+    uint8_t month;
+
+    // Big endian
+    uint16_t year;
+};
+
+struct magellan_status
+{
+    uint8_t unknown[10];
+    uint8_t status;
+};
+
+struct gps_packet
+{
+    enum packet_state state;
+    uint8_t length;
+    uint8_t progress;
+
+    // Checksum for magellan, padding flag for trimble
+    uint8_t extra;
+
+    union
+    {
+        struct trimble_timestamp trimble;
+        struct magellan_timestamp magellan_time;
+        struct magellan_status magellan_status;
+        uint8_t bytes[1];
+    } data;
+};
 
 // Init Magellan: Disable the packets that the OEM software enables; enable timing and status packets
-const uint8_t mgl_init[] PROGMEM = "$PMGLI,00,G00,0,A\r\n"
-                             "$PMGLI,00,B00,0,A\r\n"
-                             "$PMGLI,00,B02,0,A\r\n"
-                             "$PMGLI,00,D00,0,A\r\n"
-                             "$PMGLI,00,E00,0,A\r\n"
-                             "$PMGLI,00,F02,0,A\r\n"
-                             "$PMGLI,00,R04,0,A\r\n"
-                             "$PMGLI,00,S01,0,A\r\n"
-                             "$PMGLI,00,A00,2,B\r\n"
-                             "$PMGLI,00,H00,2,B\r\n";
+const char initialization_data[] PROGMEM = ""
+    // Trimble initialization - disable everything except the 8F-AB timing packet
+    "\x10\x8E\xA5\x00\x01\x00\x00\x10\x03"
+    // Magellan initialization
+    "$PMGLI,00,G00,0,A\r\n"
+    "$PMGLI,00,B00,0,A\r\n"
+    "$PMGLI,00,B02,0,A\r\n"
+    "$PMGLI,00,D00,0,A\r\n"
+    "$PMGLI,00,E00,0,A\r\n"
+    "$PMGLI,00,F02,0,A\r\n"
+    "$PMGLI,00,R04,0,A\r\n"
+    "$PMGLI,00,S01,0,A\r\n"
+    "$PMGLI,00,A00,2,B\r\n"
+    "$PMGLI,00,H00,2,B\r\n";
+const uint8_t initialization_length = 199;
 
-const char gps_msg_missed_pps[]         PROGMEM = "Missing PPS pulse detected";
-const char gps_msg_unknown_mgl_packet[] PROGMEM = "Unknown magellan packet";
-const char gps_msg_bad_packet[]         PROGMEM = "Bad GPS packet";
-const char gps_fmt_skipped_bytes[]      PROGMEM = "Skipped %d bytes while syncing";
-const char gps_fmt_checksum_failed[]    PROGMEM = "GPS Checksum failed. Got 0x%02x, expected 0x%02x";
+static const char invalid_packet_fmt[]  PROGMEM = "Invalid packet end byte. Got 0x%02x, expected 0x%02x";
+static const char checksum_failed_fmt[] PROGMEM = "Packet checksum failed. Got 0x%02x, expected 0x%02x";
+static const char additional_days_fmt[] PROGMEM = "Additional days: %d";
 
-static uint8_t gps_magellan_length = 0;
-static bool gps_magellan_locked = false;
+static uint8_t input_buffer[256];
+static uint8_t input_read = 0;
+static volatile uint8_t input_write = 0;
 
-// NOTE: This is set up as a circular buffer and makes use of uint8 overflow > 256
-// If you change the buffer length, add explicit behavior to handle looping
-static uint8_t gps_input_buffer[256];
-static uint8_t gps_input_read = 0;
-static volatile uint8_t gps_input_write = 0;
+static uint8_t output_buffer[256];
+static volatile uint8_t output_read = 0;
+static volatile uint8_t output_write = 0;
 
-static gpspackettype gps_packet_type = UNKNOWN_PACKET;
-static uint8_t gps_packet_length = 0;
-static uint8_t gps_packet[32];
-
-static uint8_t gps_output_buffer[256];
-static volatile uint8_t gps_output_read = 0;
-static volatile uint8_t gps_output_write = 0;
-
-volatile gpsstate gps_state = GPS_UNAVAILABLE;
-volatile bool gps_record_trigger = false;
-static uint8_t bytes_to_sync = 0;
 static uint8_t serial_timeout_counter = 0;
-
-
-timestamp gps_last_timestamp;
 
 /*
  * Add a byte to the send queue and start sending data if necessary
@@ -71,39 +114,57 @@ timestamp gps_last_timestamp;
 void gps_send_byte(uint8_t b)
 {
     // Don't overwrite data that hasn't been sent yet
-    while (gps_output_write == (uint8_t)(gps_output_read - 1));
+    while (output_write == (uint8_t)(output_read - 1));
 
-    gps_output_buffer[gps_output_write++] = b;
+    output_buffer[output_write++] = b;
 
-    // Enable Transmit data register empty interrupt if necessary to send bytes down the line
+    // Enable transmit if necessary
     UCSR1B |= _BV(UDRIE1);
 }
 
-/*
- * data register empty interrupt to send a byte down the wire
- */
+static inline bool byte_available()
+{
+    return input_write != input_read;
+}
+
+static uint8_t read_byte()
+{
+    // Loop until data is available
+    while (input_read == input_write);
+    return input_buffer[input_read++];
+}
+
 ISR(USART1_UDRE_vect)
 {
-    if(gps_output_write != gps_output_read)
-        UDR1 = gps_output_buffer[gps_output_read++];
+    if (output_write != output_read)
+        UDR1 = output_buffer[output_read++];
 
     // Ran out of data to send - disable the interrupt
-    if(gps_output_write == gps_output_read)
+    if (output_write == output_read)
         UCSR1B &= ~_BV(UDRIE1);
 }
 
-/*
- * Initialize usart1 for communicating with the GPS via RS232
- * Enable timer1 to monitor for serial connection loss
- */
-void gps_init()
+ISR(USART1_RX_vect)
 {
-    // Configure serial data timeout timer
-    TCCR1A = 0x00;
+    // Reset timeout countdown
     serial_timeout_counter = 0;
+
+    // Update status if necessary
+    if (gps_status == GPS_UNAVAILABLE)
+        set_gps_status(GPS_SYNCING);
+
+    input_buffer[(uint8_t)(input_write++)] = UDR1;
+}
+
+void gps_initialize()
+{
+    // Serial timeout watchdog
+    // Triggers every 25.6ms to increment the timeout counter
+    TCCR1A = 0x00;
     TCCR2A = _BV(WGM21);
-    TCCR2B = _BV(CS22)|_BV(CS21)|_BV(CS20);
+    TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20);
     TIMSK2 |= _BV(OCIE2A);
+    OCR2A = 250;
 
     // Set baud rate to 9600
     // and timeout counter to 16.384ms
@@ -115,114 +176,30 @@ void gps_init()
     UCSR1A = _BV(U2X0);
 #endif
 
-    OCR2A = 159;
-
     // Enable receive, transmit, data received interrupt
     UCSR1B = _BV(RXEN1)|_BV(TXEN1)|_BV(RXCIE1);
 
-    // Set 8-bit data frame
-    UCSR1C = _BV(UCSZ11)|_BV(UCSZ10);
-
-    gps_magellan_length = 0;
-    gps_magellan_locked = false;
-    gps_input_read = gps_input_write = 0;
-    gps_packet_type = gps_packet_length = 0;
-    gps_output_read = gps_output_write = 0;
-
-    gps_record_trigger = false;
-    gps_state = GPS_UNAVAILABLE;
+    // Send GPS configuration data
+    for (uint8_t i = 0; i < initialization_length; i++)
+        gps_send_byte(pgm_read_byte(&initialization_data[i]));
 }
 
-/*
- * Reset data buffers and send configuration data for both GPS units
- * The connected GPS will ignore the data for other unit
- */
-void gps_configure_gps()
-{
-    // Send Trimble init data
-    for (uint8_t i = 0; i < 9; i++)
-        gps_send_byte(pgm_read_byte(&trimble_init[i]));
-
-    // Send Magellan init data
-    uint8_t i = 0, b = pgm_read_byte(&mgl_init[0]);
-    do
-    {
-        gps_send_byte(b);
-        b = pgm_read_byte(&mgl_init[++i]);
-    } while (b != '\0');
-}
-
-static void set_time(timestamp *t)
-{
-    gps_last_timestamp = *t;
-
-    // Mark that we have a valid timestamp
-    gps_state = GPS_ACTIVE;
-    interrupt_flags |= FLAG_SEND_TIMESTAMP;
-
-    // Synchronise the exposure with the edge of a minute
-    if (countdown_mode == COUNTDOWN_SYNCING && (gps_last_timestamp.seconds % align_boundary == align_boundary - 1))
-        countdown_mode = COUNTDOWN_ALIGNED;
-
-    if (timing_mode == MODE_PPSCOUNTER)
-    {
-        // Enable the counter for the next PPS pulse
-        if (countdown_mode == COUNTDOWN_TRIGGERED)
-            countdown_mode = COUNTDOWN_ENABLED;
-        else if (countdown_mode == COUNTDOWN_ENABLED)
-        {
-            // We should always receive the PPS pulse before the time packet
-            usb_send_message_P(gps_msg_missed_pps);
-        }
-
-        if (gps_record_trigger)
-        {
-            download_timestamp = gps_last_timestamp;
-            gps_record_trigger = false;
-            interrupt_flags |= FLAG_SEND_TRIGGER;
-        }
-    }
-    else
-    {
-        // Reset rollover count
-        ATOMIC_BLOCK(ATOMIC_FORCEON)
-        {
-            while (millisecond_count > 1000)
-                millisecond_count -= 1000;
-        }
-    }
-}
-
-/*
- * Haven't received any serial data ~4 seconds
- * The GPS has probably died
- */
 ISR(TIMER2_COMPA_vect)
 {
-    if (++serial_timeout_counter == 245)
+    // No data received in 3 seconds
+    if (++serial_timeout_counter == 118)
     {
-        gps_state = GPS_UNAVAILABLE;
-        interrupt_flags |= FLAG_NO_SERIAL;
+        set_gps_status(GPS_UNAVAILABLE);
+        serial_timeout_counter = 0;
     }
 }
 
-/*
- * Received data from gps serial. Add to buffer
- */
-ISR(USART1_RX_vect)
+// Swap the endian-ness of a 16-bit integer
+static inline uint16_t swap_bytes(uint16_t b)
 {
-    // Reset timeout countdown
-    serial_timeout_counter = 0;
-
-    // Update status if necessary
-    if (gps_state == GPS_UNAVAILABLE)
-        gps_state = GPS_SYNCING;
-    gps_input_buffer[gps_input_write++] = UDR1;
+    return ((b & 0xFF00) >> 8) | ((b & 0xFF) << 8);
 }
 
-/*
- * Helper routine for determining whether a given year is a leap year
- */
 static uint8_t is_leap_year(uint16_t year)
 {
     if (year % 4) return 0;
@@ -230,232 +207,189 @@ static uint8_t is_leap_year(uint16_t year)
     return (year % 400) ? 0 : 1;
 }
 
-/*
- * Process any data in the received buffer
- * Parses at most one time packet - so must be called frequently
- * Returns true if the timestamp or status info has changed
- */
-void gps_process_buffer()
+void parse_packet(struct gps_packet *p)
 {
-    // Take a local copy of gps_input_write as it can be modified by interrupts
-    uint8_t temp_write = gps_input_write;
-
-    // No new data has arrived
-    if (gps_input_read == temp_write)
-        return;
-
-    // Relay mode - forward all data to the PC
-    if (timer_status == TIMER_RELAY)
-        for (uint8_t temp_read = gps_input_read; temp_read != temp_write; temp_read++)
-            usb_send_byte(gps_input_buffer[temp_read]);
-
-    // Sync to the start of a packet if necessary
-    for (; gps_packet_type == UNKNOWN_PACKET && gps_input_read != temp_write; gps_input_read++, bytes_to_sync++)
+    static bool magellan_time_locked = false;
+    switch (p->length)
     {
-        // Magellan packet
-        if (gps_input_buffer[(uint8_t)(gps_input_read - 1)] == '$' &&
-            gps_input_buffer[(uint8_t)(gps_input_read - 2)] == '$' &&
-            // End of previous packet
-            gps_input_buffer[(uint8_t)(gps_input_read - 3)] == 0x0A)
+        case sizeof(struct trimble_timestamp):
         {
-            if (gps_input_buffer[gps_input_read] == 'A')
-            {
-                gps_packet_type = MAGELLAN_TIME_PACKET;
-                gps_magellan_length = 13;
-            }
-            else if (gps_input_buffer[gps_input_read] == 'H')
-            {
-                gps_packet_type = MAGELLAN_STATUS_PACKET;
-                gps_magellan_length = 16;
-            }
-            else // Some other Magellan packet - ignore it
-            {
-                usb_send_message_P(gps_msg_unknown_mgl_packet);
-                continue;
-            }
+            struct trimble_timestamp *tt = &p->data.trimble;
 
-            if (bytes_to_sync > 3)
-                usb_send_message_fmt_P(gps_fmt_skipped_bytes, bytes_to_sync);
-
-            bytes_to_sync = 0;
-
-            // Rewind to the start of the packet
-            gps_input_read -= 2;
+            set_time(&(struct timestamp){
+                .year = swap_bytes(tt->year),
+                .month = tt->month,
+                .day = tt->day,
+                .hours = tt->hours,
+                .minutes = tt->minutes,
+                .seconds = tt->seconds,
+                .milliseconds = 0,
+                .locked = tt->flags == 0x03
+            });
             break;
         }
-
-        // Trimble
-        if ( // Start of timing packet
-            gps_input_buffer[gps_input_read] == 0xAB &&
-            gps_input_buffer[(uint8_t)(gps_input_read - 1)] == 0x8F &&
-            gps_input_buffer[(uint8_t)(gps_input_read - 2)] == DLE &&
-            // End of previous packet
-            gps_input_buffer[(uint8_t)(gps_input_read - 3)] == ETX &&
-            gps_input_buffer[(uint8_t)(gps_input_read - 4)] == DLE)
+        case sizeof(struct magellan_status):
         {
-            gps_packet_type = TRIMBLE_PACKET;
-            // Rewind to the start of the packet
-            gps_input_read -= 2;
+            magellan_time_locked = p->data.magellan_status.status == 0x06;
+            break;
+        }
+        case sizeof(struct magellan_timestamp):
+        {
+            struct magellan_timestamp *mt = &p->data.magellan_time;
+
+            // Swap from big-endian to little-endian
+            mt->year = swap_bytes(mt->year);
+
+            uint8_t days[12] = {
+                31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+            };
+
+            // The Magellan firmware has not been updated to the new GPS epoch
+            // so we must add 1024 weeks to correct the date
+            uint16_t day = 7168;
+
+            // Rewind to Jan 1 of the assumed year
+            days[1] = is_leap_year(mt->year) ? 29 : 28;
+            for (uint8_t i = 0; i < mt->month - 1; i++)
+                day += days[i];
+            day += mt->day;
+            mt->month = 1;
+
+            // Advance full years
+            while (day >= 366)
+            {
+                day -= is_leap_year(mt->year) ? 366 : 365;
+                mt->year++;
+            }
+
+            // Advance final partial year
+            days[1] = is_leap_year(mt->year) ? 29 : 28;
+            while (day > days[mt->month - 1])
+                day -= days[mt->month++ - 1];
+
+            set_time(&(struct timestamp){
+                .year = mt->year,
+                .month = mt->month,
+                .day = day,
+                .hours = mt->hours,
+                .minutes = mt->minutes,
+                .seconds = mt->seconds,
+                .milliseconds = 0,
+                .locked = magellan_time_locked
+            });
             break;
         }
     }
+}
 
-    switch (gps_packet_type)
+void gps_tick()
+{
+    static struct gps_packet p = {.state = TB_HEADER};
+    while (byte_available())
     {
-        case UNKNOWN_PACKET:
-            // Still haven't synced to a packet
-            return;
+        uint8_t b = read_byte();
+        if (timer_status == TIMER_RELAY)
+            usb_send_byte(b);
 
-        case TRIMBLE_PACKET:
-            // Write bytes into the packet buffer
-            for (; gps_input_read != temp_write; gps_input_read++)
+        switch (p.state)
+        {
+        case TB_HEADER:
+        case MGL_HEADERA:
+            if (b == 0x10)
+                p.state = TB_TYPEA;
+            else if (b == '$')
+                p.state = MGL_HEADERB;
+            break;
+
+        // Trimble packets
+        case TB_TYPEA:
+            // We only care about 8F-AB
+            if (b == 0x8F)
+                p.state++;
+            else
+                p.state = TB_HEADER;
+            break;
+        case TB_TYPEB:
+            if (b == 0xAB)
             {
-                // DLE bytes are padded with a second DLE to distinguish from the packet start/end bytes
-                if (gps_input_buffer[gps_input_read] == DLE)
-                {
-                    // Count previous number of DLEs - only want to skip if this is an odd count
-                    uint8_t count = 1;
-
-                    while (gps_input_buffer[(uint8_t)(gps_input_read - count)] == DLE)
-                        count++;
-
-                    if (!(count % 2))
-                        gps_input_read++;
-                }
-
-                if (gps_input_read == temp_write)
-                    break;
-
-                gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
-
-                // End of packet (Trimble timing packet is 21 bytes)
-                if (gps_packet_length == 21)
-                {
-                    // Sanity check: Ensure the packet ends correctly
-                    if (gps_packet[20] == ETX && gps_packet[19] == DLE)
-                    {
-                        set_time(&(timestamp){
-                            .year = ((gps_packet[17] << 8) & 0xFF00) | (gps_packet[18] & 0x00FF),
-                            .month = gps_packet[16],
-                            .day = gps_packet[15],
-                            .hours = gps_packet[14],
-                            .minutes = gps_packet[13],
-                            .seconds = gps_packet[12],
-                            .milliseconds = 0,
-                            .locked = gps_packet[11] == 0x03
-                        });
-                    }
-                    else
-                    {
-                        usb_send_message_P(gps_msg_bad_packet);
-                        usb_send_raw(gps_packet, gps_packet_length);
-                    }
-
-                    // Reset for next packet
-                    gps_packet_type = UNKNOWN_PACKET;
-                    gps_packet_length = 0;
-                    return;
-                }
+                p.length = sizeof(struct trimble_timestamp);
+                p.progress = 0;
+                p.extra = 0;
+                p.state++;
             }
-        break;
+            else
+                p.state = TB_HEADER;
+            break;
+        case TB_DATA:
+            // Padding byte - The next byte is another 0x10, or 0x03 (frame-end)
+            if (b == 0x10 && (p.extra ^= 1))
+                break;
 
-        case MAGELLAN_TIME_PACKET:
-        case MAGELLAN_STATUS_PACKET:
-            for (; gps_input_read != temp_write; gps_input_read++)
+            p.data.bytes[p.progress++] = b;
+            if (p.progress == p.length)
+                p.state++;
+            break;
+        case TB_FOOTERA:
+            if (b == 0x10)
+                p.state++;
+            else
             {
-                // Store the packet
-                gps_packet[gps_packet_length++] = gps_input_buffer[gps_input_read];
-
-                // End of packet
-                if (gps_packet_length == gps_magellan_length)
-                {
-                    // Check that the packet is valid.
-                    // A valid packet will have the final byte as a linefeed (0x0A)
-                    // and the second-to-last byte will be a checksum which will match
-                    // the XORed bytes between the $$ and checksum.
-                    //   gps_packet_length - 1 is the linefeed
-                    //   gps_packet_length - 2 is the checksum byte
-                    if (gps_packet[gps_packet_length - 1] == 0x0A)
-                    {
-                        uint8_t csm = gps_packet[2];
-                        for (int i = 3; i < gps_packet_length - 2; i++)
-                            csm ^= gps_packet[i];
-
-                        // Verify the checksum
-                        if (csm == gps_packet[gps_packet_length - 2])
-                        {
-                            if (gps_packet_type == MAGELLAN_TIME_PACKET)
-                            {
-                                // Correct for bad epoch offset
-                                // Number of days in each month (ignoring leap years)
-                                static uint8_t days[13] = {
-                                    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-                                };
-
-                                // Add 16 years (which always contains 4 leap days)
-                                uint16_t year = (((gps_packet[9] << 8) & 0xFF00) | (gps_packet[10] & 0x00FF)) + 16;
-                                uint8_t month = gps_packet[8];
-
-                                // Add the rest as days to be resolved
-                                uint16_t day = gps_packet[7] + 1324;
-
-                                // Unknown 1 day offset
-                                day += 1;
-
-                                // Is this a leap year?
-                                days[1] = is_leap_year(year) ? 29 : 28;
-
-                                while (day > days[month - 1])
-                                {
-                                    if (++month > 12)
-                                    {
-                                        month = 1;
-                                        year++;
-                                        days[1] = is_leap_year(year) ? 29 : 28;
-                                    }
-                                    day -= days[month - 1];
-                                }
-
-                                set_time(&(timestamp){
-                                    .year = year,
-                                    .month = month,
-                                    .day = day,
-                                    .hours = gps_packet[4],
-                                    .minutes = gps_packet[5],
-                                    .seconds = gps_packet[6],
-                                    .milliseconds = 0,
-                                    .locked = gps_magellan_locked
-                                });
-                            }
-                            else if (gps_packet_type == MAGELLAN_STATUS_PACKET) // Status packet
-                            {
-                                if (gps_magellan_locked != (gps_packet[13] == 6))
-                                    gps_magellan_locked = (gps_packet[13] == 6);
-                            }
-                            else
-                            {
-                                usb_send_message_P(gps_msg_bad_packet);
-                                usb_send_raw(gps_packet, gps_packet_length);
-                            }
-                        }
-                        else
-                        {
-                            usb_send_message_fmt_P(gps_fmt_checksum_failed, csm, gps_packet[gps_packet_length - 2]);
-                            usb_send_raw(gps_packet, gps_packet_length);
-                        }
-                    }
-                    else
-                    {
-                        usb_send_message_P(gps_msg_bad_packet);
-                        usb_send_raw(gps_packet, gps_packet_length);
-                    }
-
-                    // Reset buffer for the next packet
-                    gps_packet_type = UNKNOWN_PACKET;
-                    gps_packet_length = 0;
-                    return;
-                }
+                usb_send_message_fmt_P(invalid_packet_fmt, b, 0x10);
+                usb_send_raw(p.data.bytes, p.length);
+                p.state = TB_HEADER;
             }
-        break;
+            break;
+        case TB_FOOTERB:
+            if (b == 0x03)
+                parse_packet(&p);
+            else
+            {
+                usb_send_message_fmt_P(invalid_packet_fmt, b, 0x03);
+                usb_send_raw(p.data.bytes, p.length);
+            }
+            p.state = TB_HEADER;
+            break;
+
+        // Magellan packets
+        case MGL_HEADERB:
+            if (b == '$')
+                p.state++;
+            else
+                p.state = MGL_HEADERA;
+            break;
+        case MGL_TYPE:
+            if (b == 'A' || b == 'H')
+            {
+                p.length = b == 'A' ? sizeof(struct magellan_timestamp) : sizeof(struct magellan_status);
+                p.progress = 0;
+                p.extra = b;
+                p.state++;
+            }
+            else
+                p.state = TB_HEADER;
+            break;
+        case MGL_DATA:
+            p.extra ^= b;
+            p.data.bytes[p.progress++] = b;
+            if (p.progress == p.length)
+                p.state++;
+            break;
+        case MGL_CHECKSUM:
+            if (p.extra == b)
+                p.state++;
+            else
+            {
+                usb_send_message_fmt_P(checksum_failed_fmt, b, p.extra);
+                p.state = MGL_HEADERA;
+            }
+            break;
+        case MGL_FOOTER:
+            if (b == '\n')
+                parse_packet(&p);
+            else
+                usb_send_message_fmt_P(invalid_packet_fmt, b, '\n');
+            p.state = MGL_HEADERA;
+            break;
+        }
     }
 }

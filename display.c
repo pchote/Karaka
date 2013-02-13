@@ -455,12 +455,12 @@ void display_update()
 
     // Update the display every second or when the GPS state changes
     static uint8_t display_gps_seconds = 255; // Bogus value to force redraw on first run
-    static uint8_t display_gps_state = GPS_UNAVAILABLE;
-    if (display_gps_state == gps_state && display_gps_seconds == gps_last_timestamp.seconds)
+    static uint8_t display_gps_status = GPS_UNAVAILABLE;
+    if (display_gps_status == gps_status && display_gps_seconds == current_timestamp.seconds)
         return;
 
-    display_gps_state = gps_state;
-    display_gps_seconds = gps_last_timestamp.seconds;
+    display_gps_status = gps_status;
+    display_gps_seconds = current_timestamp.seconds;
 
     uint16_t display_countdown;
     enum timer_status status;
@@ -480,7 +480,7 @@ void display_update()
             break;
         case TIMER_ALIGN:
             set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg_align);
-            set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, gps_last_timestamp.seconds % align_boundary, align_boundary);
+            set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, current_timestamp.seconds % align_boundary, align_boundary);
             break;
         case TIMER_EXPOSING:
         case TIMER_READOUT:
@@ -520,15 +520,15 @@ void display_update()
     }
 
     // Update bottom row (time and locked state)
-    switch (display_gps_state)
+    switch (display_gps_status)
     {
         case GPS_ACTIVE:
         {
-            const char *fmt = gps_last_timestamp.locked ? fmt_time : fmt_time_nolock;
+            const char *fmt = current_timestamp.locked ? fmt_time : fmt_time_nolock;
             set_fmt_P(DISPLAY_BOTTOM | DISPLAY_LEFT | DISPLAY_RIGHT, fmt,
-                gps_last_timestamp.hours,
-                gps_last_timestamp.minutes,
-                gps_last_timestamp.seconds
+                current_timestamp.hours,
+                current_timestamp.minutes,
+                current_timestamp.seconds
             );
             break;
         }
