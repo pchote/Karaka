@@ -47,7 +47,7 @@ extern volatile uint16_t exposure_countdown;
 extern uint8_t align_boundary;
 extern volatile uint16_t millisecond_count;
 
-typedef enum
+enum count_status
 {
     COUNTDOWN_DISABLED  = 0,
     COUNTDOWN_SYNCING   = 1,
@@ -55,9 +55,9 @@ typedef enum
     COUNTDOWN_ENABLED   = 3,
     COUNTDOWN_TRIGGERED = 4,
 } countdownstate;
-extern volatile countdownstate countdown_mode;
+extern volatile enum count_status countdown_mode;
 
-typedef enum
+enum interrupt_flags
 {
     FLAG_SEND_STATUS       = (1 << 0),
     FLAG_STOP_EXPOSURE     = (1 << 1),
@@ -65,9 +65,9 @@ typedef enum
     FLAG_DUPLICATE_PPS     = (1 << 3),
     FLAG_SEND_TIMESTAMP    = (1 << 4),
     FLAG_SEND_TRIGGER      = (1 << 5),
-} interruptflags;
+};
 
-extern volatile interruptflags interrupt_flags;
+extern volatile enum interrupt_flags interrupt_flags;
 
 struct timestamp
 {
@@ -109,6 +109,5 @@ extern volatile enum gps_status gps_status;
 void set_gps_status(enum gps_status status);
 
 void set_time(struct timestamp *t);
-
 
 #endif

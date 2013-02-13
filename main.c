@@ -36,10 +36,10 @@ uint8_t timing_mode = MODE_PPSCOUNTER;
 
 uint16_t exposure_total = 0;
 uint8_t align_boundary = 0;
-volatile uint16_t exposure_countdown = 0;
-volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
-volatile interruptflags interrupt_flags = 0;
 
+volatile uint16_t exposure_countdown = 0;
+volatile enum count_status countdown_mode = COUNTDOWN_DISABLED;
+volatile enum interrupt_flags interrupt_flags = 0;
 volatile enum timer_status timer_status = TIMER_IDLE;
 volatile enum gps_status gps_status = GPS_UNAVAILABLE;
 
