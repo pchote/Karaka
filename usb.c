@@ -34,8 +34,7 @@ enum packet_type
     MESSAGE_RAW = 'D',
     START_EXPOSURE = 'E',
     STOP_EXPOSURE = 'F',
-    STATUSMODE = 'H',
-    SYNC = 'S',
+    STATUS = 'H',
     ENABLE_RELAY = 'R',
 };
 
@@ -358,7 +357,7 @@ void usb_send_status(enum timer_status timer, enum gps_status gps)
         .timer = timer,
         .gps = gps
     };
-    queue_data(STATUSMODE, &data, sizeof(struct packet_status));
+    queue_data(STATUS, &data, sizeof(struct packet_status));
 }
 
 void usb_send_raw(uint8_t *data, uint8_t length)
