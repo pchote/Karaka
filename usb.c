@@ -52,6 +52,12 @@ struct packet_status
     enum gps_status gps;
 };
 
+struct packet_message
+{
+    uint8_t length;
+    char str[MAX_DATA_LENGTH-1];
+};
+
 struct timer_packet
 {
     enum packet_state state;
@@ -115,34 +121,6 @@ static void queue_data(uint8_t type, const void *data, uint8_t length)
 
     // Footer
     queue_byte(checksum);
-    queue_byte('\r');
-    queue_byte('\n');
-}
-
-// Send data from flash
-static void queue_data_P(uint8_t type, const void *data, uint8_t length)
-{
-    // Data packet starts with $$ and packet type (which != $)
-    queue_byte('$');
-    queue_byte('$');
-    queue_byte(type);
-
-    // Length of data section
-    queue_byte(length);
-
-    // Packet data - calculate checksum as we go
-    uint8_t csm = 0;
-    for (uint8_t i = 0; i < length; i++)
-    {
-        uint8_t b = pgm_read_byte(&((uint8_t *)data)[i]);
-        queue_byte(b);
-        csm ^= b;
-    }
-
-    // Checksum
-    queue_byte(csm);
-
-    // Data packet ends a linefeed and carriage return
     queue_byte('\r');
     queue_byte('\n');
 }
@@ -324,25 +302,29 @@ void usb_tick()
 
 void usb_send_message_P(const char *string)
 {
-    size_t len = strlen_P(string);
-    if (len > MAX_DATA_LENGTH)
-        len = MAX_DATA_LENGTH;
+    struct packet_message msg;
+    msg.length = strlen_P(string);
+    if (msg.length > MAX_DATA_LENGTH-1)
+        msg.length = MAX_DATA_LENGTH-1;
 
-    queue_data_P(MESSAGE, string, len);
+    strncpy_P(msg.str, string, msg.length);
+    queue_data(MESSAGE, &msg, msg.length + 1);
 }
 
 void usb_send_message_fmt_P(const char *fmt, ...)
 {
     va_list args;
-    char buf[MAX_DATA_LENGTH];
-    
+    struct packet_message msg;
+
     va_start(args, fmt);
-    int len = vsnprintf_P(buf, MAX_DATA_LENGTH, fmt, args);
+    int len = vsnprintf_P(msg.str, MAX_DATA_LENGTH, fmt, args);
     va_end(args);
-    
-    if (len > MAX_DATA_LENGTH)
-        len = MAX_DATA_LENGTH;
-    queue_data(MESSAGE, buf, (uint8_t)len);
+
+    if (len > MAX_DATA_LENGTH-1)
+        len = MAX_DATA_LENGTH-1;
+
+    msg.length = (uint8_t)len;
+    queue_data(MESSAGE, &msg, msg.length + 1);
 }
 
 void usb_send_timestamp()
@@ -381,7 +363,13 @@ void usb_send_status(enum timer_status timer, enum gps_status gps)
 
 void usb_send_raw(uint8_t *data, uint8_t length)
 {
-    queue_data(MESSAGE_RAW, data, length);
+    struct packet_message msg;
+    msg.length = length;
+    if (msg.length > MAX_DATA_LENGTH-1)
+        msg.length = MAX_DATA_LENGTH-1;
+
+    memcpy(msg.str, data, msg.length);
+    queue_data(MESSAGE_RAW, &msg, msg.length + 1);
 }
 
 // Send a raw byte without wrapping in a packet
