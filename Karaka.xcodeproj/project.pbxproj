@@ -10,15 +10,13 @@
 		DA3A420A14F1F51D00A5D305 /* usb.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = usb.c; path = ../../phd/karaka/usb.c; sourceTree = "<group>"; };
 		DA3A420B14F1F51D00A5D305 /* usb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = usb.h; path = ../../phd/karaka/usb.h; sourceTree = "<group>"; };
 		DA3A420E14F1F51D00A5D305 /* display.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = display.h; path = ../../phd/karaka/display.h; sourceTree = "<group>"; };
-		DA3A421114F1F51D00A5D305 /* download.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = download.c; path = ../../phd/karaka/download.c; sourceTree = "<group>"; };
-		DA3A421214F1F51D00A5D305 /* download.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = download.h; path = ../../phd/karaka/download.h; sourceTree = "<group>"; };
 		DA3A421814F1F51D00A5D305 /* gps.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = gps.c; path = ../../phd/karaka/gps.c; sourceTree = "<group>"; };
 		DA3A421914F1F51D00A5D305 /* gps.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = gps.h; path = ../../phd/karaka/gps.h; sourceTree = "<group>"; };
 		DA3A421D14F1F51D00A5D305 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = main.c; path = ../../phd/karaka/main.c; sourceTree = "<group>"; };
 		DA3A421F14F1F51D00A5D305 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = main.h; path = ../../phd/karaka/main.h; sourceTree = "<group>"; };
 		DA3A422214F1F51D00A5D305 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; name = Makefile; path = ../../phd/karaka/Makefile; sourceTree = "<group>"; };
-		DA3A422314F1F51D00A5D305 /* monitor.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = monitor.c; path = ../../phd/karaka/monitor.c; sourceTree = "<group>"; };
-		DA3A422414F1F51D00A5D305 /* monitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = monitor.h; path = ../../phd/karaka/monitor.h; sourceTree = "<group>"; };
+		DA3A422314F1F51D00A5D305 /* camera.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = camera.c; path = ../../phd/karaka/camera.c; sourceTree = "<group>"; };
+		DA3A422414F1F51D00A5D305 /* camera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = camera.h; path = ../../phd/karaka/camera.h; sourceTree = "<group>"; };
 		DA78048816B77ED10086F948 /* display.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = display.c; sourceTree = "<group>"; };
 		DA9DD237165049820046305E /* bootloader.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bootloader.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -31,15 +29,13 @@
 				DA3A420B14F1F51D00A5D305 /* usb.h */,
 				DA78048816B77ED10086F948 /* display.c */,
 				DA3A420E14F1F51D00A5D305 /* display.h */,
-				DA3A421114F1F51D00A5D305 /* download.c */,
-				DA3A421214F1F51D00A5D305 /* download.h */,
 				DA3A421814F1F51D00A5D305 /* gps.c */,
 				DA3A421914F1F51D00A5D305 /* gps.h */,
 				DA3A421D14F1F51D00A5D305 /* main.c */,
 				DA3A421F14F1F51D00A5D305 /* main.h */,
 				DA3A422214F1F51D00A5D305 /* Makefile */,
-				DA3A422314F1F51D00A5D305 /* monitor.c */,
-				DA3A422414F1F51D00A5D305 /* monitor.h */,
+				DA3A422314F1F51D00A5D305 /* camera.c */,
+				DA3A422414F1F51D00A5D305 /* camera.h */,
 				DA9DD237165049820046305E /* bootloader.c */,
 			);
 			sourceTree = "<group>";

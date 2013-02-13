@@ -17,11 +17,10 @@
 #include <util/atomic.h>
 
 #include "main.h"
-#include "download.h"
 #include "gps.h"
 #include "display.h"
 #include "usb.h"
-#include "monitor.h"
+#include "camera.h"
 
 const char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
 const char fmt_time_drift[]      PROGMEM = "WARNING: %dms time drift";
@@ -40,6 +39,14 @@ uint8_t align_boundary = 0;
 volatile uint16_t exposure_countdown = 0;
 volatile countdownstate countdown_mode = COUNTDOWN_DISABLED;
 volatile interruptflags interrupt_flags = 0;
+
+volatile enum timer_status timer_status = TIMER_IDLE;
+
+inline void set_timer_status(enum timer_status status)
+{
+    timer_status = status;
+    interrupt_flags |= FLAG_SEND_STATUS;
+}
 
 // Internal millisecond count
 // Remains zero if timing_mode == MODE_PPSCOUNTER
@@ -146,8 +153,7 @@ int main(void)
     // Set other init
     usb_initialize();
     gps_init();
-    download_init();
-    monitor_init();
+    camera_initialize();
     display_init();
 
     exposure_total = exposure_countdown = 0;
@@ -183,25 +189,16 @@ int main(void)
             }
 
             if (temp_int_flags & FLAG_SEND_TRIGGER)
-            {
                 usb_send_trigger();
-                usb_send_status(TIMER_READOUT);
-            }
 
             if (temp_int_flags & FLAG_SEND_TIMESTAMP)
                 usb_send_timestamp();
 
-            if (temp_int_flags & FLAG_DOWNLOAD_COMPLETE)
-                usb_send_status(TIMER_EXPOSING);
-
-            if (temp_int_flags & FLAG_BEGIN_ALIGN)
-                usb_send_status(TIMER_ALIGN);
+            if (temp_int_flags & FLAG_SEND_STATUS)
+                usb_send_status(timer_status);
 
             if (temp_int_flags & FLAG_STOP_EXPOSURE)
-            {
-                usb_send_status(TIMER_IDLE);
                 usb_stop_exposure();
-            }
 
             if (temp_int_flags & FLAG_NO_SERIAL)
                 usb_send_message_P(msg_no_serial);
@@ -213,7 +210,7 @@ int main(void)
                 usb_send_message_fmt_P(fmt_time_drift, millisecond_drift);
         }
 
-        monitor_tick();
+        camera_tick();
         usb_tick();
         gps_process_buffer();
         display_update();
@@ -232,7 +229,7 @@ ISR(TIMER1_COMPA_vect)
     // This is a 16-bit operation, but we are in an interrupt so it is atomic
     if (--exposure_countdown == 0)
     {
-        trigger_download();
+        camera_trigger_readout();
         exposure_countdown = exposure_total;
         download_timestamp = gps_last_timestamp;
 
@@ -300,7 +297,7 @@ ISR(PCINT3_vect)
                 // This is a 16-bit operation, but we are in an interrupt so it is atomic
                 if (--exposure_countdown == 0)
                 {
-                    trigger_download();
+                    camera_trigger_readout();
                     exposure_countdown = exposure_total;
                     gps_record_trigger = true;
                 }
@@ -309,7 +306,7 @@ ISR(PCINT3_vect)
             }
             else if (countdown_mode == COUNTDOWN_ALIGNED)
             {
-                trigger_download();
+                camera_trigger_readout();
                 exposure_countdown = exposure_total;
                 gps_record_trigger = true;
 
@@ -319,5 +316,5 @@ ISR(PCINT3_vect)
     }
 
     if (countdown_mode == COUNTDOWN_RELAY)
-        trigger_download();
+        camera_trigger_readout();
 }

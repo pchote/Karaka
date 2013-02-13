@@ -60,14 +60,13 @@ extern volatile countdownstate countdown_mode;
 
 typedef enum
 {
-    FLAG_DOWNLOAD_COMPLETE = (1 << 0),
+    FLAG_SEND_STATUS       = (1 << 0),
     FLAG_STOP_EXPOSURE     = (1 << 1),
     FLAG_NO_SERIAL         = (1 << 2),
     FLAG_TIME_DRIFT        = (1 << 3),
     FLAG_DUPLICATE_PPS     = (1 << 4),
-    FLAG_BEGIN_ALIGN       = (1 << 5),
-    FLAG_SEND_TIMESTAMP    = (1 << 6),
-    FLAG_SEND_TRIGGER      = (1 << 7),
+    FLAG_SEND_TIMESTAMP    = (1 << 5),
+    FLAG_SEND_TRIGGER      = (1 << 6),
 } interruptflags;
 
 extern volatile interruptflags interrupt_flags;
@@ -86,5 +85,18 @@ typedef struct
 } timestamp;
 
 extern volatile timestamp download_timestamp;
+
+enum timer_status
+{
+    TIMER_IDLE,
+    TIMER_WAITING,
+    TIMER_ALIGN,
+    TIMER_EXPOSING,
+    TIMER_READOUT
+};
+
+extern volatile enum timer_status timer_status;
+void set_timer_status(enum timer_status status);
+
 
 #endif

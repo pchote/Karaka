@@ -13,7 +13,6 @@
 #include "main.h"
 #include "display.h"
 #include "gps.h"
-#include "monitor.h"
 
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
@@ -464,14 +463,14 @@ void display_update()
     display_gps_seconds = gps_last_timestamp.seconds;
 
     // Take a local copy of state that can be changed by interrupts
-    uint8_t display_monitor_mode = monitor_mode;
     uint8_t display_countdown_mode = countdown_mode;
-    uint8_t display_monitor_level_high = monitor_level_high;
 
     uint16_t display_countdown;
+    enum timer_status status;
     ATOMIC_BLOCK(ATOMIC_FORCEON)
     {
         display_countdown = exposure_countdown;
+        status = timer_status;
     }
 
     if (display_countdown_mode == COUNTDOWN_RELAY)
@@ -479,7 +478,7 @@ void display_update()
         // Relay Mode
         set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_relay);
     }
-    else if (display_monitor_mode == MONITOR_START || display_monitor_mode == MONITOR_STOP)
+    else if (status == TIMER_WAITING)
     {
         // Waiting for camera
         set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg_wait);
@@ -490,20 +489,20 @@ void display_update()
         set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg_align);
         set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown, gps_last_timestamp.seconds % align_boundary, align_boundary);
     }
-    else if (display_monitor_mode == MONITOR_ACQUIRE)
+    else if (status == TIMER_EXPOSING || status == TIMER_READOUT)
     {
         // Exposing / Readout
         switch (exposure_mode)
         {
             case EXPOSURE_HIDE:
             {
-                const char *msg = display_monitor_level_high ? msg_expose_c : msg_readout_c;
+                const char *msg = status == TIMER_EXPOSING ? msg_expose_c : msg_readout_c;
                 set_msg_P(DISPLAY_TOP | DISPLAY_LEFT | DISPLAY_RIGHT, msg);
                 break;
             }
             case EXPOSURE_SECONDS:
             {
-                const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
+                const char *msg = status == TIMER_EXPOSING ? msg_expose : msg_readout;
                 set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
                 if (timing_mode == MODE_HIGHRES)
                     set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
@@ -515,7 +514,7 @@ void display_update()
             }
             case EXPOSURE_PERCENT:
             {
-                const char *msg = display_monitor_level_high ? msg_expose : msg_readout;
+                const char *msg = status == TIMER_EXPOSING ? msg_expose : msg_readout;
                 uint16_t percentage = (exposure_total - display_countdown) / (exposure_total / 100);
                 set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
                 set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_percentage, percentage);

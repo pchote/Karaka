@@ -21,7 +21,7 @@
 #include "display.h"
 #include "gps.h"
 #include "main.h"
-#include "monitor.h"
+#include "camera.h"
 #include "usb.h"
 
 #define MAX_DATA_LENGTH 200
@@ -194,7 +194,6 @@ static void parse_packet(struct timer_packet *p)
         {
             struct packet_startexposure *data = &p->data.startexp;
 
-            monitor_simulate_camera = !data->use_monitor;
             timing_mode = data->mode;
 
             // These are only accessed from interrupt context
@@ -215,13 +214,7 @@ static void parse_packet(struct timer_packet *p)
 
             align_boundary = temp_boundary;
 
-            // Trigger fake camera output
-            if (monitor_simulate_camera)
-                simulate_camera_startup();
-
-            // Monitor the camera for a level change indicating it has finished initializing
-            monitor_mode = MONITOR_START;
-            usb_send_status(TIMER_WAITING);
+            camera_start_exposing(data->use_monitor);
 
             // Update display configuration for new sequence
             display_update_config();
@@ -239,22 +232,7 @@ static void parse_packet(struct timer_packet *p)
             exposure_total = 0;
             exposure_countdown = 0;
 
-            if (monitor_simulate_camera)
-                simulate_camera_shutdown();
-
-            // Camera is reading out - Wait for a level change indicating it has finished
-            if (!monitor_level_high)
-            {
-                monitor_mode = MONITOR_STOP;
-                usb_send_status(TIMER_WAITING);
-            }
-            else
-            {
-                // Camera can be shutdown immediately
-                monitor_mode = MONITOR_WAIT;
-                usb_stop_exposure();
-                usb_send_status(TIMER_IDLE);
-            }
+            camera_stop_exposing();
             break;
         case ENABLE_RELAY:
             eeprom_update_byte(RELAY_EEPROM_OFFSET, RELAY_ENABLED);
@@ -386,7 +364,7 @@ void usb_stop_exposure()
     queue_data(STOP_EXPOSURE, NULL, 0);
 }
 
-void usb_send_status(TimerMode status)
+void usb_send_status(enum timer_status status)
 {
     queue_data(STATUSMODE, &status, 1);
 }
