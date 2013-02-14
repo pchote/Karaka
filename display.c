@@ -298,7 +298,7 @@ static void lcd_init()
     DDRC |= _BV(PC0) | _BV(PC1) | _BV(PC6);
 
     // Manual startup sequence
-    _delay_ms(15);
+    _delay_ms(100);
     lcd_send_byte(LCD_STARTUP, 0x38);
     _delay_ms(4.1);
     lcd_send_byte(LCD_STARTUP, 0x38);
