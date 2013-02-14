@@ -13,7 +13,6 @@
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/wdt.h>
 #include <util/atomic.h>
 
 #include "main.h"
