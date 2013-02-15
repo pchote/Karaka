@@ -21,8 +21,8 @@
 #include "usb.h"
 #include "camera.h"
 
-const char msg_duplicate_pulse[] PROGMEM = "Duplicate pulse detected";
-const char msg_missing_pulse[]   PROGMEM = "Missing pulse detected";
+const char msg_duplicate_pulse[] PROGMEM = "WARNING: Missed serial data or duplicate time pulse";
+const char msg_missing_pulse[]   PROGMEM = "WARNING: Missed time pulse";
 const char fmt_time_drift[]      PROGMEM = "WARNING: %dms time drift";
 
 // Internal timing mode
@@ -37,10 +37,12 @@ uint16_t exposure_total = 0;
 uint8_t align_boundary = 0;
 
 volatile uint16_t exposure_countdown = 0;
-volatile enum count_status countdown_mode = COUNTDOWN_DISABLED;
 volatile enum interrupt_flags interrupt_flags = 0;
 volatile enum timer_status timer_status = TIMER_IDLE;
 volatile enum gps_status gps_status = GPS_UNAVAILABLE;
+
+enum gps_last_data {GPS_UNKNOWN, GPS_PULSE, GPS_SERIAL};
+volatile enum gps_last_data gps_last_data = GPS_UNKNOWN;
 
 inline void set_timer_status(enum timer_status status)
 {
@@ -87,11 +89,6 @@ int main(void)
     usb_initialize();
     camera_initialize();
     display_init();
-
-    exposure_total = exposure_countdown = 0;
-    millisecond_count = millisecond_drift = 0;
-    countdown_mode = COUNTDOWN_DISABLED;
-    interrupt_flags = 0;
 
 	// Enable relay mode until reboot
 	if (eeprom_read_byte(RELAY_EEPROM_OFFSET) == RELAY_ENABLED)
@@ -184,59 +181,77 @@ ISR(PCINT3_vect)
     if (bit_is_clear(PIND, PD4))
         return;
 
-    if (timer_status == TIMER_RELAY)
+    switch (timer_status)
     {
-        camera_trigger_readout();
-        return;
-    }
+        case TIMER_EXPOSING:
+        case TIMER_READOUT:
+            if (timing_mode == MODE_HIGHRES)
+            {
+                // Test for time drift
+                // Doesn't need to be atomic, as interrupts are disabled in an interrupt context
+                uint16_t drift = millisecond_count;
+                while (drift >= 1000)
+                    drift -= 1000;
 
-    if (timing_mode == MODE_HIGHRES)
-    {
-        // Test for time drift
-        // Doesn't need to be atomic, as interrupts are disabled in an interrupt context
-        uint16_t drift = millisecond_count;
-        while (drift >= 1000)
-            drift -= 1000;
+                if (drift != 0)
+                {
+                    millisecond_drift = drift > 500 ? (drift - 1000) : drift;
+                    interrupt_flags |= FLAG_TIME_DRIFT;
+                }
+            }
+            else
+            {
+                // End of exposure - send a trigger to the camera
+                // and store a flag so the gps can save the synctime.
+                // This is a 16-bit operation, but we are in an interrupt so it is atomic
+                if (--exposure_countdown == 0)
+                {
+                    camera_trigger_readout();
+                    exposure_countdown = exposure_total;
+                    record_trigger = true;
+                }
+            }
+            break;
+        case TIMER_ALIGN:
+            // Start the first exposure so that a (potentially future) exposure
+            // boundary will occur on the minute
+            if (current_timestamp.seconds % align_boundary != align_boundary - 1)
+                break;
 
-        if (drift != 0)
-        {
-            millisecond_drift = drift > 500 ? (drift - 1000) : drift;
-            interrupt_flags |= FLAG_TIME_DRIFT;
-        }
-
-        // Synced to a second boundary on startup
-        // Enable the millisecond timer to begin sending triggers
-        if (countdown_mode == COUNTDOWN_ALIGNED)
-        {
-            // Start timer with an initial count to align trigger as close to
-            // the pulse as possible. This figure is determined experimentally
-            // by comparing the GPS and trigger pulses with an oscilloscope
-            TCNT1 = MILLISECOND_TCNT;
-            START_MILLISECOND_TIMER;
-            countdown_mode = COUNTDOWN_ENABLED;
-        }
-    }
-    else
-    {
-        // Send a warning about the duplicate pulse
-        if (countdown_mode == COUNTDOWN_TRIGGERED)
-            interrupt_flags |= FLAG_DUPLICATE_PULSE;
-
-        if (countdown_mode >= COUNTDOWN_ALIGNED)
-        {
-            // End of exposure - send a syncpulse to the camera
-            // and store a flag so the gps can save the synctime.
-            // This is a 16-bit operation, but we are in an interrupt so it is atomic
-            if (countdown_mode == COUNTDOWN_ALIGNED || --exposure_countdown == 0)
+            if (timing_mode == MODE_HIGHRES)
+            {
+                // Enable the millisecond timer to begin sending triggers
+                // Start timer with an initial count to align trigger as close to
+                // the pulse as possible. This figure is determined experimentally
+                // by comparing the GPS and trigger pulses with an oscilloscope
+                //
+                // Constants for configuring the millisecond timer
+                // MILLISECOND_TCNT is calibrated with an oscilloscope
+                // to minimize the offset between 1Hz signal and triggers
+                TCNT1 = 254;
+                START_MILLISECOND_TIMER;
+            }
+            else
             {
                 camera_trigger_readout();
                 exposure_countdown = exposure_total;
                 record_trigger = true;
             }
-
-            countdown_mode = COUNTDOWN_TRIGGERED;
-        }
+            break;
+        case TIMER_RELAY:
+            camera_trigger_readout();
+            // Skip pulse/timestamp check
+            return;
+        case TIMER_WAITING:
+        case TIMER_IDLE:
+            // Do nothing
+            break;
     }
+
+    // Send a warning about the duplicate pulse
+    if (gps_last_data == GPS_PULSE)
+        interrupt_flags |= FLAG_DUPLICATE_PULSE;
+    gps_last_data = GPS_PULSE;
 }
 
 void set_time(struct timestamp *t)
@@ -250,26 +265,11 @@ void set_time(struct timestamp *t)
     if (gps_status != GPS_ACTIVE)
         set_gps_status(GPS_ACTIVE);
 
-    // Synchronise the exposure with the edge of a minute
-    if (countdown_mode == COUNTDOWN_SYNCING && (current_timestamp.seconds % align_boundary == align_boundary - 1))
-        countdown_mode = COUNTDOWN_ALIGNED;
-
-    if (timing_mode == MODE_PULSECOUNTER)
+    if (timing_mode == MODE_PULSECOUNTER && record_trigger)
     {
-        // Enable the counter for the next GPS pulse
-        if (countdown_mode == COUNTDOWN_TRIGGERED)
-            countdown_mode = COUNTDOWN_ENABLED;
-
-        // We should always receive the GPS pulse before the time packet
-        else if (countdown_mode == COUNTDOWN_ENABLED)
-            interrupt_flags |= FLAG_MISSING_PULSE;
-
-        if (record_trigger)
-        {
-            download_timestamp = current_timestamp;
-            record_trigger = false;
-            interrupt_flags |= FLAG_SEND_TRIGGER;
-        }
+        download_timestamp = current_timestamp;
+        record_trigger = false;
+        interrupt_flags |= FLAG_SEND_TRIGGER;
     }
     else
     {
@@ -280,4 +280,9 @@ void set_time(struct timestamp *t)
                 millisecond_count -= 1000;
         }
     }
+
+    // Send a warning about the missing pulse
+    if (gps_last_data == GPS_SERIAL && timer_status != TIMER_RELAY)
+        interrupt_flags |= FLAG_MISSING_PULSE;
+    gps_last_data = GPS_SERIAL;
 }

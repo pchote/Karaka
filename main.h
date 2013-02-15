@@ -48,16 +48,6 @@ extern volatile uint16_t exposure_countdown;
 extern uint8_t align_boundary;
 extern volatile uint16_t millisecond_count;
 
-enum count_status
-{
-    COUNTDOWN_DISABLED  = 0,
-    COUNTDOWN_SYNCING   = 1,
-    COUNTDOWN_ALIGNED   = 2,
-    COUNTDOWN_ENABLED   = 3,
-    COUNTDOWN_TRIGGERED = 4,
-} countdownstate;
-extern volatile enum count_status countdown_mode;
-
 enum interrupt_flags
 {
     FLAG_SEND_STATUS       = _BV(0),

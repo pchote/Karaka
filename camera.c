@@ -173,7 +173,6 @@ ISR(TIMER3_COMPA_vect)
         switch (monitor_mode)
         {
             case MONITOR_START:
-                countdown_mode = COUNTDOWN_SYNCING;
                 monitor_mode = MONITOR_ACQUIRE;
                 set_timer_status(TIMER_ALIGN);
                 break;

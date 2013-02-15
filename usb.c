@@ -180,7 +180,7 @@ static void parse_packet(struct timer_packet *p)
             timing_mode = data->mode;
 
             // These are only accessed from interrupt context
-            // when countdown_mode = ENABLED or TRIGGERED so
+            // when timer_status == ALIGN,EXPOSING,READOUT so
             // these is safe to modify with interrupts enabled
             exposure_countdown = data->exposure;
             exposure_total = exposure_countdown;
@@ -207,10 +207,9 @@ static void parse_packet(struct timer_packet *p)
             // Disable the exposure countdown immediately
             STOP_MILLISECOND_TIMER;
             millisecond_count = 0;
-            countdown_mode = COUNTDOWN_DISABLED;
 
             // These are only accessed from interrupt context
-            // when countdown_mode = ENABLED or TRIGGERED so
+            // when timer_status == ALIGN,EXPOSING,READOUT so
             // these is safe to modify with interrupts enabled
             exposure_total = 0;
             exposure_countdown = 0;
