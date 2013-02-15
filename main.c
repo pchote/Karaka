@@ -184,6 +184,12 @@ ISR(PCINT3_vect)
     if (bit_is_clear(PIND, PD4))
         return;
 
+    if (timer_status == TIMER_RELAY)
+    {
+        camera_trigger_readout();
+        return;
+    }
+
     if (timing_mode == MODE_HIGHRES)
     {
         // Test for time drift
@@ -212,40 +218,33 @@ ISR(PCINT3_vect)
     }
     else
     {
-        // Don't count down unless we have a valid exposure time and the GPS is locked
-        if (gps_status == GPS_ACTIVE && timer_status != TIMER_RELAY)
+        // Send a warning about the duplicate pulse
+        if (countdown_mode == COUNTDOWN_TRIGGERED)
+            interrupt_flags |= FLAG_DUPLICATE_PULSE;
+
+        if (countdown_mode == COUNTDOWN_ENABLED || countdown_mode == COUNTDOWN_TRIGGERED)
         {
-            // Send a warning about the duplicate pulse
-            if (countdown_mode == COUNTDOWN_TRIGGERED)
-                interrupt_flags |= FLAG_DUPLICATE_PULSE;
-
-            if (countdown_mode == COUNTDOWN_ENABLED || countdown_mode == COUNTDOWN_TRIGGERED)
-            {
-                // End of exposure - send a syncpulse to the camera
-                // and store a flag so the gps can save the synctime.
-                // This is a 16-bit operation, but we are in an interrupt so it is atomic
-                if (--exposure_countdown == 0)
-                {
-                    camera_trigger_readout();
-                    exposure_countdown = exposure_total;
-                    record_trigger = true;
-                }
-
-                countdown_mode = COUNTDOWN_TRIGGERED;
-            }
-            else if (countdown_mode == COUNTDOWN_ALIGNED)
+            // End of exposure - send a syncpulse to the camera
+            // and store a flag so the gps can save the synctime.
+            // This is a 16-bit operation, but we are in an interrupt so it is atomic
+            if (--exposure_countdown == 0)
             {
                 camera_trigger_readout();
                 exposure_countdown = exposure_total;
                 record_trigger = true;
-
-                countdown_mode = COUNTDOWN_TRIGGERED;
             }
+
+            countdown_mode = COUNTDOWN_TRIGGERED;
+        }
+        else if (countdown_mode == COUNTDOWN_ALIGNED)
+        {
+            camera_trigger_readout();
+            exposure_countdown = exposure_total;
+            record_trigger = true;
+
+            countdown_mode = COUNTDOWN_TRIGGERED;
         }
     }
-
-    if (timer_status == TIMER_RELAY)
-        camera_trigger_readout();
 }
 
 void set_time(struct timestamp *t)
