@@ -21,7 +21,7 @@ PARTCODE     = 0x43
 BOOTSTART    = 0x1E000
 PAGESIZE     = 256
 F_CPU        = 10000000UL
-HFUSE        = 0x18
+HFUSE        = 0x98
 LFUSE        = 0xF0
 EFUSE        = 0xFC
 
