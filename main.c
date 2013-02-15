@@ -222,25 +222,17 @@ ISR(PCINT3_vect)
         if (countdown_mode == COUNTDOWN_TRIGGERED)
             interrupt_flags |= FLAG_DUPLICATE_PULSE;
 
-        if (countdown_mode == COUNTDOWN_ENABLED || countdown_mode == COUNTDOWN_TRIGGERED)
+        if (countdown_mode >= COUNTDOWN_ALIGNED)
         {
             // End of exposure - send a syncpulse to the camera
             // and store a flag so the gps can save the synctime.
             // This is a 16-bit operation, but we are in an interrupt so it is atomic
-            if (--exposure_countdown == 0)
+            if (countdown_mode == COUNTDOWN_ALIGNED || --exposure_countdown == 0)
             {
                 camera_trigger_readout();
                 exposure_countdown = exposure_total;
                 record_trigger = true;
             }
-
-            countdown_mode = COUNTDOWN_TRIGGERED;
-        }
-        else if (countdown_mode == COUNTDOWN_ALIGNED)
-        {
-            camera_trigger_readout();
-            exposure_countdown = exposure_total;
-            record_trigger = true;
 
             countdown_mode = COUNTDOWN_TRIGGERED;
         }
