@@ -50,11 +50,8 @@ inline void set_timer_status(enum timer_status status)
 
 inline void set_gps_status(enum gps_status status)
 {
-    enum gps_status old = gps_status;
     gps_status = status;
-
-    if (old != gps_status)
-        interrupt_flags |= FLAG_SEND_STATUS;
+    interrupt_flags |= FLAG_SEND_STATUS;
 }
 
 // Internal millisecond count
@@ -254,10 +251,10 @@ ISR(PCINT3_vect)
 void set_time(struct timestamp *t)
 {
     current_timestamp = *t;
-
-    // Mark that we have a valid timestamp
-    set_gps_status(GPS_ACTIVE);
     interrupt_flags |= FLAG_SEND_TIMESTAMP;
+
+    if (gps_status != GPS_ACTIVE)
+        set_gps_status(GPS_ACTIVE);
 
     // Synchronise the exposure with the edge of a minute
     if (countdown_mode == COUNTDOWN_SYNCING && (current_timestamp.seconds % align_boundary == align_boundary - 1))
