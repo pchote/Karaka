@@ -23,6 +23,7 @@ PAGESIZE     = 256
 F_CPU        = 10000000UL
 HFUSE        = 0x18
 LFUSE        = 0xF0
+EFUSE        = 0xFC
 
 ##***************************************************************************
 
@@ -41,7 +42,7 @@ reset:
 	$(CC) -o $@ reset.c
 
 fuse:
-	$(AVRDUDE) -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m efuse:w:0xFF:m
+	$(AVRDUDE) -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m efuse:w:$(EFUSE):m
 
 install: main.hex reset
 	./reset $(PORT)
