@@ -20,7 +20,7 @@
 
 enum timing_mode
 {
-    MODE_PPSCOUNTER = 0,
+    MODE_PULSECOUNTER = 0,
     MODE_HIGHRES = 1,
 };
 
@@ -62,7 +62,7 @@ enum interrupt_flags
     FLAG_SEND_STATUS       = (1 << 0),
     FLAG_STOP_EXPOSURE     = (1 << 1),
     FLAG_TIME_DRIFT        = (1 << 2),
-    FLAG_DUPLICATE_PPS     = (1 << 3),
+    FLAG_DUPLICATE_PULSE   = (1 << 3),
     FLAG_SEND_TIMESTAMP    = (1 << 4),
     FLAG_SEND_TRIGGER      = (1 << 5),
 };

@@ -21,17 +21,17 @@
 #include "usb.h"
 #include "camera.h"
 
-const char msg_duplicate_pulse[] PROGMEM = "Duplicate PPS pulse detected";
-const char msg_missed_pps[]      PROGMEM = "Missing PPS pulse detected";
+const char msg_duplicate_pulse[] PROGMEM = "Duplicate pulse detected";
+const char msg_missed_pulse[]    PROGMEM = "Missing pulse detected";
 const char fmt_time_drift[]      PROGMEM = "WARNING: %dms time drift";
 
 // Internal timing mode
-//    MODE_PPSCOUNTER counts the 1Hz input signal and
+//    MODE_PULSECOUNTER counts the 1Hz input signal and
 //       flags the next time packet as the download time
 //    MODE_HIGHRES uses the 1Hz signal for initial alignment
 //       and stability checks, but all timing is tracked
 //       from the hardware timers (assumes stable CPU clock)
-uint8_t timing_mode = MODE_PPSCOUNTER;
+uint8_t timing_mode = MODE_PULSECOUNTER;
 
 uint16_t exposure_total = 0;
 uint8_t align_boundary = 0;
@@ -58,7 +58,7 @@ inline void set_gps_status(enum gps_status status)
 }
 
 // Internal millisecond count
-// Remains zero if timing_mode == MODE_PPSCOUNTER
+// Remains zero if timing_mode == MODE_PULSECOUNTER
 volatile uint16_t millisecond_count = 0;
 volatile int16_t millisecond_drift = 0;
 volatile struct timestamp download_timestamp;
@@ -74,7 +74,7 @@ struct timestamp current_timestamp;
 
 int main(void)
 {
-    // Enable pin change interrupt for PPS input
+    // Enable pin change interrupt for pulse input
     PCMSK3 |= _BV(PCINT28);
     PCICR |= _BV(PCIE3);
 
@@ -132,7 +132,7 @@ int main(void)
             if (temp_int_flags & FLAG_STOP_EXPOSURE)
                 usb_stop_exposure();
 
-            if (temp_int_flags & FLAG_DUPLICATE_PPS)
+            if (temp_int_flags & FLAG_DUPLICATE_PULSE)
                 usb_send_message_P(msg_duplicate_pulse);
 
             if (temp_int_flags & FLAG_TIME_DRIFT)
@@ -169,18 +169,18 @@ ISR(TIMER1_COMPA_vect)
 
 /*
  * GPS time pulse interrupt handler
- * Fired on any level change from the PPS input (PD4)
+ * Fired on any level change from the pulse input (PD4)
  */
 ISR(PCINT3_vect)
 {
-    // Trigger on the falling edge of the PPS pulse
+    // Trigger on the falling edge of the GPS pulse
     // Note that the input buffer inverts the signal
     //
     // Triggering on the rising edge is unreliable as
     // this check will fail of other interrupts delay
     // the interrupt by >10us.
     // This is needed for millisecond-mode as the timer
-    // interrupt fires at the same time as the PPS arrives.
+    // interrupt fires at the same time as the pulse arrives.
     if (bit_is_clear(PIND, PD4))
         return;
 
@@ -202,9 +202,9 @@ ISR(PCINT3_vect)
         // Enable the millisecond timer to begin sending triggers
         if (countdown_mode == COUNTDOWN_ALIGNED)
         {
-            // Start timer with an initial count to align trigger to PPS as
-            // closely as possible. This figure is determined experimentally
-            // by comparing the PPS and trigger pulses with an oscilloscope
+            // Start timer with an initial count to align trigger as close to
+            // the pulse as possible. This figure is determined experimentally
+            // by comparing the GPS and trigger pulses with an oscilloscope
             TCNT1 = MILLISECOND_TCNT;
             START_MILLISECOND_TIMER;
             countdown_mode = COUNTDOWN_ENABLED;
@@ -217,7 +217,7 @@ ISR(PCINT3_vect)
         {
             // Send a warning about the duplicate pulse
             if (countdown_mode == COUNTDOWN_TRIGGERED)
-                interrupt_flags |= FLAG_DUPLICATE_PPS;
+                interrupt_flags |= FLAG_DUPLICATE_PULSE;
 
             if (countdown_mode == COUNTDOWN_ENABLED || countdown_mode == COUNTDOWN_TRIGGERED)
             {
@@ -260,15 +260,15 @@ void set_time(struct timestamp *t)
     if (countdown_mode == COUNTDOWN_SYNCING && (current_timestamp.seconds % align_boundary == align_boundary - 1))
         countdown_mode = COUNTDOWN_ALIGNED;
 
-    if (timing_mode == MODE_PPSCOUNTER)
+    if (timing_mode == MODE_PULSECOUNTER)
     {
-        // Enable the counter for the next PPS pulse
+        // Enable the counter for the next GPS pulse
         if (countdown_mode == COUNTDOWN_TRIGGERED)
             countdown_mode = COUNTDOWN_ENABLED;
         else if (countdown_mode == COUNTDOWN_ENABLED)
         {
-            // We should always receive the PPS pulse before the time packet
-            usb_send_message_P(msg_missed_pps);
+            // We should always receive the GPS pulse before the time packet
+            usb_send_message_P(msg_missed_pulse);
         }
 
         if (record_trigger)
