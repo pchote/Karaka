@@ -250,7 +250,10 @@ ISR(PCINT3_vect)
 
 void set_time(struct timestamp *t)
 {
-    current_timestamp = *t;
+    ATOMIC_BLOCK(ATOMIC_FORCEON)
+    {
+        current_timestamp = *t;
+    }
     interrupt_flags |= FLAG_SEND_TIMESTAMP;
 
     if (gps_status != GPS_ACTIVE)
