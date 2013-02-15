@@ -22,7 +22,7 @@
 #include "camera.h"
 
 const char msg_duplicate_pulse[] PROGMEM = "Duplicate pulse detected";
-const char msg_missed_pulse[]    PROGMEM = "Missing pulse detected";
+const char msg_missing_pulse[]   PROGMEM = "Missing pulse detected";
 const char fmt_time_drift[]      PROGMEM = "WARNING: %dms time drift";
 
 // Internal timing mode
@@ -134,6 +134,9 @@ int main(void)
 
             if (temp_int_flags & FLAG_DUPLICATE_PULSE)
                 usb_send_message_P(msg_duplicate_pulse);
+
+            if (temp_int_flags & FLAG_MISSING_PULSE)
+                usb_send_message_P(msg_missing_pulse);
 
             if (temp_int_flags & FLAG_TIME_DRIFT)
                 usb_send_message_fmt_P(fmt_time_drift, millisecond_drift);
@@ -265,11 +268,10 @@ void set_time(struct timestamp *t)
         // Enable the counter for the next GPS pulse
         if (countdown_mode == COUNTDOWN_TRIGGERED)
             countdown_mode = COUNTDOWN_ENABLED;
+
+        // We should always receive the GPS pulse before the time packet
         else if (countdown_mode == COUNTDOWN_ENABLED)
-        {
-            // We should always receive the GPS pulse before the time packet
-            usb_send_message_P(msg_missed_pulse);
-        }
+            interrupt_flags |= FLAG_MISSING_PULSE;
 
         if (record_trigger)
         {

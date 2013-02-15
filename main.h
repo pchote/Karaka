@@ -17,6 +17,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <avr/io.h>
 
 enum timing_mode
 {
@@ -59,12 +60,13 @@ extern volatile enum count_status countdown_mode;
 
 enum interrupt_flags
 {
-    FLAG_SEND_STATUS       = (1 << 0),
-    FLAG_STOP_EXPOSURE     = (1 << 1),
-    FLAG_TIME_DRIFT        = (1 << 2),
-    FLAG_DUPLICATE_PULSE   = (1 << 3),
-    FLAG_SEND_TIMESTAMP    = (1 << 4),
-    FLAG_SEND_TRIGGER      = (1 << 5),
+    FLAG_SEND_STATUS       = _BV(0),
+    FLAG_STOP_EXPOSURE     = _BV(1),
+    FLAG_SEND_TIMESTAMP    = _BV(2),
+    FLAG_SEND_TRIGGER      = _BV(3),
+    FLAG_TIME_DRIFT        = _BV(4),
+    FLAG_DUPLICATE_PULSE   = _BV(5),
+    FLAG_MISSING_PULSE     = _BV(6),
 };
 
 extern volatile enum interrupt_flags interrupt_flags;
