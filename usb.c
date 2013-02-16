@@ -218,7 +218,7 @@ static void parse_packet(struct timer_packet *p)
             break;
         case ENABLE_RELAY:
             eeprom_update_byte(RELAY_EEPROM_OFFSET, RELAY_ENABLED);
-            eeprom_update_byte(BOOTLOADER_EEPROM_OFFSET, BIPASS_ENABLED);
+            eeprom_update_byte(BOOTLOADER_EEPROM_OFFSET, BYPASS_ENABLED);
             break;
         default:
             usb_send_message_fmt_P(unknown_packet_fmt, p->type);

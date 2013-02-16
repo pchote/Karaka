@@ -33,10 +33,10 @@ extern uint8_t timing_mode;
 #define STOP_MILLISECOND_TIMER (TCCR1B = _BV(WGM12))
 #define START_MILLISECOND_TIMER (TCCR1B = _BV(WGM12)|_BV(CS10))
 
-// Bootloader bipass EEPROM parameters - must match definitions in bootloader.c
+// Bootloader bypass EEPROM parameters - must match definitions in bootloader.c
 #define BOOTLOADER_EEPROM_OFFSET (uint8_t *)(0x00)
-#define BIPASS_DISABLED 0xFF
-#define BIPASS_ENABLED 0x42
+#define BYPASS_DISABLED 0xFF
+#define BYPASS_ENABLED 0x42
 
 // Relay mode EEPROM parameters
 #define RELAY_EEPROM_OFFSET (uint8_t *)(0x01)

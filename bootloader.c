@@ -11,10 +11,10 @@
 #include <avr/eeprom.h>
 #include <avr/boot.h>
 
-// Bootloader bipass EEPROM parameters - must match definitions in main.c
+// Bootloader bypass EEPROM parameters - must match definitions in main.c
 #define BOOTLOADER_EEPROM_OFFSET (uint8_t *)(0x00)
-#define BIPASS_DISABLED 0xFF
-#define BIPASS_ENABLED 0x42
+#define BYPASS_DISABLED 0xFF
+#define BYPASS_ENABLED 0x42
 
 // Disable watchdog timer early in boot
 uint8_t boot_mcusr __attribute__ ((section(".noinit")));
@@ -151,11 +151,11 @@ int main(void)
     // Skip bootloader if reset by watchdog
 	bool skip_bootloader = !(boot_mcusr & _BV(EXTRF));
 
-	// Allow the main application to request a one-time bipass of the bootloader
+	// Allow the main application to request a one-time bypass of the bootloader
 	// for enabling relay mode (the GPS programs toggle DTR when opening the port)
-	if (eeprom_read_byte(BOOTLOADER_EEPROM_OFFSET) == BIPASS_ENABLED)
+	if (eeprom_read_byte(BOOTLOADER_EEPROM_OFFSET) == BYPASS_ENABLED)
 	{
-		eeprom_update_byte(BOOTLOADER_EEPROM_OFFSET, BIPASS_DISABLED);
+		eeprom_update_byte(BOOTLOADER_EEPROM_OFFSET, BYPASS_DISABLED);
 		skip_bootloader = true;
 	}
 
