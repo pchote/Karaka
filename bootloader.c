@@ -350,7 +350,7 @@ int main(void)
             case 'x':
             case 'y':
             case 'T':
-                // Ignore command and it's parameter.
+                // Ignore command and its parameter.
                 recchar();
                 sendchar('\r');
             break;
