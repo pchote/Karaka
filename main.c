@@ -65,12 +65,6 @@ volatile bool record_trigger = false;
 
 struct timestamp current_timestamp;
 
-// Constants for configuring the millisecond timer
-// MILLISECOND_TCNT is calibrated with an oscilloscope
-// to minimize the offset between 1Hz signal and triggers
-#define MILLISECOND_OCR 9999
-#define MILLISECOND_TCNT 254
-
 int main(void)
 {
     // Enable pin change interrupt for pulse input
@@ -80,10 +74,10 @@ int main(void)
     // Enable pullup resistor on unused pins
     PORTA = 0xFF;
 
-    // Enable output compare interrupt for ms timer
-    TIMSK1 |= _BV(OCIE1A);
-    OCR1A = MILLISECOND_OCR;
+    // Set millisecond-timer period to 1ms
+    OCR1A = 9999;
     STOP_MILLISECOND_TIMER;
+    TIMSK1 |= _BV(OCIE1A);
 
     // Set other init
     usb_initialize();
