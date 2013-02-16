@@ -168,10 +168,10 @@ ISR(PCINT3_vect)
     // Note that the input buffer inverts the signal
     //
     // Triggering on the rising edge is unreliable as
-    // this check will fail of other interrupts delay
-    // the interrupt by >10us.
-    // This is needed for millisecond-mode as the timer
-    // interrupt fires at the same time as the pulse arrives.
+    // this check will fail if other interrupts delay
+    // the interrupt by >10us (which is often the case in
+    // high-resolution mode where the timer interrupt fires
+    // at the same time as the pulse arrives)
     if (bit_is_clear(PIND, PD4))
         return;
 
