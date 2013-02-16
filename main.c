@@ -218,6 +218,7 @@ ISR(PCINT3_vect)
             if (current_timestamp.seconds % align_boundary != align_boundary - 1)
                 break;
 
+            set_timer_status(TIMER_EXPOSING);
             if (timing_mode == MODE_HIGHRES)
             {
                 // Enable the millisecond timer to begin sending triggers
