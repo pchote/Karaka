@@ -453,20 +453,11 @@ void display_update()
     if (display_type == DISPLAY_LED)
         led_update_brightness();
 
-    // Update the display every second or when the GPS state changes
-    static uint8_t display_gps_seconds = 255; // Bogus value to force redraw on first run
-    static uint8_t display_gps_status = GPS_UNAVAILABLE;
-    if (display_gps_status == gps_status && display_gps_seconds == current_timestamp.seconds)
-        return;
-
-    display_gps_status = gps_status;
-    display_gps_seconds = current_timestamp.seconds;
-
-    uint16_t display_countdown;
+    uint16_t display_progress;
     enum timer_status status;
     ATOMIC_BLOCK(ATOMIC_FORCEON)
     {
-        display_countdown = exposure_countdown;
+        display_progress = exposure_total - exposure_countdown;
         status = timer_status;
     }
 
@@ -498,16 +489,16 @@ void display_update()
                     set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
                     if (timing_mode == MODE_HIGHRES)
                         set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
-                                  (exposure_total - display_countdown) / 1000, exposure_total / 1000);
+                                  display_progress / 1000, exposure_total / 1000);
                     else
                         set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_countdown,
-                                  exposure_total - display_countdown, exposure_total);
+                                  display_progress, exposure_total);
                     break;
                 }
                 case EXPOSURE_PERCENT:
                 {
                     const char *msg = status == TIMER_EXPOSING ? msg_expose : msg_readout;
-                    uint16_t percentage = (exposure_total - display_countdown) / (exposure_total / 100);
+                    uint16_t percentage = display_progress / (exposure_total / 100);
                     set_msg_P(DISPLAY_TOP | DISPLAY_LEFT, msg);
                     set_fmt_P(DISPLAY_TOP | DISPLAY_RIGHT, fmt_percentage, percentage);
                     break;
@@ -520,7 +511,7 @@ void display_update()
     }
 
     // Update bottom row (time and locked state)
-    switch (display_gps_status)
+    switch (gps_status)
     {
         case GPS_ACTIVE:
         {
