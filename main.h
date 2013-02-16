@@ -48,7 +48,7 @@ extern volatile uint16_t exposure_countdown;
 extern uint8_t align_boundary;
 extern volatile uint16_t millisecond_count;
 
-enum interrupt_flags
+enum message_flags
 {
     FLAG_SEND_STATUS       = _BV(0),
     FLAG_STOP_EXPOSURE     = _BV(1),
@@ -59,7 +59,7 @@ enum interrupt_flags
     FLAG_MISSING_PULSE     = _BV(6),
 };
 
-extern volatile enum interrupt_flags interrupt_flags;
+extern volatile enum message_flags message_flags;
 
 struct timestamp
 {

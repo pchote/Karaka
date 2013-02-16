@@ -143,7 +143,7 @@ void camera_stop_exposing()
     if (camera_status == CAMERA_READY)
     {
         monitor_mode = MONITOR_WAIT;
-        interrupt_flags |= FLAG_STOP_EXPOSURE;
+        message_flags |= FLAG_STOP_EXPOSURE;
 
         set_timer_status(TIMER_IDLE);
     }
@@ -183,7 +183,7 @@ ISR(TIMER3_COMPA_vect)
                     set_timer_status(TIMER_EXPOSING);
                 break;
             case MONITOR_STOP:
-                interrupt_flags |= FLAG_STOP_EXPOSURE;
+                message_flags |= FLAG_STOP_EXPOSURE;
                 set_timer_status(TIMER_IDLE);
                 break;
             default:

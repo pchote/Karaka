@@ -37,7 +37,7 @@ uint16_t exposure_total = 0;
 uint8_t align_boundary = 0;
 
 volatile uint16_t exposure_countdown = 0;
-volatile enum interrupt_flags interrupt_flags = 0;
+volatile enum message_flags message_flags = 0;
 volatile enum timer_status timer_status = TIMER_IDLE;
 volatile enum gps_status gps_status = GPS_UNAVAILABLE;
 
@@ -47,13 +47,13 @@ volatile enum gps_last_data gps_last_data = GPS_UNKNOWN;
 inline void set_timer_status(enum timer_status status)
 {
     timer_status = status;
-    interrupt_flags |= FLAG_SEND_STATUS;
+    message_flags |= FLAG_SEND_STATUS;
 }
 
 inline void set_gps_status(enum gps_status status)
 {
     gps_status = status;
-    interrupt_flags |= FLAG_SEND_STATUS;
+    message_flags |= FLAG_SEND_STATUS;
 }
 
 // Internal millisecond count
@@ -99,13 +99,13 @@ int main(void)
     for (;;)
     {
         // Handle message flags set via interrupt
-        if (interrupt_flags)
+        if (message_flags)
         {
             uint8_t temp_int_flags = 0;
             ATOMIC_BLOCK(ATOMIC_FORCEON)
             {
-                temp_int_flags = interrupt_flags;
-                interrupt_flags = 0;
+                temp_int_flags = message_flags;
+                message_flags = 0;
             }
 
             if (temp_int_flags & FLAG_SEND_TRIGGER)
@@ -154,7 +154,7 @@ ISR(TIMER1_COMPA_vect)
         download_timestamp = current_timestamp;
 
         download_timestamp.milliseconds = millisecond_count;
-        interrupt_flags |= FLAG_SEND_TRIGGER;
+        message_flags |= FLAG_SEND_TRIGGER;
     }
 }
 
@@ -190,7 +190,7 @@ ISR(PCINT3_vect)
                 if (drift != 0)
                 {
                     millisecond_drift = drift > 500 ? (drift - 1000) : drift;
-                    interrupt_flags |= FLAG_TIME_DRIFT;
+                    message_flags |= FLAG_TIME_DRIFT;
                 }
             }
             else
@@ -245,7 +245,7 @@ ISR(PCINT3_vect)
 
     // Send a warning about the duplicate pulse
     if (gps_last_data == GPS_PULSE)
-        interrupt_flags |= FLAG_DUPLICATE_PULSE;
+        message_flags |= FLAG_DUPLICATE_PULSE;
     gps_last_data = GPS_PULSE;
 }
 
@@ -255,7 +255,7 @@ void set_time(struct timestamp *t)
     {
         current_timestamp = *t;
     }
-    interrupt_flags |= FLAG_SEND_TIMESTAMP;
+    message_flags |= FLAG_SEND_TIMESTAMP;
 
     if (gps_status != GPS_ACTIVE)
         set_gps_status(GPS_ACTIVE);
@@ -264,7 +264,7 @@ void set_time(struct timestamp *t)
     {
         download_timestamp = current_timestamp;
         record_trigger = false;
-        interrupt_flags |= FLAG_SEND_TRIGGER;
+        message_flags |= FLAG_SEND_TRIGGER;
     }
     else
     {
@@ -278,6 +278,6 @@ void set_time(struct timestamp *t)
 
     // Send a warning about the missing pulse
     if (gps_last_data == GPS_SERIAL && timer_status != TIMER_RELAY)
-        interrupt_flags |= FLAG_MISSING_PULSE;
+        message_flags |= FLAG_MISSING_PULSE;
     gps_last_data = GPS_SERIAL;
 }
