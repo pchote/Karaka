@@ -79,8 +79,11 @@ struct gps_packet
 
 // Init Magellan: Disable the packets that the OEM software enables; enable timing and status packets
 const char initialization_data[] PROGMEM = ""
-    // Trimble initialization - disable everything except the 8F-AB timing packet
+    // Trimble initialization
+    // Disable everything except the 8F-AB timing packet
     "\x10\x8E\xA5\x00\x01\x00\x00\x10\x03"
+    // Configure UTC time output
+    "\x10\x8E\xA2\x03\x10\x03"
     // Magellan initialization
     "$PMGLI,00,G00,0,A\r\n"
     "$PMGLI,00,B00,0,A\r\n"
@@ -92,7 +95,7 @@ const char initialization_data[] PROGMEM = ""
     "$PMGLI,00,S01,0,A\r\n"
     "$PMGLI,00,A00,2,B\r\n"
     "$PMGLI,00,H00,2,B\r\n";
-const uint8_t initialization_length = 199;
+const uint8_t initialization_length = 205;
 
 static const char invalid_packet_fmt[]  PROGMEM = "Invalid packet end byte. Got 0x%02x, expected 0x%02x";
 static const char checksum_failed_fmt[] PROGMEM = "Packet checksum failed. Got 0x%02x, expected 0x%02x";
