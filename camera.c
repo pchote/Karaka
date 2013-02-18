@@ -135,29 +135,28 @@ ISR(TIMER3_COMPA_vect)
     TCCR3B = _BV(WGM32);
 
     enum camera_status status = !monitor_camera_status || bit_is_clear(PIND, PD6) ? CAMERA_READY : CAMERA_BUSY;
-    if (camera_status != status)
-    {
-        camera_status = status;
+    if (camera_status == status)
+        return;
 
-        switch (monitor_mode)
-        {
-            case MONITOR_START:
-                monitor_mode = MONITOR_ACQUIRING;
-                set_timer_status(TIMER_ALIGN);
-                break;
-            case MONITOR_ACQUIRING:
-                if (status == CAMERA_BUSY)
-                    set_timer_status(TIMER_READOUT);
-                else
-                    set_timer_status(TIMER_EXPOSING);
-                break;
-            case MONITOR_STOP:
-                message_flags |= FLAG_STOP_EXPOSURE;
-                set_timer_status(TIMER_IDLE);
-                break;
-            default:
-                break;
-        }
+    camera_status = status;
+    switch (monitor_mode)
+    {
+        case MONITOR_START:
+            monitor_mode = MONITOR_ACQUIRING;
+            set_timer_status(TIMER_ALIGN);
+            break;
+        case MONITOR_ACQUIRING:
+            if (status == CAMERA_BUSY)
+                set_timer_status(TIMER_READOUT);
+            else
+                set_timer_status(TIMER_EXPOSING);
+            break;
+        case MONITOR_STOP:
+            message_flags |= FLAG_STOP_EXPOSURE;
+            set_timer_status(TIMER_IDLE);
+            break;
+        default:
+            break;
     }
 }
 
