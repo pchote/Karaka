@@ -224,7 +224,7 @@ ISR(ADC_vect)
  * Initialize the SPI bus and display select lines
  * Clear the displays and set initial brightness to 0%
  */
-static void led_init()
+static void led_initialize()
 {
     // Set MOSI, SCK, display select pins to output
     DDRB |= 0xBE;
@@ -289,7 +289,7 @@ static void lcd_send_byte(enum lcd_data_type type, uint8_t b)
     PORTC &= ~_BV(PC6);
 }
 
-static void lcd_init()
+static void lcd_initialize()
 {
     // Set all of PORTA as data output
     DDRA = 0xFF;
@@ -414,16 +414,16 @@ static void set_fmt_P(enum display_flags flags, const char *fmt, ...)
     }
 }
 
-void display_init()
+void display_initialize()
 {
     // Read display select pin
     DDRD &= ~_BV(PD7);
     display_type = (bit_is_set(PIND, PD7)) ? DISPLAY_LCD : DISPLAY_LED;
 
     if (display_type == DISPLAY_LCD)
-        lcd_init();
+        lcd_initialize();
     else
-        led_init();
+        led_initialize();
 
     display_update_config();
 }

@@ -13,7 +13,7 @@
 #ifndef KARAKA_DISPLAY_H
 #define KARAKA_DISPLAY_H
 
-void display_init();
+void display_initialize();
 void display_update_config();
 void display_update();
 

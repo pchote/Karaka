@@ -82,7 +82,7 @@ int main(void)
     // Set other init
     usb_initialize();
     camera_initialize();
-    display_init();
+    display_initialize();
 
 	// Enable relay mode until reboot
 	if (eeprom_read_byte(RELAY_EEPROM_OFFSET) == RELAY_ENABLED)
