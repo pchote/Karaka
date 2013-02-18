@@ -99,7 +99,7 @@ int main(void)
     for (;;)
     {
         // Handle message flags set via interrupt
-        if (message_flags)
+        if (message_flags && timer_status != TIMER_RELAY)
         {
             uint8_t temp_int_flags = 0;
             ATOMIC_BLOCK(ATOMIC_FORCEON)
@@ -235,8 +235,7 @@ ISR(PCINT3_vect)
             break;
         case TIMER_RELAY:
             camera_trigger_readout();
-            // Skip pulse/timestamp check
-            return;
+            break;
         case TIMER_WAITING:
         case TIMER_IDLE:
             // Do nothing
@@ -277,7 +276,7 @@ void set_time(struct timestamp *t)
     }
 
     // Send a warning about the missing pulse
-    if (gps_last_data == GPS_SERIAL && timer_status != TIMER_RELAY)
+    if (gps_last_data == GPS_SERIAL)
         message_flags |= FLAG_MISSING_PULSE;
     gps_last_data = GPS_SERIAL;
 }
