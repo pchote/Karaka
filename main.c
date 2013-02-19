@@ -223,7 +223,7 @@ ISR(PCINT3_vect)
                 // Constants for configuring the millisecond timer
                 // MILLISECOND_TCNT is calibrated with an oscilloscope
                 // to minimize the offset between 1Hz signal and triggers
-                TCNT1 = 254;
+                TCNT1 = 355;
                 START_MILLISECOND_TIMER;
             }
             else
