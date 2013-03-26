@@ -99,7 +99,6 @@ const uint8_t initialization_length = 205;
 
 static const char invalid_packet_fmt[]  PROGMEM = "Invalid packet end byte. Got 0x%02x, expected 0x%02x";
 static const char checksum_failed_fmt[] PROGMEM = "Packet checksum failed. Got 0x%02x, expected 0x%02x";
-static const char additional_days_fmt[] PROGMEM = "Additional days: %d";
 
 static uint8_t input_buffer[256];
 static uint8_t input_read = 0;
