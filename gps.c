@@ -27,6 +27,8 @@ struct trimble_timestamp
     // Big endian
     uint32_t gps_seconds;
     uint16_t gps_week;
+
+    // Big endian
     int16_t utc_offset;
 
     uint8_t flags;
@@ -218,7 +220,7 @@ void parse_packet(struct gps_packet *p)
         {
             struct trimble_timestamp *tt = &p->data.trimble;
 
-            set_time(&(struct timestamp){
+            struct timestamp t = (struct timestamp) {
                 .year = swap_bytes(tt->year),
                 .month = tt->month,
                 .day = tt->day,
@@ -226,8 +228,23 @@ void parse_packet(struct gps_packet *p)
                 .minutes = tt->minutes,
                 .seconds = tt->seconds,
                 .milliseconds = 0,
-                .locked = tt->flags == 0x03
-            });
+                .flags = 0,
+                .utc_offset = 0,
+                .exposure_progress = 0,
+            };
+
+            // UTC Time, Locked
+            if (tt->flags == 0x03)
+                t.flags = TIMESTAMP_LOCKED;
+
+            // GPS Time, Locked
+            else if (tt->flags == 0x00)
+            {
+                t.flags = TIMESTAMP_LOCKED | TIMESTAMP_IS_GPS;
+                t.utc_offset = swap_bytes(tt->utc_offset);
+            }
+
+            set_time(&t);
             break;
         }
         case sizeof(struct magellan_status):
@@ -277,7 +294,9 @@ void parse_packet(struct gps_packet *p)
                 .minutes = mt->minutes,
                 .seconds = mt->seconds,
                 .milliseconds = 0,
-                .locked = magellan_time_locked
+                .flags = magellan_time_locked ? TIMESTAMP_LOCKED : 0,
+                .utc_offset = 0,
+                .exposure_progress = 0
             });
             break;
         }

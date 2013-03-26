@@ -163,8 +163,9 @@ static const char fmt_countdown[]   PROGMEM = "           %03d/%03d  ";
 static const char fmt_percentage[]  PROGMEM = "              %3d%%  ";
 
 // Bottom display
-static const char fmt_time[]        PROGMEM = "    %02d:%02d:%02d UTC    ";
-static const char fmt_time_nolock[] PROGMEM = "%02d:%02d:%02d NO GPS LOCK";
+static const char fmt_time_utc[]    PROGMEM = "    %02d:%02d:%02d UTC    ";
+static const char fmt_time_gps[]    PROGMEM = "    %02d:%02d:%02d GPS    ";
+static const char fmt_time_nolock[] PROGMEM = " %02d:%02d:%02d NOT LOCKED ";
 static const char msg_syncing[]     PROGMEM = "  SYNCING TO SERIAL ";
 
 static const uint8_t led_display_map[4] = {_BV(PB1), _BV(PB2), _BV(PB3), _BV(PB4)};
@@ -515,7 +516,8 @@ void display_update()
     {
         case GPS_ACTIVE:
         {
-            const char *fmt = current_timestamp.locked ? fmt_time : fmt_time_nolock;
+            const char *fmt = (current_timestamp.flags & TIMESTAMP_LOCKED) ?
+                (current_timestamp.flags & TIMESTAMP_IS_GPS) ? fmt_time_gps : fmt_time_utc : fmt_time_nolock;
             set_fmt_P(DISPLAY_BOTTOM | DISPLAY_LEFT | DISPLAY_RIGHT, fmt,
                 current_timestamp.hours,
                 current_timestamp.minutes,

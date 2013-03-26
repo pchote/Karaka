@@ -61,6 +61,12 @@ enum message_flags
 
 extern volatile enum message_flags message_flags;
 
+enum timestamp_flags
+{
+    TIMESTAMP_LOCKED = _BV(0),
+    TIMESTAMP_IS_GPS = _BV(1)
+};
+
 struct timestamp
 {
     uint16_t year;
@@ -70,7 +76,8 @@ struct timestamp
     uint8_t minutes;
     uint8_t seconds;
     uint16_t milliseconds;
-    bool locked;
+    enum timestamp_flags flags;
+    int16_t utc_offset;
     uint16_t exposure_progress;
 };
 
