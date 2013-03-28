@@ -146,6 +146,9 @@ ISR(TIMER3_COMPA_vect)
             set_timer_status(TIMER_ALIGN);
             break;
         case MONITOR_ACQUIRING:
+            // Suppress status updates for exposures < 500ms
+            if (timing_mode == MODE_HIGHRES && exposure_total < 500)
+                break;
             if (status == CAMERA_BUSY)
                 set_timer_status(TIMER_READOUT);
             else
@@ -165,6 +168,10 @@ void camera_trigger_readout()
 {
     PORTD |= _BV(PD5);
     TCCR0B = _BV(CS01) | _BV(CS00);
+
+    // Suppress status updates for exposures < 500ms
+    if (timing_mode == MODE_HIGHRES && exposure_total < 500)
+        return;
 
     // Trigger a fake download
     if (!monitor_camera_status)

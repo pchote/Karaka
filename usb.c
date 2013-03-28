@@ -43,6 +43,7 @@ struct packet_startexposure
     uint8_t use_monitor;
     enum timing_mode mode;
     uint16_t exposure;
+    uint8_t stride;
 };
 
 struct packet_status
@@ -182,8 +183,8 @@ static void parse_packet(struct timer_packet *p)
             // These are only accessed from interrupt context
             // when timer_status == ALIGN,EXPOSING,READOUT so
             // these is safe to modify with interrupts enabled
-            exposure_countdown = data->exposure;
-            exposure_total = exposure_countdown;
+            exposure_countdown = exposure_total = data->exposure;
+            trigger_countdown = trigger_stride = data->stride;
 
             // align_boundary is 8-bit, so use a temporary variable
             uint16_t temp_boundary = exposure_total;

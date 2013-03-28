@@ -34,9 +34,11 @@ const char fmt_time_drift[]      PROGMEM = "WARNING: %dms time drift";
 uint8_t timing_mode = MODE_PULSECOUNTER;
 
 uint16_t exposure_total = 0;
+uint8_t trigger_stride = 0;
 uint8_t align_boundary = 0;
 
 volatile uint16_t exposure_countdown = 0;
+volatile uint8_t trigger_countdown = 0;
 volatile enum message_flags message_flags = 0;
 volatile enum timer_status timer_status = TIMER_IDLE;
 volatile enum gps_status gps_status = GPS_UNAVAILABLE;
@@ -151,10 +153,14 @@ ISR(TIMER1_COMPA_vect)
     {
         camera_trigger_readout();
         exposure_countdown = exposure_total;
-        download_timestamp = current_timestamp;
 
-        download_timestamp.milliseconds = millisecond_count;
-        message_flags |= FLAG_SEND_TRIGGER;
+        if (--trigger_countdown == 0)
+        {
+            download_timestamp = current_timestamp;
+            download_timestamp.milliseconds = millisecond_count;
+            trigger_countdown = trigger_stride;
+            message_flags |= FLAG_SEND_TRIGGER;
+        }
     }
 }
 
@@ -261,9 +267,13 @@ void set_time(struct timestamp *t)
 
     if (timing_mode == MODE_PULSECOUNTER && record_trigger)
     {
-        download_timestamp = current_timestamp;
         record_trigger = false;
-        message_flags |= FLAG_SEND_TRIGGER;
+        if (--trigger_countdown == 0)
+        {
+            download_timestamp = current_timestamp;
+            trigger_countdown = trigger_stride;
+            message_flags |= FLAG_SEND_TRIGGER;
+        }
     }
     else
     {

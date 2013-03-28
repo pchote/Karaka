@@ -45,6 +45,8 @@ extern uint8_t timing_mode;
 
 extern uint16_t exposure_total;
 extern volatile uint16_t exposure_countdown;
+extern uint8_t trigger_stride;
+extern volatile uint8_t trigger_countdown;
 extern uint8_t align_boundary;
 extern volatile uint16_t millisecond_count;
 
