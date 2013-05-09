@@ -193,7 +193,7 @@ static void parse_packet(struct timer_packet *p)
 
             if (temp_boundary < 1)
                 temp_boundary = 1;
-            else if (align_boundary > 60)
+            else if (temp_boundary > 60)
                 temp_boundary = 60;
 
             align_boundary = temp_boundary;
