@@ -44,6 +44,7 @@ struct packet_startexposure
     enum timing_mode mode;
     uint16_t exposure;
     uint8_t stride;
+    uint8_t align_first;
 };
 
 struct packet_status
@@ -191,7 +192,7 @@ static void parse_packet(struct timer_packet *p)
             if (timing_mode == MODE_HIGHRES)
                 temp_boundary /= 1000;
 
-            if (temp_boundary < 1)
+            if (temp_boundary < 1 || data->align_first == 0)
                 temp_boundary = 1;
             else if (temp_boundary > 60)
                 temp_boundary = 60;
