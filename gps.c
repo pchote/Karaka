@@ -220,10 +220,40 @@ void parse_packet(struct gps_packet *p)
         {
             struct trimble_timestamp *tt = &p->data.trimble;
 
+            // Swap from big-endian to little-endian
+            tt->year = swap_bytes(tt->year);
+
+            uint8_t days[12] = {
+                31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+            };
+
+            // The Magellan firmware has not been updated to the new GPS epoch
+            // so we must add 1024 weeks to correct the date
+            uint16_t day = 7168;
+
+            // Rewind to Jan 1 of the assumed year
+            days[1] = is_leap_year(tt->year) ? 29 : 28;
+            for (uint8_t i = 0; i < tt->month - 1; i++)
+                day += days[i];
+            day += tt->day;
+            tt->month = 1;
+
+            // Advance full years
+            while (day >= 366)
+            {
+                day -= is_leap_year(tt->year) ? 366 : 365;
+                tt->year++;
+            }
+
+            // Advance final partial year
+            days[1] = is_leap_year(tt->year) ? 29 : 28;
+            while (day > days[tt->month - 1])
+                day -= days[tt->month++ - 1];
+
             struct timestamp t = (struct timestamp) {
-                .year = swap_bytes(tt->year),
+                .year = tt->year,
                 .month = tt->month,
-                .day = tt->day,
+                .day = day,
                 .hours = tt->hours,
                 .minutes = tt->minutes,
                 .seconds = tt->seconds,
